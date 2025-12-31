@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
+    />
+    <title>CAPA - Capture to 3D</title>
+    <link rel="stylesheet" href="styles/main.css" />
+  </head>
+  <body>
+    <div class="app-container">
+      <header>
+        <h1>CAPA</h1>
+        <p class="subtitle">Capture to 3D</p>
+      </header>
+
+      <main>
+        <!-- Step 1: Image Capture -->
+        <section id="capture-section" class="step-section active">
+          <h2>Step 1: Capture Object</h2>
+          <div class="capture-options">
+            <button id="btn-upload" class="btn btn-primary">
+              Upload Image
+            </button>
+            <button id="btn-screenshot" class="btn btn-secondary" disabled>
+              Screenshot
+            </button>
+          </div>
+          <div id="image-preview" class="image-preview hidden">
+            <div class="image-wrapper">
+              <img id="preview-img" src="" alt="Preview" />
+            </div>
+            <div class="image-actions">
+              <p class="instruction">Click and drag to select the object you want to convert to 3D</p>
+              <button id="btn-auto-detect" class="btn btn-secondary">Auto-Detect</button>
+              <button id="btn-clear" class="btn btn-small">Clear</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Step 2: Object Detection -->
+        <section id="detection-section" class="step-section hidden">
+          <h2>Step 2: Object Detection</h2>
+          <div id="detection-status" class="status-message">
+            <p>Analyzing image...</p>
+          </div>
+          <div id="detection-result" class="detection-result hidden">
+            <div class="primary-detection">
+              <h3>Primary Detection</h3>
+              <p>Object: <strong id="detected-object">-</strong></p>
+              <p>Confidence: <span id="confidence">-</span>%</p>
+            </div>
+            <div id="all-detections" class="all-detections hidden">
+              <h4>All Detections</h4>
+              <ul id="detections-list"></ul>
+            </div>
+            <div class="action-buttons">
+              <button id="btn-confirm" class="btn btn-primary">Confirm & Generate 3D</button>
+              <button id="btn-correct" class="btn btn-secondary">Correct</button>
+              <button id="btn-show-all" class="btn btn-small">Show All</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Step 3: 3D Viewer -->
+        <section id="viewer-section" class="step-section hidden">
+          <h2>Step 3: 3D Model</h2>
+          <div id="viewer-container" class="viewer-container">
+            <canvas id="canvas-3d"></canvas>
+          </div>
+          <div class="viewer-controls">
+            <button id="btn-rotate" class="btn btn-small">Rotate</button>
+            <button id="btn-scale" class="btn btn-small">Scale</button>
+            <button id="btn-reset" class="btn btn-small">Reset</button>
+          </div>
+        </section>
+
+        <!-- Step 4: Export -->
+        <section id="export-section" class="step-section hidden">
+          <h2>Step 4: Export</h2>
+          <div class="export-options">
+            <button id="btn-export-stl" class="btn btn-primary">Export STL</button>
+            <button id="btn-export-obj" class="btn btn-primary">Export OBJ</button>
+            <button id="btn-export-glb" class="btn btn-primary">Export GLB</button>
+          </div>
+        </section>
+      </main>
+
+      <footer>
+        <p>Status: <span id="status-text">Ready</span></p>
+      </footer>
+    </div>
+
+    <script src="renderer.js"></script>
+  </body>
+</html>
+
