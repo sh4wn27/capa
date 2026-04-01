@@ -1,0 +1,142 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "capa"
+version = "0.1.0"
+description = "Computational Architecture for Predicting Alloimmunity — structure-aware HLA mismatch representations for post-transplant outcome prediction"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11"
+authors = [{ name = "CAPA Contributors" }]
+keywords = ["HLA", "transplant", "survival-analysis", "protein-language-model", "deep-learning"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+]
+
+dependencies = [
+    # Deep learning
+    "torch>=2.2.0",
+    "torchvision>=0.17.0",
+    # Protein language model
+    "transformers>=4.40.0",
+    "accelerate>=0.29.0",
+    # Survival analysis
+    "lifelines>=0.29.0",
+    # Data
+    "pandas>=2.2.0",
+    "numpy>=1.26.0",
+    "polars>=0.20.0",
+    # HDF5 embedding cache
+    "h5py>=3.11.0",
+    # Config / schemas
+    "pydantic>=2.7.0",
+    "pydantic-settings>=2.3.0",
+    # Visualization
+    "matplotlib>=3.9.0",
+    "seaborn>=0.13.0",
+    "plotly>=5.22.0",
+    # Interpretability
+    "shap>=0.45.0",
+    "umap-learn>=0.5.6",
+    # Utilities
+    "tqdm>=4.66.0",
+    "rich>=13.7.0",
+    "requests>=2.31.0",
+    "scikit-learn>=1.4.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.2.0",
+    "pytest-cov>=5.0.0",
+    "ruff>=0.4.0",
+    "mypy>=1.10.0",
+    "pandas-stubs>=2.2.0",
+    "types-requests>=2.31.0",
+    "types-tqdm>=4.66.0",
+]
+
+[project.urls]
+Repository = "https://github.com/capa-project/capa"
+Issues = "https://github.com/capa-project/capa/issues"
+
+# ---------------------------------------------------------------------------
+# Ruff
+# ---------------------------------------------------------------------------
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+src = ["capa", "scripts", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+    "N",   # pep8-naming
+    "ANN", # flake8-annotations
+    "D",   # pydocstyle
+    "RUF", # ruff-specific
+]
+ignore = [
+    "D100", # Missing docstring in public module
+    "D104", # Missing docstring in public package
+    "D107", # Missing docstring in __init__
+    "ANN101", # Missing type annotation for self
+    "ANN102", # Missing type annotation for cls
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.lint.isort]
+known-first-party = ["capa"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+# ---------------------------------------------------------------------------
+# Mypy
+# ---------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+exclude = ["notebooks/", "paper/", "web/"]
+
+[[tool.mypy.overrides]]
+module = ["lifelines.*", "shap.*", "umap.*", "h5py.*", "transformers.*", "plotly.*"]
+ignore_missing_imports = true
+
+# ---------------------------------------------------------------------------
+# Pytest
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--cov=capa --cov-report=term-missing --cov-fail-under=0"
+filterwarnings = ["ignore::DeprecationWarning"]
+
+# ---------------------------------------------------------------------------
+# Coverage
+# ---------------------------------------------------------------------------
+[tool.coverage.run]
+source = ["capa"]
+omit = ["tests/*", "scripts/*"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
