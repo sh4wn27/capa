@@ -71,7 +71,9 @@ package-lock.json
 # =============================================================================
 # Data & ML artifacts
 # =============================================================================
-data/raw/
+# Keep the small source ARFF in version control; exclude everything else
+data/raw/*
+!data/raw/bone-marrow.arff
 data/processed/
 
 # Embedding caches (HDF5)
