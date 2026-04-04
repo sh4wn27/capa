@@ -1,3 +1,106 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  :root {
+    /* Navy #0F1C35  ≈ hsl(219, 59%, 14%) */
+    /* Blush #E8849A ≈ hsl(346, 64%, 71%) */
+
+    --background:   0 0% 100%;
+    --foreground:   219 59% 14%;
+
+    --card:            0 0% 100%;
+    --card-foreground: 219 59% 14%;
+
+    --popover:            0 0% 100%;
+    --popover-foreground: 219 59% 14%;
+
+    --primary:            219 59% 14%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary:            346 64% 71%;
+    --secondary-foreground: 219 59% 14%;
+
+    --muted:            220 20% 96%;
+    --muted-foreground: 220 15% 46%;
+
+    --accent:            346 64% 71%;
+    --accent-foreground: 219 59% 14%;
+
+    --destructive:            0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 20% 90%;
+    --input:  220 20% 90%;
+    --ring:   346 64% 71%;
+
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply tracking-tight;
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 3px;
+  }
+}
+
+/* Hero background — dark navy + subtle grid */
+.hero-bg {
+  background-color: #0F1C35;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 64px 64px;
+}
+
+/* Gradient text (blush) */
+.gradient-text {
+  background: linear-gradient(135deg, #E8849A 0%, #f5c6d0 60%, #cc617a 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Blush glow border */
+.blush-glow {
+  box-shadow:
+    0 0 0 1px rgba(232, 132, 154, 0.25),
+    0 4px 32px rgba(232, 132, 154, 0.12);
+}
+
+/* Monospace code pill */
+.code-pill {
+  font-family: ui-monospace, "Cascadia Code", "Fira Mono", monospace;
+  font-size: 0.78em;
+  background: hsl(var(--muted));
+  border: 1px solid hsl(var(--border));
+  border-radius: 5px;
+  padding: 2px 6px;
+  letter-spacing: -0.01em;
+}

@@ -38,19 +38,28 @@ class ClinicalCovariates(BaseModel):
         Recipient age in years.
     age_donor : float | None
         Donor age in years.
+    cd34_dose : float | None
+        CD34+ cell dose (×10⁶/kg).
+    sex_mismatch : bool | None
+        True when donor and recipient sex differ.
     disease : str | None
         Primary diagnosis (e.g. ``"ALL"``, ``"AML"``).
     conditioning : str | None
         Conditioning regimen (e.g. ``"MAC"``, ``"RIC"``).
     donor_type : str | None
         Donor relationship (e.g. ``"MSD"``, ``"MUD"``).
+    stem_cell_source : str | None
+        Graft source (e.g. ``"BM"``, ``"PBSC"``, ``"cord"``).
     """
 
     age_recipient: float | None = Field(default=None, ge=0.0)
     age_donor: float | None = Field(default=None, ge=0.0)
+    cd34_dose: float | None = Field(default=None, ge=0.0)
+    sex_mismatch: bool | None = Field(default=None)
     disease: str | None = Field(default=None)
     conditioning: str | None = Field(default=None)
     donor_type: str | None = Field(default=None)
+    stem_cell_source: str | None = Field(default=None)
 
 
 class PredictionRequest(BaseModel):
@@ -67,13 +76,17 @@ class EventRisk(BaseModel):
     Attributes
     ----------
     cumulative_incidence : list[float]
-        CIF values at each discrete time bin.
+        CIF values at each discrete time bin (length = ``time_bins``).
     risk_score : float
-        Scalar summary risk (CIF at the median follow-up time).
+        Scalar summary risk — CIF at the final time bin, in ``[0, 1]``.
+    time_points : list[float] | None
+        Day-axis corresponding to each CIF value (length = ``time_bins``).
+        Defaults to uniform 0–730-day grid when omitted by the client.
     """
 
     cumulative_incidence: list[float]
-    risk_score: float
+    risk_score: float = Field(ge=0.0, le=1.0)
+    time_points: list[float] | None = Field(default=None)
 
 
 class PredictionResponse(BaseModel):
@@ -84,5 +97,14 @@ class PredictionResponse(BaseModel):
     trm: EventRisk
     attention_weights: list[list[float]] | None = Field(
         default=None,
-        description="Donor→recipient cross-attention matrix (n_loci × n_loci).",
+        description="Donor→recipient cross-attention matrix (n_loci × n_loci), "
+        "last-layer weights averaged over heads.",
+    )
+    mismatch_count: int | None = Field(
+        default=None,
+        description="Number of mismatched loci between donor and recipient.",
+    )
+    model_version: str | None = Field(
+        default=None,
+        description="Checkpoint identifier, e.g. 'v0.1.0' or a git SHA.",
     )
