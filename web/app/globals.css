@@ -4,29 +4,29 @@
 
 @layer base {
   :root {
-    /* Violet #4C1D95 ≈ hsl(263, 70%, 35%) */
+    /* Near-black #111111 ≈ hsl(0, 0%, 7%) */
     /* Blush #E8849A ≈ hsl(346, 64%, 71%) */
 
     --background:   0 0% 100%;
-    --foreground:   263 70% 35%;
+    --foreground:   0 0% 7%;
 
     --card:            0 0% 100%;
-    --card-foreground: 263 70% 35%;
+    --card-foreground: 0 0% 7%;
 
     --popover:            0 0% 100%;
-    --popover-foreground: 263 70% 35%;
+    --popover-foreground: 0 0% 7%;
 
-    --primary:            263 70% 35%;
+    --primary:            0 0% 7%;
     --primary-foreground: 0 0% 100%;
 
     --secondary:            346 64% 71%;
-    --secondary-foreground: 263 70% 35%;
+    --secondary-foreground: 0 0% 7%;
 
-    --muted:            263 20% 96%;
-    --muted-foreground: 263 15% 46%;
+    --muted:            0 0% 96%;
+    --muted-foreground: 0 0% 46%;
 
     --accent:            346 64% 71%;
-    --accent-foreground: 263 70% 35%;
+    --accent-foreground: 0 0% 7%;
 
     --destructive:            0 84% 60%;
     --destructive-foreground: 0 0% 100%;
@@ -70,12 +70,12 @@
   }
 }
 
-/* Hero background — deep violet + subtle grid */
+/* Hero background — clean white */
 .hero-bg {
-  background-color: #4C1D95;
+  background-color: #ffffff;
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+    linear-gradient(rgba(0, 0, 0, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.04) 1px, transparent 1px);
   background-size: 64px 64px;
 }
 
