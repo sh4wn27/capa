@@ -152,7 +152,7 @@ export default function HomePage() {
               transition={{ duration: 0.5, ease }}
               className="mb-8 flex justify-center"
             >
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/6 px-4 py-1.5 text-xs font-medium text-white/65 backdrop-blur-sm">
+              <span className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-black/5 px-4 py-1.5 text-xs font-medium text-black/55 backdrop-blur-sm">
                 <span className="h-1.5 w-1.5 rounded-full bg-blush-400 animate-pulse-dot" />
                 Open Source · MIT · Proof-of-Concept
               </span>
@@ -163,7 +163,7 @@ export default function HomePage() {
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.65, delay: 0.08, ease }}
-              className="text-[clamp(2.25rem,6vw,4.5rem)] font-bold leading-[1.08] text-white"
+              className="text-[clamp(2.25rem,6vw,4.5rem)] font-bold leading-[1.08] text-foreground"
             >
               Predicting Alloimmunity with{" "}
               <span className="gradient-text">Protein Language Models</span>
@@ -174,10 +174,10 @@ export default function HomePage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.18, ease }}
-              className="mt-6 text-lg sm:text-xl text-white/58 leading-relaxed max-w-2xl mx-auto"
+              className="mt-6 text-lg sm:text-xl text-black/55 leading-relaxed max-w-2xl mx-auto"
             >
               CAPA replaces coarse HLA match/mismatch scores with{" "}
-              <span className="text-white/80 font-medium">continuous ESM-2 embeddings</span>{" "}
+              <span className="text-black/80 font-medium">continuous ESM-2 embeddings</span>{" "}
               and predicts GvHD, relapse, and transplant-related mortality as
               competing risks using cross-attention and DeepHit.
             </motion.p>
@@ -199,7 +199,7 @@ export default function HomePage() {
                 asChild
                 size="xl"
                 variant="outline"
-                className="w-full sm:w-auto border-white/18 bg-white/5 text-white hover:bg-white/10 hover:text-white"
+                className="w-full sm:w-auto border-black/15 text-foreground hover:bg-black/5"
               >
                 <Link href="/paper">
                   <BookOpen className="h-4 w-4" />
@@ -219,7 +219,7 @@ export default function HomePage() {
                 href="https://github.com/capa-project/capa"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-sm text-white/32 hover:text-white/60 transition-colors"
+                className="inline-flex items-center gap-2 text-sm text-black/35 hover:text-black/65 transition-colors"
               >
                 <GithubIcon className="h-4 w-4" />
                 capa-project/capa
@@ -234,11 +234,11 @@ export default function HomePage() {
             transition={{ delay: 1.2, duration: 0.8 }}
             className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5"
           >
-            <span className="text-[10px] text-white/25 uppercase tracking-widest">scroll</span>
+            <span className="text-[10px] text-black/25 uppercase tracking-widest">scroll</span>
             <motion.div
               animate={{ y: [0, 5, 0] }}
               transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
-              className="w-px h-6 bg-gradient-to-b from-white/20 to-transparent"
+              className="w-px h-6 bg-gradient-to-b from-black/20 to-transparent"
             />
           </motion.div>
         </motion.div>
@@ -539,7 +539,7 @@ export default function HomePage() {
       {/* ──────────────────────────────────────────────────────────────
           CTA BANNER
       ────────────────────────────────────────────────────────────── */}
-      <section className="hero-bg relative overflow-hidden py-24">
+      <section className="relative overflow-hidden py-24 bg-[#111111]">
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0"
