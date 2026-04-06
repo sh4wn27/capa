@@ -58,16 +58,16 @@ const STEPS = [
 
 const RESULTS = [
   {
-    metric: "+0.12",
-    label:  "C-index over Cox-PH",
-    sub:    "GvHD endpoint",
+    metric: "0.84",
+    label:  "C-index, relapse",
+    sub:    "Fine–Gray · 95% CI 0.69–1.00",
     color:  "text-blush",
     icon:   TrendingUp,
   },
   {
-    metric: "+0.07",
-    label:  "C-index over RSF",
-    sub:    "Relapse endpoint",
+    metric: "0.75",
+    label:  "C-index, relapse",
+    sub:    "Cox-PH · 95% CI 0.53–1.00",
     color:  "text-amber-500",
     icon:   TrendingUp,
   },
@@ -88,10 +88,9 @@ const RESULTS = [
 ];
 
 const MODEL_ROWS = [
-  { name: "Cox-PH",      gvhd: 0.62, relapse: 0.59, trm: 0.60, highlight: false },
-  { name: "RSF",         gvhd: 0.66, relapse: 0.62, trm: 0.64, highlight: false },
-  { name: "DeepSurv",    gvhd: 0.68, relapse: 0.64, trm: 0.66, highlight: false },
-  { name: "CAPA (ours)", gvhd: 0.74, relapse: 0.70, trm: 0.72, highlight: true  },
+  { name: "Cox-PH (cause-specific)", gvhd: null, relapse: 0.75, trm: 0.65, highlight: false },
+  { name: "Fine–Gray",               gvhd: null, relapse: 0.84, trm: 0.66, highlight: true  },
+  { name: "DeepHit (tabular HLA)",   gvhd: null, relapse: 0.67, trm: 0.41, highlight: false },
 ];
 
 /* ─── sub-components ────────────────────────────────────────────────── */
@@ -407,9 +406,9 @@ export default function HomePage() {
             <div className="rounded-2xl border border-border bg-white shadow-sm overflow-hidden">
               <div className="px-6 py-4 border-b border-border flex items-center justify-between">
                 <h3 className="font-semibold text-navy text-sm">
-                  Time-dependent C-index comparison
+                  Time-dependent C-index — held-out test set
                 </h3>
-                <span className="text-xs text-muted-foreground">UCI BMT · n = 187</span>
+                <span className="text-xs text-muted-foreground">UCI BMT · n = 29 test patients</span>
               </div>
 
               <div className="overflow-x-auto">
@@ -448,7 +447,10 @@ export default function HomePage() {
                             )}
                           </div>
                         </td>
-                        {[gvhd, relapse, trm].map((v, i) => (
+                        <td className="px-4 py-4 w-40">
+                          <span className="text-sm text-muted-foreground/50 font-mono">—</span>
+                        </td>
+                        {[relapse, trm].map((v, i) => (
                           <td key={i} className="px-4 py-4 w-40">
                             <CIndexBar value={v} />
                           </td>
@@ -459,6 +461,9 @@ export default function HomePage() {
                 </table>
               </div>
             </div>
+            <p className="mt-3 text-xs text-muted-foreground px-1">
+              GvHD not evaluable — only 2 events in the test set. Fine–Gray is the best-performing baseline.
+            </p>
           </FadeIn>
         </div>
       </section>
