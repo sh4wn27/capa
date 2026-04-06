@@ -4,29 +4,29 @@
 
 @layer base {
   :root {
-    /* Navy #0F1C35  ≈ hsl(219, 59%, 14%) */
+    /* Violet #4C1D95 ≈ hsl(263, 70%, 35%) */
     /* Blush #E8849A ≈ hsl(346, 64%, 71%) */
 
     --background:   0 0% 100%;
-    --foreground:   219 59% 14%;
+    --foreground:   263 70% 35%;
 
     --card:            0 0% 100%;
-    --card-foreground: 219 59% 14%;
+    --card-foreground: 263 70% 35%;
 
     --popover:            0 0% 100%;
-    --popover-foreground: 219 59% 14%;
+    --popover-foreground: 263 70% 35%;
 
-    --primary:            219 59% 14%;
+    --primary:            263 70% 35%;
     --primary-foreground: 0 0% 100%;
 
     --secondary:            346 64% 71%;
-    --secondary-foreground: 219 59% 14%;
+    --secondary-foreground: 263 70% 35%;
 
-    --muted:            220 20% 96%;
-    --muted-foreground: 220 15% 46%;
+    --muted:            263 20% 96%;
+    --muted-foreground: 263 15% 46%;
 
     --accent:            346 64% 71%;
-    --accent-foreground: 219 59% 14%;
+    --accent-foreground: 263 70% 35%;
 
     --destructive:            0 84% 60%;
     --destructive-foreground: 0 0% 100%;
@@ -70,9 +70,9 @@
   }
 }
 
-/* Hero background — dark navy + subtle grid */
+/* Hero background — deep violet + subtle grid */
 .hero-bg {
-  background-color: #0F1C35;
+  background-color: #4C1D95;
   background-image:
     linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);

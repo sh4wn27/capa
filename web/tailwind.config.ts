@@ -15,19 +15,19 @@ const config: Config = {
     },
     extend: {
       colors: {
-        // Deep navy
+        // Deep violet
         navy: {
-          50:  "#EEF1F8",
-          100: "#D5DCF0",
-          200: "#AABADE",
-          300: "#7D96C9",
-          400: "#4F70B1",
-          500: "#2A4A93",
-          600: "#1A3070",
-          700: "#0F1C45",
-          800: "#0A1230",
-          900: "#060C1E",
-          DEFAULT: "#0F1C35",
+          50:  "#F5F3FF",
+          100: "#EDE9FE",
+          200: "#DDD6FE",
+          300: "#C4B5FD",
+          400: "#A78BFA",
+          500: "#8B5CF6",
+          600: "#7C3AED",
+          700: "#6D28D9",
+          800: "#4C1D95",
+          900: "#2E1065",
+          DEFAULT: "#4C1D95",
         },
         // Blush pink
         blush: {
