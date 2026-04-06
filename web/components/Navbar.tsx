@@ -57,7 +57,7 @@ export default function Navbar() {
         {/* Right actions */}
         <div className="flex items-center gap-2">
           <Link
-            href="https://github.com/capa-project/capa"
+            href="https://github.com/sh4wn27/capa"
             target="_blank"
             rel="noopener noreferrer"
             className="hidden sm:flex items-center gap-1.5 text-sm text-muted-foreground hover:text-navy transition-colors px-2 py-1.5"

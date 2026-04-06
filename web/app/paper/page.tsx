@@ -51,7 +51,7 @@ export default function PaperPage() {
               className="border-black/15 text-foreground hover:bg-black/5"
             >
               <a
-                href="https://github.com/capa-project/capa"
+                href="https://github.com/sh4wn27/capa"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -132,7 +132,7 @@ export default function PaperPage() {
   author  = {Li, Huanxuan},
   year    = {2025},
   note    = {Preprint},
-  url     = {https://github.com/capa-project/capa}
+  url     = {https://github.com/sh4wn27/capa}
 }`}
           </pre>
         </div>

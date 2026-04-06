@@ -216,13 +216,13 @@ export default function HomePage() {
               className="mt-8 flex justify-center"
             >
               <a
-                href="https://github.com/capa-project/capa"
+                href="https://github.com/sh4wn27/capa"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 text-sm text-black/35 hover:text-black/65 transition-colors"
               >
                 <GithubIcon className="h-4 w-4" />
-                capa-project/capa
+                sh4wn27/capa
               </a>
             </motion.div>
           </div>
@@ -570,7 +570,7 @@ export default function HomePage() {
               variant="outline"
               className="border-white/18 bg-white/5 text-white hover:bg-white/10 hover:text-white"
             >
-              <a href="https://github.com/capa-project/capa" target="_blank" rel="noopener noreferrer">
+              <a href="https://github.com/sh4wn27/capa" target="_blank" rel="noopener noreferrer">
                 <GithubIcon className="h-4 w-4" />
                 View source
               </a>
@@ -601,7 +601,7 @@ export default function HomePage() {
               </p>
               <div className="mt-5 flex items-center gap-4">
                 <a
-                  href="https://github.com/capa-project/capa"
+                  href="https://github.com/sh4wn27/capa"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-white/35 hover:text-white/70 transition-colors"
@@ -644,7 +644,7 @@ export default function HomePage() {
               <ul className="space-y-2.5">
                 {[
                   {
-                    href:  "https://github.com/capa-project/capa",
+                    href:  "https://github.com/sh4wn27/capa",
                     label: "GitHub Repository",
                   },
                   {

@@ -202,7 +202,7 @@ export default function AboutPage() {
             <div className="flex gap-3">
               <Button asChild variant="default">
                 <a
-                  href="https://github.com/capa-project/capa"
+                  href="https://github.com/sh4wn27/capa"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
