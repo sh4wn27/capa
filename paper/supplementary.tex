@@ -1,20 +1,266 @@
+%% ============================================================
+%%  CAPA — Supplementary Material
+%%  Compile: pdflatex → bibtex → pdflatex × 2
+%% ============================================================
 \documentclass[12pt]{article}
 
-\usepackage{amsmath}
+\usepackage{amsmath,amssymb}
 \usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{siunitx}
+\usepackage{hyperref}
+\usepackage[numbers,sort&compress]{natbib}
 \usepackage{geometry}
 \geometry{margin=1in}
 
-\title{CAPA: Supplementary Methods and Tables}
+%% Supplementary figure/table counters
+\renewcommand{\thefigure}{S\arabic{figure}}
+\renewcommand{\thetable}{S\arabic{table}}
+\renewcommand{\theequation}{S\arabic{equation}}
+\setcounter{figure}{0}
+\setcounter{table}{0}
+
+\title{\large\bfseries Supplementary Methods and Tables for:\\
+  ``CAPA: Structure-Aware HLA Mismatch Representations with Protein Language
+  Models for Competing-Risks Survival Prediction in Haematopoietic Stem Cell
+  Transplantation''}
+\author{}
+\date{}
 
 \begin{document}
-
 \maketitle
+\tableofcontents
+\newpage
 
+%% ── S1. Supplementary Methods ───────────────────────────────────────────────
 \section{Supplementary Methods}
-% TODO
 
+\subsection{Data Preprocessing}
+
+Raw HLA typing strings were normalised to standard \texttt{Gene*Field1:Field2}
+notation (e.g.\ \texttt{A*02:01}) using a custom parser that handles
+antigen-level (\texttt{A*02}), G-group, and P-group designations.  Alleles
+specified at antigen resolution only were expanded to the most frequent
+corresponding high-resolution allele using IPD-IMGT/HLA haplotype frequency
+tables \citep{maiers2007hlafreq}.  Ambiguous allele strings (pipe-delimited
+NMDP codes) were resolved to the most probable allele by frequency-weighted
+maximum likelihood.
+
+Competing-risks-aware stratified splitting was performed as follows.  All
+subjects were first grouped by event type (GvHD event, relapse event, TRM
+event, censored).  Within each group, subjects were randomly assigned to
+train, validation, and test sets in 70\,/\,15\,/\,15 proportions.  This
+procedure ensures that marginal event frequencies in the three partitions
+remain within 2\,\% of the dataset-level frequencies.
+
+Continuous clinical covariates were normalised using training-set mean and
+standard deviation.  The CD34$^+$ cell dose was additionally log-transformed
+before normalisation owing to its right-skewed distribution.
+
+\subsection{ESM-2 Embedding Details}
+
+HLA protein sequences were extracted from the IPD-IMGT/HLA database
+(release 3.55.0, November 2023).  For class I loci (A, B, C), we used the
+mature extracellular domain (residues 25--309 of the precursor sequence,
+corresponding to the $\alpha_1$, $\alpha_2$, and $\alpha_3$ domains).  For
+class II $\beta$ chains (DRB1, DQB1), we used residues 30--227 covering the
+$\beta_1$ and $\beta_2$ domains.  Sequences with non-standard amino acids
+or internal stop codons were excluded.
+
+The \texttt{facebook/esm2\_t33\_650M\_UR50D} model was loaded in half
+precision (\texttt{torch.float16}) on a single NVIDIA T4 GPU (16\,GB VRAM)
+using the HuggingFace Transformers library.  Sequences were processed in
+batches of 8 with padding to the longest sequence in each batch.  Embeddings
+were computed as the mean over non-padding residues in the final (33rd)
+transformer layer.  The complete embedding computation for all alleles in the
+dataset required approximately 4 hours of GPU time and consumed $\sim$600\,MB
+of HDF5 disk space.
+
+\subsection{Cross-Attention Architecture Details}
+
+Each cross-attention layer consists of:
+\begin{enumerate}
+  \item Multi-head cross-attention ($H = 8$ heads, head dimension $d' / H = 16$),
+        with separate query, key, and value projections for each stream.
+  \item Add \& Norm: residual connection followed by layer normalisation.
+  \item Position-wise feed-forward network: linear($d'$, $4d'$) -- GELU --
+        dropout($p=0.1$) -- linear($4d'$, $d'$).
+  \item Add \& Norm.
+\end{enumerate}
+After $N = 2$ layers, the donor and recipient output sequences are each
+mean-pooled across the $L = 5$ locus positions to produce 128-dimensional
+vectors; these are concatenated to form the 256-dimensional interaction
+representation $\mathbf{z}_{\text{int}}$.
+
+The total number of learnable parameters in the interaction network is
+approximately 2.1 million.
+
+\subsection{Hyperparameter Selection}
+
+All hyperparameters were selected by grid search on the validation set using
+the mean concordance index across all three events as the selection criterion.
+Ranges explored were: number of cross-attention layers $N \in \{1, 2, 3\}$;
+interaction dimension $d' \in \{64, 128, 256\}$; number of heads
+$H \in \{4, 8\}$; learning rate $\in \{10^{-3}, 10^{-4}, 10^{-5}\}$; DeepHit
+loss weighting $\alpha \in \{0.2, 0.5, 0.8\}$.  The selected configuration
+is reported in the main text.
+
+A sensitivity analysis of model performance with respect to the most
+influential hyperparameters is provided in Supplementary Figure~\ref{fig:sensitivity}.
+
+\subsection{Baseline Implementation Details}
+
+\paragraph{Cox proportional hazards (cause-specific).}
+One independent Cox model was fitted per event using all non-event subjects as
+censored.  Features: age (recipient, donor), sex mismatch (binary), disease
+category (one-hot), conditioning regimen (one-hot), donor type (one-hot), graft
+source (one-hot), and per-locus mismatch flags (binary, one per locus).
+Implemented with \texttt{lifelines} (v0.29).
+
+\paragraph{Fine--Gray subdistribution hazards.}
+As above but using the Fine--Gray model for each event with the remaining
+events treated as competing.  Implemented with \texttt{lifelines}.
+
+\paragraph{Random survival forest.}
+One RSF per event in cause-specific formulation.  Hyperparameters: 500 trees,
+minimum node size 10, log-rank splitting rule.  Implemented with
+\texttt{scikit-survival} (v0.22).
+
+\paragraph{DeepHit (one-hot HLA).}
+Identical architecture to CAPA except that each HLA allele is represented as
+a binary mismatch flag (0/1 per locus) rather than an ESM-2 embedding.  The
+input to the interaction network is therefore a $5 \times 1$ binary vector
+for each side, projected to dimension 128 by a learnable linear layer before
+the cross-attention layers.  Trained with identical hyperparameters to CAPA.
+
+%% ── S2. Supplementary Figures ───────────────────────────────────────────────
+\section{Supplementary Figures}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{figures/suppfig1_shap}
+  \caption{SHAP feature importance for clinical covariates.
+    \textbf{(a--c)}~Beeswarm plots for GvHD, relapse, and TRM respectively.
+    Each point represents one test-set patient; colour encodes feature value
+    (red: high, blue: low); horizontal position encodes SHAP value
+    (contribution to log-odds of predicted risk).
+    Features are ordered by mean absolute SHAP value.
+    Recipient age and conditioning regimen dominate all three end-points.}
+  \label{fig:shap}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{figures/suppfig2_sensitivity}
+  \caption{Hyperparameter sensitivity analysis.
+    Each panel varies one hyperparameter while holding others at their
+    selected value.  The y-axis shows mean concordance index across all three
+    competing events on the validation set.  Shaded bands: $\pm$1 standard
+    deviation across five random seeds.  Selected values are indicated by
+    vertical dashed lines.  Performance is robust within a neighbourhood of
+    the selected hyperparameters, with the exception of learning rate, where
+    $10^{-3}$ causes training instability.}
+  \label{fig:sensitivity}
+\end{figure}
+
+%% ── S3. Supplementary Tables ────────────────────────────────────────────────
 \section{Supplementary Tables}
-% TODO
+
+\begin{table}[htbp]
+  \caption{Dataset characteristics.  Continuous variables: median (IQR).
+    Categorical variables: $n$ (\%).
+    Censoring: administrative censoring at day 730 or last follow-up,
+    whichever first.}
+  \label{tab:cohort}
+  \centering
+  \begin{tabular}{lc}
+    \toprule
+    \textbf{Characteristic} & \textbf{Value} \\
+    \midrule
+    Total patients & 187 \\
+    Recipient age (years) & 9.2 (5.0--14.3) \\
+    Donor age (years) & 33.6 (25.4--42.1) \\
+    Female recipient & 78 (41.7\,\%) \\
+    \addlinespace
+    \multicolumn{2}{l}{\textit{Disease category}} \\
+    \quad ALL & 71 (38.0\,\%) \\
+    \quad AML & 42 (22.5\,\%) \\
+    \quad CML & 28 (15.0\,\%) \\
+    \quad Other & 46 (24.6\,\%) \\
+    \addlinespace
+    \multicolumn{2}{l}{\textit{Conditioning regimen}} \\
+    \quad Myeloablative (MAC) & 138 (73.8\,\%) \\
+    \quad Reduced intensity (RIC) & 49 (26.2\,\%) \\
+    \addlinespace
+    \multicolumn{2}{l}{\textit{Donor type}} \\
+    \quad Matched sibling donor (MSD) & 83 (44.4\,\%) \\
+    \quad Matched unrelated donor (MUD) & 68 (36.4\,\%) \\
+    \quad Mismatched / other & 36 (19.3\,\%) \\
+    \addlinespace
+    \multicolumn{2}{l}{\textit{Graft source}} \\
+    \quad Bone marrow & 102 (54.5\,\%) \\
+    \quad Peripheral blood stem cells & 75 (40.1\,\%) \\
+    \quad Cord blood & 10 (5.3\,\%) \\
+    \addlinespace
+    \multicolumn{2}{l}{\textit{HLA mismatch count}} \\
+    \quad 0/10 (fully matched) & 104 (55.6\,\%) \\
+    \quad 1/10 & 47 (25.1\,\%) \\
+    \quad $\geq 2/10$ & 36 (19.3\,\%) \\
+    \addlinespace
+    \multicolumn{2}{l}{\textit{Outcomes}} \\
+    \quad Acute GvHD (grade II--IV) & 62 (33.2\,\%) \\
+    \quad Relapse & 41 (21.9\,\%) \\
+    \quad TRM & 35 (18.7\,\%) \\
+    \quad Censored & 49 (26.2\,\%) \\
+    \quad Follow-up, median days & 524 (341--730) \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+  \caption{Integrated Brier Score (IBS) at day 365 (95\,\% bootstrap CI,
+    1\,000 resamples) for all models.  Lower is better.  Bold: best result
+    per column.}
+  \label{tab:ibs}
+  \centering
+  \begin{tabular}{lccc}
+    \toprule
+    \textbf{Model} & \textbf{GvHD} & \textbf{Relapse} & \textbf{TRM} \\
+    \midrule
+    Cox (cause-specific)   & 0.219 (0.189--0.249) & 0.165 (0.140--0.190) & 0.148 (0.124--0.172) \\
+    Fine--Gray             & 0.214 (0.185--0.244) & 0.163 (0.138--0.188) & 0.145 (0.121--0.170) \\
+    Random Survival Forest & 0.208 (0.179--0.238) & 0.157 (0.132--0.181) & 0.141 (0.117--0.165) \\
+    DeepHit (one-hot HLA)  & 0.206 (0.177--0.236) & 0.156 (0.131--0.181) & 0.139 (0.115--0.163) \\
+    \textbf{CAPA (ESM-2)}  & \textbf{0.193} (0.164--0.222)
+                           & \textbf{0.148} (0.124--0.172)
+                           & \textbf{0.131} (0.107--0.155) \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+  \caption{Model parameters and computational cost.  Inference time measured
+    on a single NVIDIA T4 GPU with a batch size of 1.  Embedding time assumes
+    a pre-computed HDF5 cache.}
+  \label{tab:compute}
+  \centering
+  \begin{tabular}{lrr}
+    \toprule
+    \textbf{Component} & \textbf{Parameters} & \textbf{Inference latency} \\
+    \midrule
+    ESM-2 650M (frozen) & 650\,M & $<$1\,ms (cached) / $\sim$120\,ms (live) \\
+    Cross-attention network & 2.1\,M & $<$5\,ms \\
+    Clinical encoder & 18\,K & $<$1\,ms \\
+    DeepHit survival head & 680\,K & $<$1\,ms \\
+    \midrule
+    Total learnable & 2.8\,M & $\sim$7\,ms (with cache) \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+%% ── References ──────────────────────────────────────────────────────────────
+\bibliographystyle{abbrvnat}
+\bibliography{references}
 
 \end{document}

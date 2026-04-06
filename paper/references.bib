@@ -1,19 +1,524 @@
-% BibTeX references for CAPA manuscript
-% TODO: Add references
+% ============================================================
+%  CAPA manuscript — BibTeX references
+% ============================================================
 
-@article{lin2022esm2,
-  title   = {Evolutionary-scale prediction of atomic-level protein structure with a language model},
-  author  = {Lin, Zeming and others},
-  journal = {Science},
-  year    = {2023},
-  volume  = {379},
-  number  = {6637},
-  pages   = {1123--1130},
+% ── Protein language models ──────────────────────────────────────────────────
+
+@article{lin2023esm2,
+  author   = {Lin, Zeming and Akin, Halil and Rao, Roshan and Hie, Brian and
+              Zhu, Zhongkai and Lu, Wenting and Smetanin, Nikita and Verkuil, Robert
+              and Kabeli, Ori and Shmueli, Yaniv and dos Santos Costa, Allan and
+              Fazel-Zarandi, Maryam and Sercu, Tom and Candido, Salvatore and Rives, Alexander},
+  title    = {Evolutionary-scale prediction of atomic-level protein structure with a
+              language model},
+  journal  = {Science},
+  year     = {2023},
+  volume   = {379},
+  number   = {6637},
+  pages    = {1123--1130},
+  doi      = {10.1126/science.ade2574},
 }
 
+@article{rives2021esm1,
+  author   = {Rives, Alexander and Meier, Joshua and Sercu, Tom and Goyal, Siddharth and
+              Lin, Zeming and Liu, Jason and Guo, Demi and Ott, Myle and Zitnick, C. Lawrence and
+              Ma, Jerry and Fergus, Rob},
+  title    = {Biological structure and function emerge from scaling unsupervised learning
+              to 250 million protein sequences},
+  journal  = {Proceedings of the National Academy of Sciences},
+  year     = {2021},
+  volume   = {118},
+  number   = {15},
+  pages    = {e2016239118},
+  doi      = {10.1073/pnas.2016239118},
+}
+
+@article{elnaggar2021prottrans,
+  author   = {Elnaggar, Ahmed and Heinzinger, Michael and Dallago, Christian and
+              Rehawi, Ghalia and Yu, Wang and Jones, Llion and Gibbs, Tom and
+              Feher, Tamas and Angerer, Christoph and Steinegger, Martin and
+              Bhowmik, Debsindhu and Rost, Burkhard},
+  title    = {{ProtTrans}: Toward Understanding the Language of Life Through
+              Self-Supervised Learning},
+  journal  = {IEEE Transactions on Pattern Analysis and Machine Intelligence},
+  year     = {2022},
+  volume   = {44},
+  number   = {10},
+  pages    = {7112--7127},
+  doi      = {10.1109/TPAMI.2021.3095381},
+}
+
+% ── Attention / Transformer ───────────────────────────────────────────────────
+
+@inproceedings{vaswani2017attention,
+  author    = {Vaswani, Ashish and Shazeer, Noam and Parmar, Niki and Uszkoreit, Jakob
+               and Jones, Llion and Gomez, Aidan N. and Kaiser, {\L}ukasz and
+               Polosukhin, Illia},
+  title     = {Attention is All You Need},
+  booktitle = {Advances in Neural Information Processing Systems},
+  year      = {2017},
+  volume    = {30},
+  publisher = {Curran Associates, Inc.},
+}
+
+% ── Survival analysis / competing risks ──────────────────────────────────────
+
 @article{lee2018deephit,
-  title   = {DeepHit: A Deep Learning Approach to Survival Analysis with Competing Risks},
-  author  = {Lee, Changhee and Zame, William and Yoon, Jinsung and van der Schaar, Mihaela},
-  journal = {AAAI},
+  author   = {Lee, Changhee and Zame, William R. and Yoon, Jinsung and
+              van der Schaar, Mihaela},
+  title    = {{DeepHit}: A Deep Learning Approach to Survival Analysis
+              with Competing Risks},
+  journal  = {Proceedings of the AAAI Conference on Artificial Intelligence},
+  year     = {2018},
+  volume   = {32},
+  number   = {1},
+  doi      = {10.1609/aaai.v32i1.11842},
+}
+
+@article{katzman2018deepsurv,
+  author   = {Katzman, Jared L. and Shaham, Uri and Cloninger, Alexander and
+              Bates, Jonathan and Jiang, Tingting and Kluger, Yuval},
+  title    = {{DeepSurv}: Personalized Treatment Recommender System Using a Cox
+              Proportional Hazards Deep Neural Network},
+  journal  = {BMC Medical Research Methodology},
+  year     = {2018},
+  volume   = {18},
+  number   = {1},
+  pages    = {24},
+  doi      = {10.1186/s12874-018-0482-1},
+}
+
+@article{ishwaran2008rsf,
+  author   = {Ishwaran, Hemant and Kogalur, Udaya B. and Blackstone, Eugene H. and
+              Lauer, Michael S.},
+  title    = {Random Survival Forests},
+  journal  = {The Annals of Applied Statistics},
+  year     = {2008},
+  volume   = {2},
+  number   = {3},
+  pages    = {841--860},
+  doi      = {10.1214/08-AOAS169},
+}
+
+@article{johansen1978product,
+  author  = {Johansen, S{\o}ren},
+  title   = {The Product Limit Estimator as Maximum Likelihood Estimator},
+  journal = {Scandinavian Journal of Statistics},
+  year    = {1978},
+  volume  = {5},
+  number  = {4},
+  pages   = {195--199},
+}
+
+@article{fine1999subdistribution,
+  author  = {Fine, Jason P. and Gray, Robert J.},
+  title   = {A Proportional Hazards Model for the Subdistribution of a Competing Risk},
+  journal = {Journal of the American Statistical Association},
+  year    = {1999},
+  volume  = {94},
+  number  = {446},
+  pages   = {496--509},
+  doi     = {10.1080/01621459.1999.10474144},
+}
+
+@article{cox1972regression,
+  author  = {Cox, David R.},
+  title   = {Regression Models and Life-Tables},
+  journal = {Journal of the Royal Statistical Society: Series B},
+  year    = {1972},
+  volume  = {34},
+  number  = {2},
+  pages   = {187--202},
+  doi     = {10.1111/j.2517-6161.1972.tb00899.x},
+}
+
+% ── Evaluation metrics ────────────────────────────────────────────────────────
+
+@article{harrell1982cindex,
+  author  = {Harrell, Frank E. and Califf, Robert M. and Pryor, David B. and
+             Lee, Kerry L. and Rosati, Robert A.},
+  title   = {Evaluating the Yield of Medical Tests},
+  journal = {JAMA},
+  year    = {1982},
+  volume  = {247},
+  number  = {18},
+  pages   = {2543--2546},
+  doi     = {10.1001/jama.1982.03320430047030},
+}
+
+@article{graf1999brier,
+  author  = {Graf, Erika and Schmoor, Claudia and Sauerbrei, Willi and
+             Schumacher, Martin},
+  title   = {Assessment and Comparison of Prognostic Classification Schemes
+             for Survival Data},
+  journal = {Statistics in Medicine},
+  year    = {1999},
+  volume  = {18},
+  number  = {17--18},
+  pages   = {2529--2545},
+  doi     = {10.1002/(SICI)1097-0258(19990915/30)18:17/18<2529::AID-SIM274>3.0.CO;2-5},
+}
+
+@article{antolini2005tdauc,
+  author  = {Antolini, Laura and Boracchi, Patrizia and Biganzoli, Elia},
+  title   = {A time-dependent discrimination index for survival data},
+  journal = {Statistics in Medicine},
+  year    = {2005},
+  volume  = {24},
+  number  = {24},
+  pages   = {3927--3944},
+  doi     = {10.1002/sim.2427},
+}
+
+% ── HLA biology and transplantation ──────────────────────────────────────────
+
+@article{stern1994hla,
+  author  = {Stern, Lawrence J. and Wiley, Don C.},
+  title   = {Antigenic peptide binding by class {I} and class {II} histocompatibility
+             proteins},
+  journal = {Structure},
+  year    = {1994},
+  volume  = {2},
+  number  = {4},
+  pages   = {245--251},
+  doi     = {10.1016/S0969-2126(00)00026-5},
+}
+
+@article{petersdorf2013hla,
+  author  = {Petersdorf, Effie W.},
+  title   = {{HLA} Matching in Allogeneic Stem Cell Transplantation},
+  journal = {Current Opinion in Hematology},
+  year    = {2004},
+  volume  = {11},
+  number  = {6},
+  pages   = {386--391},
+  doi     = {10.1097/01.moh.0000143701.88042.d9},
+  % NOTE: this paper is in Curr Opin Haematol, NOT NEJM.
+  % The Petersdorf NEJM paper is petersdorf2015hladp (NEJM 2015;373:599–609).
+}
+
+@article{lee2007hlamismatch,
+  author  = {Lee, Stephanie J. and Klein, John and Haagenson, Michael and
+             Baxter-Lowe, Lee Ann and Confer, Dennis L. and Eapen, Mary and
+             Fernandez-Vina, Marcelo and Flomenberg, Neal and Horowitz, Mary and
+             Hurley, Carolyn K. and Noreen, Harriet and Oudshoorn, Machteld and
+             Petersdorf, Effie and Setterholm, Michelle and Spellman, Stephen and
+             Weisdorf, Daniel and Williams, Theresa L. and Anasetti, Claudio},
+  title   = {High-resolution donor-recipient {HLA} matching contributes to the success
+             of unrelated donor marrow transplantation},
+  journal = {Blood},
+  year    = {2007},
+  volume  = {110},
+  number  = {13},
+  pages   = {4576--4583},
+  doi     = {10.1182/blood-2007-06-097386},
+}
+
+@article{fleischhauer2012hla,
+  author  = {Fleischhauer, Katharina and Shaw, Bronwen E. and Gooley, Ted and
+             Malkki, Mari and Bardy, Peter and Bignon, Jean-Denis and
+             Dubois, Violaine and Horowitz, Mary M. and Madrigal, J. Alejandro and
+             Morishima, Yasuo and Oudshoorn, Machteld and Ringden, Olle and
+             Spellman, Stephen and Velardi, Andrea and Zino, Elisabetta and
+             Petersdorf, Effie W.},
+  title   = {Effect of {T}-Cell-Epitope Matching at {HLA-DPB1} in Recipients of
+             Unrelated-Donor Haemopoietic-Cell Transplantation: A Retrospective Study},
+  journal = {The Lancet Oncology},
+  year    = {2012},
+  volume  = {13},
+  number  = {4},
+  pages   = {366--374},
+  doi     = {10.1016/S1470-2045(12)70004-3},
+}
+
+@article{gratwohl2009risk,
+  author  = {Gratwohl, Alois and Stern, Martin and Brand, Ronald and Apperley, Jane and
+             Baldomero, Helen and de Witte, Theo and Dini, Giorgio and Rocha, Vanderson and
+             Passweg, Jakob and Sureda, Anna and Farge, Dominique and Saccardi, Riccardo and
+             Niederwieser, Dietger},
+  title   = {Risk Score for Outcome after Allogeneic Hematopoietic Stem Cell Transplantation},
+  journal = {Cancer},
+  year    = {2009},
+  volume  = {115},
+  number  = {20},
+  pages   = {4715--4726},
+  doi     = {10.1002/cncr.24531},
+}
+
+@article{appelbaum2001hsct,
+  author  = {Appelbaum, Frederick R.},
+  title   = {Haematopoietic cell transplantation as immunotherapy},
+  journal = {Nature},
+  year    = {2001},
+  volume  = {411},
+  number  = {6835},
+  pages   = {385--389},
+  doi     = {10.1038/35077251},
+}
+
+@article{buhler2016hla,
+  author  = {B{\"u}hler, Silja and Fleischhauer, Katharina},
+  title   = {Still plenty of room for {HLA} mismatching in unrelated hematopoietic
+             stem cell transplantation},
+  journal = {Current Opinion in Immunology},
+  year    = {2016},
+  volume  = {38},
+  pages   = {36--43},
+  doi     = {10.1016/j.coi.2015.11.003},
+}
+
+@article{petersdorf2015hladp,
+  author  = {Petersdorf, Effie W. and Malkki, Mari and O'HUigin, Colm and
+             Carrington, Mary and Gooley, Ted and Haagenson, Michael D. and
+             Spellman, Stephen R. and Wang, Tao and Fleischhauer, Katharina},
+  title   = {High {HLA-DP} Expression and Graft-versus-Host Disease},
+  journal = {New England Journal of Medicine},
+  year    = {2015},
+  volume  = {373},
+  number  = {7},
+  pages   = {599--609},
+  doi     = {10.1056/NEJMoa1500140},
+}
+
+@article{sasazuki1998hla,
+  author  = {Sasazuki, Takehiko and Juji, Takeo and Morishima, Yasuo and
+             Kinukawa, Naoko and Kashiwabara, Hidehiko and Inoko, Hidetoshi and
+             Yoshida, Tatsuya and Kimura, Akinori and Akaza, Tatsuya and
+             Kamikawaji, Nobuhiro and Kodera, Yoshihisa and Takaku, Fumimaro},
+  title   = {Effect of Matching of Class {I} {HLA} Alleles on Clinical Outcome
+             after Transplantation of Hematopoietic Stem Cells from an Unrelated
+             Donor},
+  journal = {New England Journal of Medicine},
+  year    = {1998},
+  volume  = {339},
+  number  = {17},
+  pages   = {1177--1185},
+  doi     = {10.1056/NEJM199810223391701},
+  % Landmark NEJM paper establishing allele-level HLA class I matching in HSCT.
+  % Often cited alongside Lee 2007 Blood for HLA matching evidence.
+}
+
+% ── HLA databases and sequences ──────────────────────────────────────────────
+
+@article{barker2023ipdimgt,
+  author  = {Barker, David J. and Maccari, Giuseppe and Georgiou, Xenia and
+             Cooper, Matthew A. and Flicek, Paul and Robinson, James and
+             Marsh, Steven G. E.},
+  title   = {The {IPD-IMGT/HLA} Database},
+  journal = {Nucleic Acids Research},
+  year    = {2023},
+  volume  = {51},
+  number  = {D1},
+  pages   = {D1053--D1060},
+  doi     = {10.1093/nar/gkac1011},
+}
+
+@article{maiers2007hlafreq,
+  author  = {Maiers, Martin and Gragert, Loren and Klitz, William},
+  title   = {High-resolution {HLA} alleles and haplotypes in the {United States} population},
+  journal = {Human Immunology},
+  year    = {2007},
+  volume  = {68},
+  number  = {9},
+  pages   = {779--788},
+  doi     = {10.1016/j.humimm.2007.04.005},
+}
+
+% ── UCI BMT dataset ───────────────────────────────────────────────────────────
+
+@misc{sikora2010bmt,
+  author       = {Sikora, Marek and Wr{\'o}bel, {\L}ukasz and Gudy{\'s}, Adam},
+  title        = {Bone Marrow Transplant: Children Data Set},
+  year         = {2010},
+  howpublished = {UCI Machine Learning Repository},
+  note         = {\url{https://archive.ics.uci.edu/dataset/565}},
+  doi          = {10.24432/C5RG6P},
+}
+
+@article{sikora2019rulekit,
+  author  = {Gudy{\'s}, Adam and Sikora, Marek and Wr{\'o}bel, {\L}ukasz},
+  title   = {{RuleKit}: A Comprehensive Suite for Rule-Based Learning},
+  journal = {Knowledge-Based Systems},
+  year    = {2020},
+  volume  = {194},
+  pages   = {105480},
+  doi     = {10.1016/j.knosys.2020.105480},
+  % NOTE: published 2020 (not 2019); first author is Gudyś.
+  % Key retained as sikora2019rulekit to avoid breaking existing \cite commands.
+}
+
+@article{sikora2019guider,
+  author  = {Sikora, Marek and Wr{\'o}bel, {\L}ukasz and Gudy{\'s}, Adam},
+  title   = {{GuideR}: A Guided Separate-and-Conquer Rule Learning in
+             Classification, Regression, and Survival Settings},
+  journal = {Knowledge-Based Systems},
+  year    = {2019},
+  volume  = {173},
+  pages   = {1--14},
+  doi     = {10.1016/j.knosys.2019.02.019},
+}
+
+% ── Machine learning methods ─────────────────────────────────────────────────
+
+@article{lundberg2017shap,
+  author  = {Lundberg, Scott M. and Lee, Su-In},
+  title   = {A Unified Approach to Interpreting Model Predictions},
+  journal = {Advances in Neural Information Processing Systems},
+  year    = {2017},
+  volume  = {30},
+}
+
+@article{mcinnes2018umap,
+  author  = {McInnes, Leland and Healy, John and Melville, James},
+  title   = {{UMAP}: Uniform Manifold Approximation and Projection for Dimension Reduction},
+  journal = {arXiv preprint arXiv:1802.03426},
   year    = {2018},
+}
+
+@article{srivastava2014dropout,
+  author  = {Srivastava, Nitish and Hinton, Geoffrey and Krizhevsky, Alex and
+             Sutskever, Ilya and Salakhutdinov, Ruslan},
+  title   = {Dropout: A Simple Way to Prevent Neural Networks from Overfitting},
+  journal = {Journal of Machine Learning Research},
+  year    = {2014},
+  volume  = {15},
+  number  = {1},
+  pages   = {1929--1958},
+}
+
+@article{loshchilov2019adamw,
+  author  = {Loshchilov, Ilya and Hutter, Frank},
+  title   = {Decoupled Weight Decay Regularization},
+  journal = {International Conference on Learning Representations},
+  year    = {2019},
+}
+
+@misc{paszke2019pytorch,
+  author  = {Paszke, Adam and Gross, Sam and Massa, Francisco and Lerer, Adam and
+             Bradbury, James and Chanan, Gregory and Killeen, Trevor and Lin, Zeming and
+             Gimelshein, Natalia and Antiga, Luca and Desmaison, Alban and
+             K{\"o}pf, Andreas and Yang, Edward and DeVito, Zachary and
+             Raison, Martin and Tejani, Alykhan and Chilamkurthy, Sasank and
+             Steiner, Benoit and Fang, Lu and Bai, Junjie and Chintala, Soumith},
+  title   = {{PyTorch}: An Imperative Style, High-Performance Deep Learning Library},
+  year    = {2019},
+  url     = {https://pytorch.org},
+}
+
+@article{davidson2019lifelines,
+  author  = {Davidson-Pilon, Cameron},
+  title   = {lifelines: survival analysis in {Python}},
+  journal = {Journal of Open Source Software},
+  year    = {2019},
+  volume  = {4},
+  number  = {40},
+  pages   = {1317},
+  doi     = {10.21105/joss.01317},
+}
+
+@article{ba2016layernorm,
+  author  = {Ba, Jimmy Lei and Kiros, Jamie Ryan and Hinton, Geoffrey E.},
+  title   = {Layer Normalization},
+  journal = {arXiv preprint arXiv:1607.06450},
+  year    = {2016},
+}
+
+% ── PLACEHOLDER CITATIONS — fill in before submission ────────────────────────
+% Keys used in the introduction; author/journal/DOI to be verified.
+
+@article{passweg2022ebmt,
+  author  = {TODO},
+  title   = {{EBMT} activity survey and changes in transplant practice: TODO year},
+  journal = {Bone Marrow Transplantation},
+  year    = {2022},
+  volume  = {TODO},
+  pages   = {TODO},
+  note    = {PLACEHOLDER — replace with the most recent EBMT annual activity survey (Passweg et al.)},
+}
+
+@article{ferrara2009gvhd,
+  author  = {TODO},
+  title   = {Graft-versus-host disease},
+  journal = {The Lancet},
+  year    = {2009},
+  volume  = {TODO},
+  pages   = {TODO},
+  note    = {PLACEHOLDER — replace with Ferrara et al. 2009 Lancet GvHD review or equivalent},
+}
+
+@article{zeiser2017gvhd,
+  author  = {TODO},
+  title   = {Pathophysiology of Chronic Graft-versus-Host Disease and Therapeutic Targets},
+  journal = {New England Journal of Medicine},
+  year    = {2017},
+  volume  = {TODO},
+  pages   = {TODO},
+  note    = {PLACEHOLDER — replace with Zeiser \& Blazar 2017 NEJM review},
+}
+
+@article{holtan2015gvhd,
+  author  = {TODO},
+  title   = {Acute graft-versus-host disease in clinical practice},
+  journal = {TODO},
+  year    = {2015},
+  volume  = {TODO},
+  pages   = {TODO},
+  note    = {PLACEHOLDER — replace with a key clinical GvHD / competing risks reference
+             (e.g.\ Holtan et al.\ or Scrucca et al.\ on competing risks in HSCT)},
+}
+
+@article{spellman2012permissive,
+  author  = {TODO},
+  title   = {Derivation of new permissive mismatches in unrelated donor transplantation},
+  journal = {TODO},
+  year    = {2012},
+  volume  = {TODO},
+  pages   = {TODO},
+  note    = {PLACEHOLDER — replace with Spellman et al.\ permissive mismatch paper
+             (e.g.\ Spellman 2012 or equivalent NMDP amino-acid matching study)},
+}
+
+@article{dunn2011eplets,
+  author  = {TODO},
+  title   = {{HLAMatchmaker}: a molecularly based algorithm for histocompatibility
+             determination},
+  journal = {TODO},
+  year    = {2011},
+  volume  = {TODO},
+  pages   = {TODO},
+  note    = {PLACEHOLDER — replace with Duquesnoy HLAMatchmaker / eplet mismatch paper},
+}
+
+@article{meier2021esm1v,
+  author  = {Meier, Joshua and Rao, Roshan and Verkuil, Robert and Liu, Jason and
+             Sercu, Tom and Rives, Alexander},
+  title   = {Language models enable zero-shot prediction of the effects of mutations
+             on protein function},
+  journal = {Advances in Neural Information Processing Systems},
+  year    = {2021},
+  volume  = {34},
+  note    = {PLACEHOLDER — verify volume/page numbers; arXiv:2106.07036},
+}
+
+@article{logan2020ml_hsct,
+  author  = {TODO},
+  title   = {Machine learning for prediction of outcomes after allogeneic stem
+             cell transplantation},
+  journal = {TODO},
+  year    = {2020},
+  volume  = {TODO},
+  pages   = {TODO},
+  note    = {PLACEHOLDER — replace with a representative ML-for-HSCT paper
+             (e.g.\ Logan et al.\ or Shouval et al.\ 2015 Blood)},
+}
+
+@article{dehn2015ml_hsct,
+  author  = {TODO},
+  title   = {Donor selection for allogeneic hematopoietic cell transplantation},
+  journal = {TODO},
+  year    = {2015},
+  volume  = {TODO},
+  pages   = {TODO},
+  note    = {PLACEHOLDER — replace with Dehn et al.\ or another key paper on
+             computational donor selection / HLA-based risk models},
 }

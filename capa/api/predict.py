@@ -21,9 +21,11 @@ On startup the app attempts to:
 2. Load the embedding cache from the path in ``CAPAConfig``.
 3. Instantiate :class:`~capa.model.capa_model.CAPAModel` and restore weights.
 
-If no checkpoint is found the server starts in **mock mode**: it returns
-Weibull-sampled synthetic CIF curves so the frontend remains usable without
-a trained model.  A ``model_version`` of ``"mock"`` signals this state.
+If no checkpoint is found, or if the checkpoint file is empty / corrupt,
+the server starts anyway but ``/predict`` returns **HTTP 503** with
+``{"detail": "Model not yet trained. Run scripts/train.py first."}``.
+``/health`` always returns HTTP 200 regardless of model state — check the
+``"ready"`` and ``"startup_error"`` fields to distinguish the cases.
 
 Environment variables
 ---------------------
@@ -38,7 +40,6 @@ CAPA_EMBED__DEVICE
 from __future__ import annotations
 
 import logging
-import math
 import os
 import time
 from contextlib import asynccontextmanager
@@ -52,7 +53,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from capa.api.schemas import (
-    ClinicalCovariates,
     EventRisk,
     HLATyping,
     PredictionRequest,
@@ -67,9 +67,15 @@ logger = logging.getLogger(__name__)
 # Module-level singletons populated during lifespan startup
 # ---------------------------------------------------------------------------
 _model: CAPAModel | None = None
-_model_version: str = "mock"
+_model_version: str = "untrained"
 _startup_ts: float = 0.0
 _device: torch.device = torch.device("cpu")
+
+# Set to a human-readable string when the model cannot be loaded.
+# None means the model loaded successfully.
+# "no_checkpoint" means the file was missing (untrained state).
+# Any other string is an unexpected load error.
+_startup_error: str | None = "no_checkpoint"
 
 _LOCI: list[str] = ["A", "B", "C", "DRB1", "DQB1"]
 _TIME_BINS: int = 100
@@ -199,7 +205,7 @@ def _model_response(req: PredictionRequest) -> PredictionResponse:
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    global _model, _model_version, _startup_ts, _device
+    global _model, _model_version, _startup_ts, _device, _startup_error
 
     _startup_ts = time.monotonic()
     cfg = get_config()
@@ -222,13 +228,17 @@ async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     if not ckpt_path.is_file():
         logger.warning(
-            "No checkpoint found at %s — running in mock mode. "
-            "Set CAPA_CHECKPOINT env var to point at a real model.pt.",
+            "No checkpoint found at %s. "
+            "Run scripts/train.py to train the model, or set CAPA_CHECKPOINT "
+            "to point at an existing model.pt. "
+            "The server will start but /predict will return 503 until trained.",
             ckpt_path,
         )
+        # _startup_error stays "no_checkpoint" (its initial value)
         yield
         return
 
+    # File exists — attempt to load it
     try:
         logger.info("Loading CAPA checkpoint from %s", ckpt_path)
         state = torch.load(ckpt_path, map_location=_device, weights_only=False)
@@ -270,6 +280,7 @@ async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             except Exception as exc:  # noqa: BLE001
                 logger.warning("Could not load embedding cache: %s", exc)
 
+        _startup_error = None  # model loaded successfully
         elapsed = time.monotonic() - _startup_ts
         logger.info(
             "CAPA model %s loaded in %.1f s (%s parameters)",
@@ -278,8 +289,16 @@ async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             f"{sum(p.numel() for p in _model.parameters()):,}",
         )
     except Exception as exc:
-        logger.error("Failed to load checkpoint — falling back to mock mode: %s", exc)
+        # Checkpoint file exists but is empty, corrupt, or has wrong architecture.
+        # Do NOT crash — the server stays up so /health and monitoring still work.
         _model = None
+        _startup_error = f"load_failed: {exc}"
+        logger.error(
+            "Failed to load checkpoint %s — /predict will return 503 until "
+            "a valid checkpoint is available. Error: %s",
+            ckpt_path,
+            exc,
+        )
 
     yield
 
@@ -333,16 +352,22 @@ async def _global_handler(request: Request, exc: Exception) -> JSONResponse:
 
 
 @app.get("/health", summary="Liveness + readiness probe")
-async def health() -> dict[str, str | bool | float]:
+async def health() -> dict[str, str | bool | float | None]:
     """Return server status, model version, and uptime.
 
-    A ``200`` response with ``"ready": true`` means the model is loaded.
-    ``"ready": false`` indicates mock mode (no checkpoint found).
+    Always returns HTTP 200 so container orchestrators and load-balancers
+    treat the process as alive.  Callers should inspect ``"ready"`` to
+    determine whether predictions are available:
+
+    * ``"ready": true``  — model loaded, ``/predict`` is fully operational.
+    * ``"ready": false`` — model not loaded; ``/predict`` will return 503.
+      Check ``"startup_error"`` for the reason.
     """
     return {
         "status": "ok",
         "model_version": _model_version,
         "ready": _model is not None,
+        "startup_error": _startup_error,
         "uptime_seconds": round(time.monotonic() - _startup_ts, 1) if _startup_ts else 0.0,
         "device": str(_device),
     }
@@ -389,9 +414,11 @@ async def predict(request: PredictionRequest) -> PredictionResponse:
         )
 
     if _model is None:
-        # Mock mode — still useful for frontend development
-        logger.debug("Mock mode: returning synthetic response")
-        return _mock_response(request)
+        # Model not ready — surface a clear 503 so the caller knows to train first.
+        raise HTTPException(
+            status_code=503,
+            detail="Model not yet trained. Run scripts/train.py first.",
+        )
 
     try:
         return _model_response(request)
