@@ -27,7 +27,7 @@ export default function AboutPage() {
   return (
     <div className="bg-white">
       {/* ── Hero ─────────────────────────────────────────────────────── */}
-      <section className="hero-bg relative overflow-hidden py-24">
+      <section className="relative overflow-hidden py-24 bg-white border-b border-border">
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0"
@@ -37,14 +37,14 @@ export default function AboutPage() {
           }}
         />
         <div className="container relative max-w-7xl px-6 text-center">
-          <Badge className="mb-6 border-white/15 bg-white/8 text-white/70">
+          <Badge className="mb-6" variant="blush">
             About the Project
           </Badge>
-          <h1 className="mx-auto max-w-3xl text-4xl font-bold text-white sm:text-5xl">
+          <h1 className="mx-auto max-w-3xl text-4xl font-bold text-foreground sm:text-5xl">
             Rethinking HLA compatibility with{" "}
             <span className="gradient-text">protein language models</span>
           </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-lg text-white/60 leading-relaxed">
+          <p className="mx-auto mt-6 max-w-2xl text-lg text-black/55 leading-relaxed">
             CAPA replaces the coarse categorical HLA match/mismatch score with
             continuous, biologically meaningful distances derived from ESM-2 —
             a 650 M-parameter protein language model.
@@ -165,6 +165,25 @@ export default function AboutPage() {
               </ul>
             </CardContent>
           </Card>
+        </div>
+      </section>
+
+      {/* ── Contributors ──────────────────────────────────────────────── */}
+      <section className="py-20 border-t border-border">
+        <div className="container max-w-7xl px-6">
+          <div className="mb-8">
+            <Badge variant="blush" className="mb-4">Contributors</Badge>
+            <h2 className="text-2xl font-bold text-navy">People</h2>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blush-100 text-blush-600 font-bold text-lg select-none">
+              H
+            </div>
+            <div>
+              <p className="font-semibold text-foreground">Huanxuan Li (Shawn)</p>
+              <p className="text-sm text-muted-foreground">Lead developer · Architecture, training pipeline, web interface</p>
+            </div>
+          </div>
         </div>
       </section>
 

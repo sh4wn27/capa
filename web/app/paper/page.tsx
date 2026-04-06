@@ -18,7 +18,7 @@ export default function PaperPage() {
   return (
     <div className="bg-white min-h-screen">
       {/* Header */}
-      <section className="hero-bg relative overflow-hidden py-20">
+      <section className="relative overflow-hidden py-20 bg-white border-b border-border">
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0"
@@ -28,16 +28,16 @@ export default function PaperPage() {
           }}
         />
         <div className="container relative max-w-7xl px-6 text-center">
-          <Badge className="mb-6 border-white/15 bg-white/8 text-white/70">
+          <Badge className="mb-6" variant="blush">
             Manuscript
           </Badge>
-          <h1 className="mx-auto max-w-3xl text-4xl font-bold text-white sm:text-5xl leading-tight">
+          <h1 className="mx-auto max-w-3xl text-4xl font-bold text-foreground sm:text-5xl leading-tight">
             Structure-aware HLA mismatch{" "}
             <span className="gradient-text">representations</span>{" "}
             for post-transplant outcome prediction
           </h1>
-          <p className="mx-auto mt-5 max-w-xl text-white/55">
-            CAPA Contributors · 2025 · Preprint
+          <p className="mx-auto mt-5 max-w-xl text-black/50">
+            Huanxuan Li (Shawn) · 2025 · Preprint
           </p>
           <div className="mt-8 flex justify-center gap-4">
             <Button variant="blush" size="lg" disabled>
@@ -47,8 +47,8 @@ export default function PaperPage() {
             <Button
               asChild
               size="lg"
-              className="border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white"
               variant="outline"
+              className="border-black/15 text-foreground hover:bg-black/5"
             >
               <a
                 href="https://github.com/capa-project/capa"
@@ -129,7 +129,7 @@ export default function PaperPage() {
 {`@article{capa2025,
   title   = {Structure-aware HLA mismatch representations
              for post-transplant outcome prediction},
-  author  = {CAPA Contributors},
+  author  = {Li, Huanxuan},
   year    = {2025},
   note    = {Preprint},
   url     = {https://github.com/capa-project/capa}

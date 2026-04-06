@@ -168,10 +168,10 @@ the cross-attention layers.  Trained with identical hyperparameters to CAPA.
 \section{Supplementary Tables}
 
 \begin{table}[htbp]
-  \caption{Dataset characteristics.  Continuous variables: median (IQR).
-    Categorical variables: $n$ (\%).
-    Censoring: administrative censoring at day 730 or last follow-up,
-    whichever first.}
+  \caption{Cohort characteristics of the UCI Bone Marrow Transplant: Children
+    dataset ($n=187$).  Continuous variables: median (IQR).  Categorical
+    variables: $n$ (\%).  All values are derived directly from the raw ARFF
+    file; no imputation has been applied to this summary.}
   \label{tab:cohort}
   \centering
   \begin{tabular}{lc}
@@ -179,70 +179,69 @@ the cross-attention layers.  Trained with identical hyperparameters to CAPA.
     \textbf{Characteristic} & \textbf{Value} \\
     \midrule
     Total patients & 187 \\
-    Recipient age (years) & 9.2 (5.0--14.3) \\
-    Donor age (years) & 33.6 (25.4--42.1) \\
-    Female recipient & 78 (41.7\,\%) \\
+    Recipient age (years) & 9.6 (5.0--14.0) \\
+    Donor age (years) & 33.6 (27.0--40.1) \\
+    Female recipient & 75 (40.1\,\%) \\
     \addlinespace
     \multicolumn{2}{l}{\textit{Disease category}} \\
-    \quad ALL & 71 (38.0\,\%) \\
-    \quad AML & 42 (22.5\,\%) \\
-    \quad CML & 28 (15.0\,\%) \\
-    \quad Other & 46 (24.6\,\%) \\
-    \addlinespace
-    \multicolumn{2}{l}{\textit{Conditioning regimen}} \\
-    \quad Myeloablative (MAC) & 138 (73.8\,\%) \\
-    \quad Reduced intensity (RIC) & 49 (26.2\,\%) \\
-    \addlinespace
-    \multicolumn{2}{l}{\textit{Donor type}} \\
-    \quad Matched sibling donor (MSD) & 83 (44.4\,\%) \\
-    \quad Matched unrelated donor (MUD) & 68 (36.4\,\%) \\
-    \quad Mismatched / other & 36 (19.3\,\%) \\
+    \quad ALL & 68 (36.4\,\%) \\
+    \quad Chronic (CML/MDS) & 45 (24.1\,\%) \\
+    \quad AML & 33 (17.6\,\%) \\
+    \quad Non-malignant & 32 (17.1\,\%) \\
+    \quad Lymphoma & 9 (4.8\,\%) \\
     \addlinespace
     \multicolumn{2}{l}{\textit{Graft source}} \\
-    \quad Bone marrow & 102 (54.5\,\%) \\
-    \quad Peripheral blood stem cells & 75 (40.1\,\%) \\
-    \quad Cord blood & 10 (5.3\,\%) \\
+    \quad Peripheral blood stem cells & 145 (77.5\,\%) \\
+    \quad Bone marrow & 42 (22.5\,\%) \\
     \addlinespace
-    \multicolumn{2}{l}{\textit{HLA mismatch count}} \\
-    \quad 0/10 (fully matched) & 104 (55.6\,\%) \\
-    \quad 1/10 & 47 (25.1\,\%) \\
-    \quad $\geq 2/10$ & 36 (19.3\,\%) \\
+    \multicolumn{2}{l}{\textit{HLA mismatch (loci matched out of 10)}} \\
+    \quad 10/10 (0 mismatches) & 94 (50.3\,\%) \\
+    \quad 9/10 (1 mismatch) & 65 (34.8\,\%) \\
+    \quad 8/10 (2 mismatches) & 23 (12.3\,\%) \\
+    \quad 7/10 (3 mismatches) & 5 (2.7\,\%) \\
     \addlinespace
-    \multicolumn{2}{l}{\textit{Outcomes}} \\
-    \quad Acute GvHD (grade II--IV) & 62 (33.2\,\%) \\
-    \quad Relapse & 41 (21.9\,\%) \\
-    \quad TRM & 35 (18.7\,\%) \\
-    \quad Censored & 49 (26.2\,\%) \\
-    \quad Follow-up, median days & 524 (341--730) \\
+    CD34$^+$ dose ($\times 10^6$/kg) & 9.7 (5.4--15.4) \\
+    High-risk disease & 69 (36.9\,\%) \\
+    Malignant disease & 155 (82.9\,\%) \\
+    \addlinespace
+    \multicolumn{2}{l}{\textit{Outcomes (competing-risk encoding)}} \\
+    \quad Acute GvHD grade III--IV (alive, no relapse) & 16 (8.6\,\%) \\
+    \quad Relapse & 28 (15.0\,\%) \\
+    \quad TRM (dead without relapse) & 62 (33.2\,\%) \\
+    \quad Censored / alive & 81 (43.3\,\%) \\
+    \quad Follow-up, median days & 676 (168--1604) \\
     \bottomrule
   \end{tabular}
 \end{table}
 
 \begin{table}[htbp]
-  \caption{Integrated Brier Score (IBS) at day 365 (95\,\% bootstrap CI,
-    1\,000 resamples) for all models.  Lower is better.  Bold: best result
-    per column.}
+  \caption{Integrated Brier Score (IBS) integrated over 6-month, 12-month, and
+    18-month evaluation times (95\,\% bootstrap CI, 1\,000 resamples) for all
+    models on the held-out test set ($n=29$).  Lower is better.
+    Bold: best result per column.
+    GvHD IBS is near zero for all models due to the rarity of events (8.6\,\%
+    of the cohort) and is not a meaningful discriminator.
+    All models use aggregate HLA mismatch features; per-allele ESM-2 embeddings
+    require registry-scale data.}
   \label{tab:ibs}
   \centering
   \begin{tabular}{lccc}
     \toprule
     \textbf{Model} & \textbf{GvHD} & \textbf{Relapse} & \textbf{TRM} \\
     \midrule
-    Cox (cause-specific)   & 0.219 (0.189--0.249) & 0.165 (0.140--0.190) & 0.148 (0.124--0.172) \\
-    Fine--Gray             & 0.214 (0.185--0.244) & 0.163 (0.138--0.188) & 0.145 (0.121--0.170) \\
-    Random Survival Forest & 0.208 (0.179--0.238) & 0.157 (0.132--0.181) & 0.141 (0.117--0.165) \\
-    DeepHit (one-hot HLA)  & 0.206 (0.177--0.236) & 0.156 (0.131--0.181) & 0.139 (0.115--0.163) \\
-    \textbf{CAPA (ESM-2)}  & \textbf{0.193} (0.164--0.222)
-                           & \textbf{0.148} (0.124--0.172)
-                           & \textbf{0.131} (0.107--0.155) \\
+    Cox (cause-specific)        & 0.000 (0.000--0.000) & 0.114 (0.011--0.245) & 0.202 (0.127--0.286) \\
+    \textbf{Fine--Gray}         & 0.000 (0.000--0.000) & \textbf{0.110} (0.016--0.232) & \textbf{0.202} (0.132--0.279) \\
+    DeepHit (tabular HLA)       & 0.000 (0.000--0.000) & 0.113 (0.007--0.239) & 0.336 (0.231--0.434) \\
     \bottomrule
   \end{tabular}
 \end{table}
 
 \begin{table}[htbp]
-  \caption{Model parameters and computational cost.  Inference time measured
-    on a single NVIDIA T4 GPU with a batch size of 1.  Embedding time assumes
-    a pre-computed HDF5 cache.}
+  \caption{CAPA model parameters and estimated computational cost (architectural
+    design values).  Inference times estimated for a single NVIDIA T4 GPU with
+    batch size of 1, based on component complexity.  These values characterise
+    the architecture and have not been benchmarked on the UCI BMT cohort, which
+    does not contain the allele-level data required to run the ESM-2 pipeline.}
   \label{tab:compute}
   \centering
   \begin{tabular}{lrr}
