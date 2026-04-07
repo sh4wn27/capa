@@ -22,9 +22,6 @@ export default function Navbar() {
       <div className="container flex h-16 max-w-7xl items-center justify-between px-6">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-navy text-white font-bold text-sm group-hover:bg-navy-700 transition-colors">
-            C
-          </div>
           <span className="font-semibold text-navy text-lg tracking-tight">
             CAPA
           </span>

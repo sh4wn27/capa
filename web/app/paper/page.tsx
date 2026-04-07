@@ -39,9 +39,11 @@ export default function PaperPage() {
             Huanxuan Li (Shawn) · 2025 · Preprint
           </p>
           <div className="mt-8 flex justify-center gap-4">
-            <Button variant="blush" size="lg" disabled>
-              <FileText className="h-4 w-4" />
-              PDF (coming soon)
+            <Button asChild variant="blush" size="lg">
+              <a href="/capa_manuscript.pdf" target="_blank" rel="noopener noreferrer">
+                <FileText className="h-4 w-4" />
+                Read PDF
+              </a>
             </Button>
             <Button
               asChild
