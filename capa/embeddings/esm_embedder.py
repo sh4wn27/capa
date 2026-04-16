@@ -211,6 +211,147 @@ class ESMEmbedder:
     # Internal helpers
     # ------------------------------------------------------------------
 
+    # ------------------------------------------------------------------
+    # Fine-tuning helpers (V2)
+    # ------------------------------------------------------------------
+
+    def unfreeze_last_n_layers(self, n: int) -> int:
+        """Unfreeze the last *n* transformer layers of the ESM-2 model.
+
+        All other parameters remain frozen.  Call this *after* the model has
+        been loaded (i.e. after the first :meth:`embed` call, or after calling
+        :meth:`_load` directly).
+
+        Parameters
+        ----------
+        n : int
+            Number of transformer layers to unfreeze counting from the output
+            end (e.g. ``n=2`` unfreezes layers 31 and 32 of ESM-2-650M).
+            ``n=0`` is a no-op — all layers stay frozen.
+
+        Returns
+        -------
+        int
+            Number of parameters made trainable.
+
+        Raises
+        ------
+        RuntimeError
+            If the model has not been loaded yet.
+        """
+        if self._model is None:
+            raise RuntimeError(
+                "Call embed() or _load() before unfreeze_last_n_layers()."
+            )
+        if n <= 0:
+            return 0
+
+        # First freeze everything
+        for p in self._model.parameters():  # type: ignore[union-attr]
+            p.requires_grad_(False)
+
+        # Unfreeze the last n encoder layers.
+        # ESM-2 / ESM transformers store layers in model.encoder.layer
+        encoder = getattr(self._model, "encoder", None)
+        layers = getattr(encoder, "layer", None) if encoder is not None else None
+        if layers is None:
+            logger.warning(
+                "Could not locate encoder.layer in %s — "
+                "unfreezing last %d named modules instead.",
+                self._model_name, n,
+            )
+            # Fall back: unfreeze the last n named modules that have params
+            named = [(name, mod) for name, mod in  # type: ignore[union-attr]
+                     self._model.named_modules()  # type: ignore[union-attr]
+                     if list(mod.parameters(recurse=False))]
+            for _, mod in named[-n:]:
+                for p in mod.parameters(recurse=False):
+                    p.requires_grad_(True)
+        else:
+            for layer in layers[-n:]:
+                for p in layer.parameters():
+                    p.requires_grad_(True)
+
+        n_trainable = sum(
+            p.numel() for p in self._model.parameters()  # type: ignore[union-attr]
+            if p.requires_grad
+        )
+        logger.info(
+            "ESM-2 fine-tune: unfroze last %d layer(s) → %d trainable params",
+            n, n_trainable,
+        )
+        return n_trainable
+
+    def get_finetune_parameters(self) -> list[torch.nn.Parameter]:
+        """Return the list of currently trainable ESM-2 parameters.
+
+        Returns
+        -------
+        list[torch.nn.Parameter]
+            Parameters with ``requires_grad=True``.  Empty if the model is
+            fully frozen or not yet loaded.
+        """
+        if self._model is None:
+            return []
+        return [
+            p for p in self._model.parameters()  # type: ignore[union-attr]
+            if p.requires_grad
+        ]
+
+    def set_train_mode(self, *, train: bool = True) -> None:
+        """Switch the ESM-2 model between train and eval mode.
+
+        Parameters
+        ----------
+        train : bool
+            ``True`` → ``model.train()``, ``False`` → ``model.eval()``.
+        """
+        if self._model is not None:
+            if train:
+                self._model.train()  # type: ignore[union-attr]
+            else:
+                self._model.eval()  # type: ignore[union-attr]
+
+    def embed_with_grad(
+        self,
+        sequences: list[str],
+    ) -> torch.Tensor:
+        """Embed sequences with gradient tracking enabled (for fine-tuning).
+
+        Unlike :meth:`embed`, this method does *not* disable gradients, so
+        the returned tensor participates in the autograd graph.  Only the
+        unfrozen layers contribute gradients; frozen layers are treated as
+        constants by autograd.
+
+        Parameters
+        ----------
+        sequences : list[str]
+            Amino acid sequences.
+
+        Returns
+        -------
+        torch.Tensor
+            Tensor of shape ``(len(sequences), EMBEDDING_DIM)``.
+        """
+        if not sequences:
+            raise ValueError("sequences must be non-empty")
+        self._load()
+
+        inputs = self._tokenizer(  # type: ignore[call-arg, operator]
+            sequences,
+            return_tensors="pt",
+            padding=True,
+            truncation=True,
+            max_length=self._max_length,
+        )
+        inputs = {k: v.to(self._device) for k, v in inputs.items()}
+        outputs = self._model(**inputs)  # type: ignore[operator]
+
+        mask = inputs["attention_mask"].unsqueeze(-1).float()  # (B, L, 1)
+        hidden = outputs.last_hidden_state * mask
+        pooled = hidden.sum(dim=1) / mask.sum(dim=1).clamp(min=1e-9)
+        return pooled  # (B, D) — gradients flow through here
+
     def _load(self) -> None:
         """Lazy-load the ESM-2 model and tokenizer on first use.
 

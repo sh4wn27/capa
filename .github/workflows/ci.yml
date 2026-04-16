@@ -7,6 +7,7 @@ on:
     branches: [main]
 
 jobs:
+  # ── Python: lint ────────────────────────────────────────────────────────────
   lint:
     name: Lint & format check
     runs-on: ubuntu-latest
@@ -30,6 +31,7 @@ jobs:
       - name: ruff format check
         run: uv run ruff format --check .
 
+  # ── Python: type-check ──────────────────────────────────────────────────────
   type-check:
     name: Type check
     runs-on: ubuntu-latest
@@ -50,6 +52,7 @@ jobs:
       - name: mypy
         run: uv run mypy capa/
 
+  # ── Python: tests ───────────────────────────────────────────────────────────
   test:
     name: Tests (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
@@ -78,3 +81,53 @@ jobs:
         with:
           files: coverage.xml
           fail_ci_if_error: false
+
+  # ── Python: FastAPI smoke test ──────────────────────────────────────────────
+  api-smoke:
+    name: FastAPI endpoint smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        run: uv python install 3.11
+
+      - name: Install dependencies
+        run: uv sync --extra dev
+
+      - name: Install httpx (ASGI test client)
+        run: uv add --dev httpx
+
+      - name: Run API smoke tests
+        run: uv run pytest tests/test_api_endpoints.py -v
+
+  # ── Web: build check ────────────────────────────────────────────────────────
+  web-build:
+    name: Next.js build check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+        env:
+          # Prevent the build from failing due to missing backend URL
+          CAPA_BACKEND_URL: "http://localhost:8000"

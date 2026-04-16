@@ -288,6 +288,22 @@ def main() -> None:
     logger.info("Model: %d parameters  survival=%s", n_params, args.survival_type)
 
     # ── Trainer ───────────────────────────────────────────────────────
+    # ── ESM-2 fine-tuning (optional) ──────────────────────────────────
+    esm_params = None
+    if cfg.model.esm_finetune_layers > 0:
+        from capa.embeddings.esm_embedder import ESMEmbedder
+        esm = ESMEmbedder(
+            model_name=cfg.embedding.esm_model_name,
+            device=args.device,
+        )
+        esm._load()
+        n_unfrozen = esm.unfreeze_last_n_layers(cfg.model.esm_finetune_layers)
+        esm_params = esm.get_finetune_parameters()
+        logger.info(
+            "ESM-2 partial fine-tune: last %d layers, %d trainable params",
+            cfg.model.esm_finetune_layers, n_unfrozen,
+        )
+
     from capa.training.trainer import Trainer
     trainer = Trainer(
         model=model,
@@ -299,6 +315,7 @@ def main() -> None:
         patience=patience,
         lr_patience=cfg.training.lr_patience,
         lr_factor=cfg.training.lr_factor,
+        esm_params=esm_params,
         alpha=alpha,
         sigma=sigma,
         max_grad_norm=cfg.training.max_grad_norm,

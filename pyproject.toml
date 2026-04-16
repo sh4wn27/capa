@@ -152,3 +152,8 @@ omit = ["tests/*", "scripts/*"]
 [tool.coverage.report]
 show_missing = true
 skip_covered = false
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+]

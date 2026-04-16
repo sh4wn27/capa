@@ -53,6 +53,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from capa.api.schemas import (
+    ComparisonRequest,
+    ComparisonResponse,
+    DonorRiskSummary,
     EventRisk,
     HLATyping,
     PredictionRequest,
@@ -470,3 +473,61 @@ async def predict(request: PredictionRequest) -> PredictionResponse:
     except Exception as exc:
         logger.exception("Model inference failed")
         raise HTTPException(status_code=500, detail=f"Inference failed: {exc}") from exc
+
+
+@app.post(
+    "/compare",
+    response_model=ComparisonResponse,
+    summary="Rank multiple candidate donors for one recipient",
+)
+async def compare(request: ComparisonRequest) -> ComparisonResponse:
+    """Predict outcomes for every candidate donor and return a ranked list.
+
+    Parameters
+    ----------
+    request : ComparisonRequest
+        Recipient HLA typing, list of 2–20 donor entries, and optional
+        shared clinical covariates.
+
+    Returns
+    -------
+    ComparisonResponse
+        Ranked donor list (best match first), with full CIF curves per donor.
+    """
+    summaries: list[DonorRiskSummary] = []
+
+    for i, entry in enumerate(request.donors):
+        label = entry.label or f"Donor {i + 1}"
+        pred_req = PredictionRequest(
+            donor_hla=entry.donor_hla,
+            recipient_hla=request.recipient_hla,
+            clinical=request.clinical,
+        )
+        if _model is not None:
+            pred = _model_response(pred_req)
+        else:
+            pred = _mock_response(pred_req)
+
+        summaries.append(
+            DonorRiskSummary(
+                label=label,
+                gvhd_risk=pred.gvhd.risk_score,
+                relapse_risk=pred.relapse.risk_score,
+                trm_risk=pred.trm.risk_score,
+                mismatch_count=pred.mismatch_count,
+                rank=0,  # filled in after sorting
+                full_prediction=pred,
+            )
+        )
+
+    # Rank by composite acute-risk score: GvHD + TRM (lower is better)
+    summaries.sort(key=lambda s: s.gvhd_risk + s.trm_risk)
+    for rank, s in enumerate(summaries, start=1):
+        # rank is set after construction; use model_copy for pydantic v2
+        summaries[rank - 1] = s.model_copy(update={"rank": rank})
+
+    return ComparisonResponse(
+        donors=summaries,
+        best_donor_label=summaries[0].label,
+        model_version=_model_version,
+    )

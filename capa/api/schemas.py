@@ -110,3 +110,85 @@ class PredictionResponse(BaseModel):
         default=None,
         description="Checkpoint identifier, e.g. 'v0.1.0' or a git SHA.",
     )
+
+
+class DonorEntry(BaseModel):
+    """One donor in a multi-donor comparison request.
+
+    Attributes
+    ----------
+    label : str | None
+        Human-readable identifier shown in the comparison table (e.g. donor
+        registry ID or a pseudonym).  Defaults to ``"Donor N"`` when omitted.
+    donor_hla : HLATyping
+        HLA typing for this donor.
+    """
+
+    label: str | None = Field(default=None, examples=["Donor A"])
+    donor_hla: HLATyping
+
+
+class ComparisonRequest(BaseModel):
+    """Request payload for the multi-donor comparison endpoint.
+
+    Attributes
+    ----------
+    recipient_hla : HLATyping
+        Recipient HLA typing (shared across all donors).
+    donors : list[DonorEntry]
+        List of candidate donors to compare.  Length must be 2–20.
+    clinical : ClinicalCovariates
+        Recipient clinical covariates (shared across all donors).
+    """
+
+    recipient_hla: HLATyping
+    donors: list[DonorEntry] = Field(min_length=2, max_length=20)
+    clinical: ClinicalCovariates = Field(default_factory=ClinicalCovariates)
+
+
+class DonorRiskSummary(BaseModel):
+    """Per-donor risk summary within a comparison response.
+
+    Attributes
+    ----------
+    label : str
+        Donor label from the request (or auto-assigned ``"Donor N"``).
+    gvhd_risk : float
+        GvHD cumulative incidence at the final time bin.
+    relapse_risk : float
+        Relapse cumulative incidence at the final time bin.
+    trm_risk : float
+        TRM cumulative incidence at the final time bin.
+    mismatch_count : int | None
+        Number of mismatched HLA loci.
+    rank : int
+        1-based rank by ascending composite risk (gvhd + trm, lower is better).
+    full_prediction : PredictionResponse
+        Full CIF curves for this donor.
+    """
+
+    label: str
+    gvhd_risk: float = Field(ge=0.0, le=1.0)
+    relapse_risk: float = Field(ge=0.0, le=1.0)
+    trm_risk: float = Field(ge=0.0, le=1.0)
+    mismatch_count: int | None
+    rank: int
+    full_prediction: PredictionResponse
+
+
+class ComparisonResponse(BaseModel):
+    """Response payload for the multi-donor comparison endpoint.
+
+    Attributes
+    ----------
+    donors : list[DonorRiskSummary]
+        Per-donor results, sorted by ascending rank (best match first).
+    best_donor_label : str
+        Label of the top-ranked donor.
+    model_version : str | None
+        Checkpoint version string.
+    """
+
+    donors: list[DonorRiskSummary]
+    best_donor_label: str
+    model_version: str | None = None

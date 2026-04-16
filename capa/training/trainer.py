@@ -115,6 +115,13 @@ class Trainer:
         DeepHit ranking loss bandwidth.
     max_grad_norm : float
         Gradient-clipping max norm.
+    esm_params : list[torch.nn.Parameter] | None
+        If provided, these parameters are added as a second AdamW parameter
+        group with learning rate ``esm_lr_scale × learning_rate``.  Used for
+        ESM-2 partial fine-tuning (V2: ``esm_finetune_layers > 0``).
+    esm_lr_scale : float
+        Learning rate multiplier for the ESM-2 fine-tune parameter group.
+        Default is 0.01 (i.e. LR is 100× smaller than the main network).
     runs_dir : Path
         Directory to write checkpoints and the JSON log file.
     checkpoint_every : int
@@ -140,6 +147,8 @@ class Trainer:
         patience: int = 20,
         lr_patience: int = 10,
         lr_factor: float = 0.5,
+        esm_params: list[nn.Parameter] | None = None,
+        esm_lr_scale: float = 0.01,
         alpha: float = 0.5,
         sigma: float = 0.1,
         max_grad_norm: float = 1.0,
@@ -163,9 +172,22 @@ class Trainer:
         self.survival_type = survival_type
         self.device = torch.device(device)
 
+        param_groups: list[dict[str, object]] = [
+            {"params": list(model.parameters()), "lr": learning_rate},
+        ]
+        if esm_params:
+            param_groups.append({
+                "params": esm_params,
+                "lr": learning_rate * esm_lr_scale,
+                "name": "esm_finetune",
+            })
+            logger.info(
+                "ESM-2 fine-tune param group: %d params at lr=%.2e",
+                sum(p.numel() for p in esm_params),  # type: ignore[union-attr]
+                learning_rate * esm_lr_scale,
+            )
         self.optimizer = AdamW(
-            model.parameters(),
-            lr=learning_rate,
+            param_groups,
             weight_decay=weight_decay,
         )
         # Paper: "LR decayed by 0.5 when val loss did not improve for 10 epochs"
