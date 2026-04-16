@@ -26,13 +26,13 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     """Entry point."""
-    parse_args()
+    args = parse_args()
 
     from capa.config import get_config
     from capa.data.loader import load_bmt
     from capa.data.splits import make_splits
 
-    cfg = get_config()
+    cfg = get_config(config_file=args.config)
 
     if not cfg.data.bmt_path.exists():
         logger.error(

@@ -38,6 +38,54 @@ export interface PredictionResponse {
   model_version?: string;
 }
 
+// ── Multi-donor comparison ────────────────────────────────────────────────────
+
+export interface DonorEntry {
+  label?: string;
+  donor_hla: HLATyping;
+}
+
+export interface ComparisonRequest {
+  recipient_hla: HLATyping;
+  donors: DonorEntry[];
+  clinical?: ClinicalCovariates;
+}
+
+export interface DonorRiskSummary {
+  label: string;
+  gvhd_risk: number;
+  relapse_risk: number;
+  trm_risk: number;
+  mismatch_count?: number;
+  rank: number;
+  full_prediction: PredictionResponse;
+}
+
+export interface ComparisonResponse {
+  donors: DonorRiskSummary[];
+  best_donor_label: string;
+  model_version?: string;
+}
+
+export async function comparedonors(
+  request: ComparisonRequest
+): Promise<ComparisonResponse> {
+  const response = await fetch("/api/compare", {
+    method:  "POST",
+    headers: { "Content-Type": "application/json" },
+    body:    JSON.stringify(request),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Comparison failed (${response.status}): ${text}`);
+  }
+
+  return response.json() as Promise<ComparisonResponse>;
+}
+
+// ── Single-patient prediction ─────────────────────────────────────────────────
+
 export async function predictRisk(
   request: PredictionRequest
 ): Promise<PredictionResponse> {
