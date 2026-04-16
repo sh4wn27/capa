@@ -692,3 +692,100 @@ class TestEmbeddingCacheOriginal:
     def test_contains_false_when_file_missing(self, tmp_path: Path) -> None:
         cache = EmbeddingCache(tmp_path / "missing.h5")
         assert not cache.contains("A*02:01")
+
+
+# ---------------------------------------------------------------------------
+# ESMEmbedder fine-tuning helpers (V2)
+# ---------------------------------------------------------------------------
+
+def _make_nn_mock_model(
+    n_layers: int = 4,
+    hidden_dim: int = _MOCK_HIDDEN,
+) -> torch.nn.Module:
+    """Return a tiny nn.Module that mimics the ESM-2 encoder.layer structure."""
+    import types
+
+    class _FakeOutput:
+        def __init__(self, hs: torch.Tensor) -> None:
+            self.last_hidden_state = hs
+
+    class _FakeLayer(torch.nn.Module):
+        def __init__(self) -> None:
+            super().__init__()
+            self.weight = torch.nn.Parameter(torch.ones(hidden_dim, hidden_dim))
+
+    class _FakeEncoder(torch.nn.Module):
+        def __init__(self) -> None:
+            super().__init__()
+            self.layer = torch.nn.ModuleList(
+                [_FakeLayer() for _ in range(n_layers)]
+            )
+
+    class _FakeModel(torch.nn.Module):
+        def __init__(self) -> None:
+            super().__init__()
+            self.encoder = _FakeEncoder()
+
+        def __call__(  # type: ignore[override]
+            self, **inputs: torch.Tensor
+        ) -> _FakeOutput:
+            b, sl = inputs["attention_mask"].shape
+            return _FakeOutput(torch.full((b, sl, hidden_dim), 1.0))
+
+    model = _FakeModel()
+    # Freeze all params initially (mimics ESM-2 after load)
+    for p in model.parameters():
+        p.requires_grad_(False)
+    return model
+
+
+def _make_nn_embedder(n_layers: int = 4) -> ESMEmbedder:
+    """ESMEmbedder with a tiny nn.Module mock (supports fine-tune API)."""
+    embedder = ESMEmbedder(device="cpu", batch_size=4)
+    embedder._model = _make_nn_mock_model(n_layers=n_layers)
+    embedder._tokenizer = _make_mock_tokenizer()
+    return embedder
+
+
+class TestESMEmbedderFineTune:
+    def test_unfreeze_before_load_raises(self) -> None:
+        embedder = ESMEmbedder(device="cpu")
+        with pytest.raises(RuntimeError, match="embed\\(\\)"):
+            embedder.unfreeze_last_n_layers(1)
+
+    def test_unfreeze_zero_is_noop(self) -> None:
+        embedder = _make_nn_embedder()
+        n = embedder.unfreeze_last_n_layers(0)
+        assert n == 0
+        assert all(not p.requires_grad for p in embedder._model.parameters())  # type: ignore[union-attr]
+
+    def test_unfreeze_last_two_layers(self) -> None:
+        embedder = _make_nn_embedder(n_layers=4)
+        n_params = embedder.unfreeze_last_n_layers(2)
+        assert n_params > 0
+        trainable = [p for p in embedder._model.parameters() if p.requires_grad]  # type: ignore[union-attr]
+        frozen   = [p for p in embedder._model.parameters() if not p.requires_grad]  # type: ignore[union-attr]
+        # 2 unfrozen layers out of 4 → half the layers' params are trainable
+        assert len(trainable) == 2
+        assert len(frozen) == 2
+
+    def test_get_finetune_parameters_empty_before_unfreeze(self) -> None:
+        embedder = _make_nn_embedder()
+        assert embedder.get_finetune_parameters() == []
+
+    def test_get_finetune_parameters_after_unfreeze(self) -> None:
+        embedder = _make_nn_embedder(n_layers=4)
+        embedder.unfreeze_last_n_layers(1)
+        params = embedder.get_finetune_parameters()
+        assert len(params) == 1  # one weight tensor per layer
+
+    def test_set_train_mode(self) -> None:
+        embedder = _make_nn_embedder()
+        embedder.set_train_mode(train=True)
+        assert embedder._model.training  # type: ignore[union-attr]
+        embedder.set_train_mode(train=False)
+        assert not embedder._model.training  # type: ignore[union-attr]
+
+    def test_get_finetune_parameters_empty_without_model(self) -> None:
+        embedder = ESMEmbedder(device="cpu")
+        assert embedder.get_finetune_parameters() == []

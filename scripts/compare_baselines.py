@@ -71,6 +71,11 @@ def _parse_args() -> argparse.Namespace:
         description="Train and compare all CAPA baseline models",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
+    p.add_argument(
+        "--config", type=Path, default=None,
+        help="Path to a YAML config file (e.g. configs/default.yaml). "
+             "CLI flags override YAML values; YAML overrides pydantic defaults.",
+    )
     p.add_argument("--synthetic", action="store_true",
                    help="Use synthetic data (no real BMT dataset needed).")
     p.add_argument("--n", type=int, default=200,
@@ -393,7 +398,7 @@ def main() -> None:
     # Run dir
     import datetime
     from capa.config import get_config
-    cfg = get_config()
+    cfg = get_config(config_file=args.config)
     run_name = args.run_name or datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     base_runs_dir = args.runs_dir if args.runs_dir is not None else cfg.training.runs_dir
     runs_dir = base_runs_dir / f"compare_{run_name}"

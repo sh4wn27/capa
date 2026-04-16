@@ -51,6 +51,11 @@ def _parse_args() -> argparse.Namespace:
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     p.add_argument(
+        "--config", type=Path, default=None,
+        help="Path to a YAML config file (e.g. configs/default.yaml). "
+             "CLI flags override YAML values; YAML overrides pydantic defaults.",
+    )
+    p.add_argument(
         "--checkpoint", type=Path, required=True,
         help="Path to a .pt checkpoint saved by the Trainer.",
     )
@@ -178,7 +183,7 @@ def main() -> None:
     from capa.training.evaluate import evaluate_all
     from capa.training.trainer import CheckpointState
 
-    cfg = get_config()
+    cfg = get_config(config_file=args.config)
 
     # ── Architecture settings ─────────────────────────────────────────
     embedding_dim   = args.embedding_dim   or cfg.embedding.embedding_dim
