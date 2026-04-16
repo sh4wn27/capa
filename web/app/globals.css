@@ -48,7 +48,7 @@
     font-feature-settings: "rlig" 1, "calt" 1;
   }
   h1, h2, h3, h4, h5, h6 {
-    @apply tracking-tight;
+    @apply font-display tracking-tight;
   }
 }
 
@@ -73,18 +73,11 @@
 /* Hero background — clean white */
 .hero-bg {
   background-color: #ffffff;
-  background-image:
-    linear-gradient(rgba(0, 0, 0, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 0, 0, 0.04) 1px, transparent 1px);
-  background-size: 64px 64px;
 }
 
-/* Gradient text (blush) */
+/* Accent text (blush) */
 .gradient-text {
-  background: linear-gradient(135deg, #E8849A 0%, #f5c6d0 60%, #cc617a 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #E8849A;
 }
 
 /* Blush glow border */

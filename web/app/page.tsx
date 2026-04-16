@@ -11,7 +11,6 @@ import {
   BarChart2,
   GitMerge,
   BookOpen,
-  FlaskConical,
   TrendingUp,
   Users,
   Layers,
@@ -127,16 +126,6 @@ export default function HomePage() {
       ────────────────────────────────────────────────────────────── */}
       <section ref={heroRef} className="hero-bg relative overflow-hidden min-h-[92vh] flex items-center">
 
-        {/* Radial glow */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(ellipse 90% 60% at 50% -10%, rgba(232,132,154,0.18) 0%, transparent 65%)",
-          }}
-        />
-
         {/* Parallax content */}
         <motion.div
           style={{ opacity: heroOpacity, y: heroY }}
@@ -144,41 +133,39 @@ export default function HomePage() {
         >
           <div className="max-w-4xl mx-auto text-center">
 
-            {/* Status pill */}
-            <motion.div
-              initial={{ opacity: 0, y: -12 }}
-              animate={{ opacity: 1, y: 0 }}
+            {/* Eyebrow */}
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
               transition={{ duration: 0.5, ease }}
-              className="mb-8 flex justify-center"
+              className="mb-6 text-xs font-sans font-medium tracking-widest uppercase text-black/35"
             >
-              <span className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-black/5 px-4 py-1.5 text-xs font-medium text-black/55 backdrop-blur-sm">
-                <span className="h-1.5 w-1.5 rounded-full bg-blush-400 animate-pulse-dot" />
-                Open Source · MIT · Proof-of-Concept
-              </span>
-            </motion.div>
+              Open Source · MIT · Proof-of-Concept
+            </motion.p>
 
             {/* Headline */}
             <motion.h1
-              initial={{ opacity: 0, y: 24 }}
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.65, delay: 0.08, ease }}
-              className="text-[clamp(2.25rem,6vw,4.5rem)] font-bold leading-[1.08] text-foreground"
+              transition={{ duration: 0.6, delay: 0.06, ease }}
+              className="text-[clamp(2.4rem,6vw,4.75rem)] font-display font-semibold leading-[1.06] text-foreground"
             >
-              Predicting Alloimmunity with{" "}
+              Predicting Alloimmunity{" "}
+              <br className="hidden sm:block" />
+              with{" "}
               <span className="gradient-text">Protein Language Models</span>
             </motion.h1>
 
             {/* Subtitle */}
             <motion.p
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.18, ease }}
-              className="mt-6 text-lg sm:text-xl text-black/55 leading-relaxed max-w-2xl mx-auto"
+              transition={{ duration: 0.55, delay: 0.16, ease }}
+              className="mt-6 text-lg sm:text-xl text-black/50 leading-relaxed max-w-2xl mx-auto font-sans"
             >
-              CAPA replaces coarse HLA match/mismatch scores with{" "}
-              <span className="text-black/80 font-medium">continuous ESM-2 embeddings</span>{" "}
+              CAPA replaces coarse HLA match/mismatch scores with continuous ESM-2 embeddings
               and predicts GvHD, relapse, and transplant-related mortality as
-              competing risks using cross-attention and DeepHit.
+              competing risks via cross-attention and DeepHit.
             </motion.p>
 
             {/* CTAs */}
@@ -251,7 +238,7 @@ export default function HomePage() {
 
           <FadeIn className="text-center mb-18">
             <Badge variant="blush" className="mb-4">How it works</Badge>
-            <h2 className="text-3xl sm:text-4xl font-bold text-navy">
+            <h2 className="text-3xl sm:text-4xl font-semibold text-navy">
               From allele strings to risk curves
             </h2>
             <p className="mt-4 text-muted-foreground max-w-xl mx-auto">
@@ -372,7 +359,7 @@ export default function HomePage() {
 
           <FadeIn className="text-center mb-16">
             <Badge variant="blush" className="mb-4">Key results</Badge>
-            <h2 className="text-3xl sm:text-4xl font-bold text-navy">
+            <h2 className="text-3xl sm:text-4xl font-semibold text-navy">
               Outperforming traditional baselines
             </h2>
             <p className="mt-4 text-muted-foreground max-w-xl mx-auto">
@@ -478,7 +465,7 @@ export default function HomePage() {
             {/* Text */}
             <FadeIn direction="left">
               <Badge variant="blush" className="mb-5">About the project</Badge>
-              <h2 className="text-3xl sm:text-4xl font-bold text-navy leading-snug">
+              <h2 className="text-3xl sm:text-4xl font-semibold text-navy leading-snug">
                 A new lens on HLA compatibility
               </h2>
               <p className="mt-5 text-muted-foreground leading-relaxed">
@@ -544,18 +531,9 @@ export default function HomePage() {
       {/* ──────────────────────────────────────────────────────────────
           CTA BANNER
       ────────────────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden py-24 bg-[#111111]">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(ellipse 65% 80% at 50% 110%, rgba(232,132,154,0.12) 0%, transparent 60%)",
-          }}
-        />
-        <FadeIn className="container relative max-w-2xl px-6 text-center">
-          <FlaskConical className="mx-auto mb-5 h-9 w-9 text-blush opacity-70" />
-          <h2 className="text-3xl sm:text-4xl font-bold text-white">
+      <section className="py-24 bg-[#111111]">
+        <FadeIn className="container max-w-2xl px-6 text-center">
+          <h2 className="text-3xl sm:text-4xl font-semibold text-white">
             Try it on your own data
           </h2>
           <p className="mt-4 text-white/52 leading-relaxed">

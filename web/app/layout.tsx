@@ -1,12 +1,20 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { DM_Sans, Fraunces } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 
-const inter = Inter({
+const dmSans = DM_Sans({
   subsets: ["latin"],
-  variable: "--font-inter",
+  variable: "--font-sans",
   display: "swap",
+  axes: ["opsz"],
+});
+
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  variable: "--font-display",
+  display: "swap",
+  axes: ["SOFT", "WONK", "opsz"],
 });
 
 export const metadata: Metadata = {
@@ -25,7 +33,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang="en" className={`${dmSans.variable} ${fraunces.variable}`}>
       <body className="min-h-screen flex flex-col font-sans">
         <Navbar />
         <main className="flex-1">{children}</main>

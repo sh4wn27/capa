@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FlaskConical } from "lucide-react";
 import { GithubIcon } from "@/components/ui/github-icon";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -22,11 +21,11 @@ export default function Navbar() {
     <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-white/90 backdrop-blur-md supports-[backdrop-filter]:bg-white/80">
       <div className="container flex h-16 max-w-7xl items-center justify-between px-6">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2.5 group">
-          <span className="font-semibold text-navy text-lg tracking-tight">
+        <Link href="/" className="flex items-center gap-2 group">
+          <span className="font-display font-semibold text-navy text-lg tracking-tight">
             CAPA
           </span>
-          <span className="hidden sm:block text-xs text-muted-foreground font-normal mt-px">
+          <span className="hidden sm:block text-xs text-muted-foreground font-sans font-normal mt-px">
             / Alloimmunity Prediction
           </span>
         </Link>
@@ -63,11 +62,8 @@ export default function Navbar() {
             <GithubIcon className="h-4 w-4" />
             <span>GitHub</span>
           </Link>
-          <Button asChild size="sm" variant="blush" className="gap-1.5">
-            <Link href="/predict">
-              <FlaskConical className="h-3.5 w-3.5" />
-              Try it
-            </Link>
+          <Button asChild size="sm" variant="blush">
+            <Link href="/predict">Predict</Link>
           </Button>
         </div>
       </div>
