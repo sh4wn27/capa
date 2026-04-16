@@ -1,0 +1,40 @@
+# CAPA default configuration — V2
+# All values here match the paper (Bioinformatics submission).
+# Override individual keys with environment variables (CAPA_*) or CLI flags.
+# Loaded by:  uv run python scripts/train.py --config configs/default.yaml
+
+data:
+  val_fraction: 0.15
+  test_fraction: 0.15
+  random_seed: 42
+
+embedding:
+  esm_model_name: "facebook/esm2_t33_650M_UR50D"
+  embedding_dim: 1280
+  batch_size: 8
+  device: "cpu"               # override to "cuda" or "mps" for GPU
+
+model:
+  hla_loci: ["A", "B", "C", "DRB1", "DQB1"]   # add "DPB1" for 6-locus mode
+  interaction_heads: 8
+  interaction_layers: 2
+  interaction_dim: 128
+  interaction_pos_embed: false   # V2: learned per-locus positional embeddings
+  dropout: 0.1
+  clinical_dim: 32
+  time_bins: 100
+  num_events: 3                  # GvHD (1), Relapse (2), TRM (3)
+  esm_finetune_layers: 0         # V2: unfreeze final N ESM-2 layers (0 = fully frozen)
+
+training:
+  learning_rate: 1.0e-4
+  weight_decay: 1.0e-4
+  batch_size: 32
+  max_epochs: 200
+  patience: 20                   # early-stopping patience (epochs)
+  lr_patience: 10                # ReduceLROnPlateau patience
+  lr_factor: 0.5                 # ReduceLROnPlateau decay factor
+  random_seed: 42
+  alpha: 0.5                     # DeepHit ranking loss weight
+  sigma: 0.1                     # DeepHit ranking loss bandwidth
+  max_grad_norm: 1.0

@@ -51,6 +51,7 @@ dependencies = [
     "rich>=13.7.0",
     "requests>=2.31.0",
     "scikit-learn>=1.4.0",
+    "reportlab>=4.4.10",
 ]
 
 [project.optional-dependencies]
