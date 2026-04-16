@@ -52,6 +52,11 @@ def _parse_args() -> argparse.Namespace:
         description="Train the CAPA competing-risks survival model",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
+    # Config file
+    p.add_argument("--config", type=Path, default=None,
+                   help="Path to a YAML config file (e.g. configs/default.yaml). "
+                        "CLI flags override YAML values; YAML overrides pydantic defaults.")
+
     # Run identity
     p.add_argument("--run-name", default=None,
                    help="Sub-directory name inside runs_dir. Defaults to a timestamp.")
@@ -176,7 +181,7 @@ def main() -> None:
 
     # ── Reproducibility ───────────────────────────────────────────────
     from capa.config import get_config
-    cfg = get_config()
+    cfg = get_config(config_file=args.config)
 
     seed = args.seed if args.seed is not None else cfg.training.random_seed
     random.seed(seed)
@@ -277,6 +282,7 @@ def main() -> None:
         num_heads=cfg.model.interaction_heads,
         num_layers=cfg.model.interaction_layers,
         dropout=cfg.model.dropout,
+        use_pos_embed=cfg.model.interaction_pos_embed,
     )
     n_params = sum(p.numel() for p in model.parameters())
     logger.info("Model: %d parameters  survival=%s", n_params, args.survival_type)
@@ -291,9 +297,11 @@ def main() -> None:
         weight_decay=weight_decay,
         max_epochs=max_epochs,
         patience=patience,
+        lr_patience=cfg.training.lr_patience,
+        lr_factor=cfg.training.lr_factor,
         alpha=alpha,
         sigma=sigma,
-        max_grad_norm=1.0,
+        max_grad_norm=cfg.training.max_grad_norm,
         runs_dir=runs_dir,
         checkpoint_every=args.checkpoint_every,
         device=args.device,

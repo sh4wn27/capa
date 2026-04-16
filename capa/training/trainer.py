@@ -3,7 +3,7 @@
 Features
 --------
 * AdamW optimiser with configurable LR and weight decay
-* Cosine-annealing LR schedule (one cycle over ``max_epochs``)
+* ReduceLROnPlateau LR schedule (factor & patience configurable; matches paper)
 * Early stopping on validation C-index (higher is better; patience configurable)
 * Gradient clipping at ``max_grad_norm``
 * Checkpoint saving: best model + periodic every ``checkpoint_every`` epochs
@@ -41,7 +41,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from torch.optim import AdamW
-from torch.optim.lr_scheduler import CosineAnnealingLR
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
 
 from capa.model.losses import deephit_loss
@@ -104,7 +104,11 @@ class Trainer:
     max_epochs : int
         Maximum training epochs.
     patience : int
-        Early-stopping patience in epochs.
+        Early-stopping patience in epochs (C-index not improving).
+    lr_patience : int
+        ReduceLROnPlateau patience (validation loss not improving).
+    lr_factor : float
+        ReduceLROnPlateau multiplicative decay factor (< 1).
     alpha : float
         DeepHit loss ranking weight (0 = pure NLL, 1 = pure ranking).
     sigma : float
@@ -134,6 +138,8 @@ class Trainer:
         weight_decay: float = 1e-4,
         max_epochs: int = 200,
         patience: int = 20,
+        lr_patience: int = 10,
+        lr_factor: float = 0.5,
         alpha: float = 0.5,
         sigma: float = 0.1,
         max_grad_norm: float = 1.0,
@@ -162,10 +168,12 @@ class Trainer:
             lr=learning_rate,
             weight_decay=weight_decay,
         )
-        self.scheduler = CosineAnnealingLR(
+        # Paper: "LR decayed by 0.5 when val loss did not improve for 10 epochs"
+        self.scheduler = ReduceLROnPlateau(
             self.optimizer,
-            T_max=max_epochs,
-            eta_min=learning_rate * 1e-2,
+            mode="min",
+            factor=lr_factor,
+            patience=lr_patience,
         )
 
         self.model.to(self.device)
@@ -209,7 +217,7 @@ class Trainer:
 
             train_loss = self._train_epoch()
             val_loss, val_cindex = self._val_epoch()
-            self.scheduler.step()
+            self.scheduler.step(val_loss)  # ReduceLROnPlateau monitors val loss
 
             elapsed = time.perf_counter() - t0
             self._history["train_loss"].append(train_loss)

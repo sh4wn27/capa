@@ -1,0 +1,64 @@
+# CAPA — local development docker-compose
+#
+# Services
+# --------
+#   backend   — FastAPI prediction server (capa.api.predict)
+#   web       — Next.js frontend (optional; remove if you run it with npm)
+#
+# Quick start (mock-mode, no checkpoint needed):
+#   docker compose up backend
+#
+# With a trained checkpoint:
+#   CAPA_CHECKPOINT=./runs/best/model.pt docker compose up backend
+#
+# Full stack (backend + web):
+#   docker compose up
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    image: capa-backend:latest
+    container_name: capa-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount trained checkpoint and embedding cache read-only at runtime.
+      # Leave these unset (comment out) to run in mock/Weibull-fallback mode.
+      - ./runs:/app/runs:ro
+      - ./data:/app/data:ro
+    environment:
+      # Set CAPA_CHECKPOINT to enable real model inference.
+      # If unset the server returns illustrative Weibull-distributed curves.
+      CAPA_CHECKPOINT: "${CAPA_CHECKPOINT:-}"
+      PYTHONUNBUFFERED: "1"
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    image: capa-web:latest
+    container_name: capa-web
+    ports:
+      - "3000:3000"
+    environment:
+      CAPA_BACKEND_URL: "http://backend:8000"
+      NODE_ENV: "production"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    profiles:
+      # Only start web when explicitly requested:
+      #   docker compose --profile fullstack up
+      - fullstack

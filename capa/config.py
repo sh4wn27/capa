@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import logging
+import os
 from pathlib import Path
+from typing import Any
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -65,7 +67,11 @@ class ModelConfig(BaseSettings):
     interaction_heads: int = Field(default=8)
     interaction_layers: int = Field(default=2)
     interaction_dim: int = Field(default=128)
+    interaction_pos_embed: bool = Field(default=False)  # V2: learned per-locus positional embeddings
     dropout: float = Field(default=0.1, ge=0.0, le=1.0)
+
+    # V2: partial ESM-2 fine-tuning (0 = fully frozen)
+    esm_finetune_layers: int = Field(default=0, ge=0)
 
     # Clinical covariate embedding
     clinical_dim: int = Field(default=32)
@@ -84,8 +90,13 @@ class TrainingConfig(BaseSettings):
     weight_decay: float = Field(default=1e-4, ge=0.0)
     batch_size: int = Field(default=32, gt=0)
     max_epochs: int = Field(default=200, gt=0)
-    patience: int = Field(default=20, gt=0)  # early stopping
+    patience: int = Field(default=20, gt=0)      # early-stopping patience
+    lr_patience: int = Field(default=10, gt=0)   # ReduceLROnPlateau patience
+    lr_factor: float = Field(default=0.5, gt=0.0, lt=1.0)  # ReduceLROnPlateau decay
     random_seed: int = Field(default=42)
+
+    # Gradient clipping
+    max_grad_norm: float = Field(default=1.0, gt=0.0)
 
     # DeepHit loss weights
     alpha: float = Field(default=0.5, ge=0.0, le=1.0)  # ranking loss weight
@@ -105,6 +116,66 @@ class CAPAConfig(BaseSettings):
     training: TrainingConfig = Field(default_factory=TrainingConfig)
 
 
-def get_config() -> CAPAConfig:
-    """Return the global CAPA configuration (reads env vars automatically)."""
+def _flatten_yaml(d: dict[str, Any], prefix: str = "") -> dict[str, str]:
+    """Recursively flatten a nested YAML dict into CAPA_* env-var style keys.
+
+    Parameters
+    ----------
+    d : dict
+        Nested dict from parsed YAML.
+    prefix : str
+        Running key prefix (e.g. ``"CAPA_MODEL_"``).
+
+    Returns
+    -------
+    dict[str, str]
+        Flat mapping ``{ENV_VAR_NAME: str_value}`` ready for ``os.environ``.
+    """
+    result: dict[str, str] = {}
+    for k, v in d.items():
+        full_key = f"{prefix}{k.upper()}"
+        if isinstance(v, dict):
+            result.update(_flatten_yaml(v, full_key + "_"))
+        elif isinstance(v, list):
+            # pydantic-settings reads lists from JSON-encoded env vars
+            import json
+            result[full_key] = json.dumps(v)
+        else:
+            result[full_key] = str(v)
+    return result
+
+
+def get_config(config_file: str | Path | None = None) -> CAPAConfig:
+    """Return the global CAPA configuration.
+
+    Priority (highest → lowest):
+    1. Environment variables (``CAPA_*``)
+    2. Values from *config_file* (YAML), if provided
+    3. Pydantic field defaults
+
+    Parameters
+    ----------
+    config_file : str or Path or None
+        Path to a YAML config file (e.g. ``configs/default.yaml``).
+        Values are injected as env vars *only if the env var is not already set*,
+        so explicit env overrides always win.
+    """
+    if config_file is not None:
+        try:
+            import yaml  # type: ignore[import-untyped]
+        except ImportError as exc:
+            raise ImportError(
+                "PyYAML is required for YAML config loading. "
+                "Install it with: uv add pyyaml"
+            ) from exc
+
+        with open(config_file) as fh:
+            raw: dict[str, Any] = yaml.safe_load(fh) or {}
+
+        flat = _flatten_yaml(raw, prefix="CAPA_")
+        for env_key, env_val in flat.items():
+            if env_key not in os.environ:
+                os.environ[env_key] = env_val
+        logger.debug("Loaded config from %s (%d keys)", config_file, len(flat))
+
     return CAPAConfig()

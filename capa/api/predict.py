@@ -307,6 +307,51 @@ async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 
 # ---------------------------------------------------------------------------
+# Public helper — usable without an HTTP server (tests, scripts, notebooks)
+# ---------------------------------------------------------------------------
+
+
+def predict_risk(
+    donor_hla: dict[str, str],
+    recipient_hla: dict[str, str],
+    clinical: dict[str, Any] | None = None,
+) -> PredictionResponse:
+    """Generate a prediction response without going through the HTTP layer.
+
+    Uses the loaded model when available, otherwise falls back to the mock
+    Weibull-based response (same as the server's no-checkpoint behaviour).
+
+    Parameters
+    ----------
+    donor_hla : dict[str, str]
+        Mapping ``locus → allele_name``, e.g. ``{"A": "A*02:01"}``.
+    recipient_hla : dict[str, str]
+        Same format.
+    clinical : dict[str, Any] | None
+        Optional clinical covariates dict.
+
+    Returns
+    -------
+    PredictionResponse
+        Competing-risk curves and scalar risk scores.
+    """
+    req = PredictionRequest(
+        donor_hla=HLATyping(**donor_hla),
+        recipient_hla=HLATyping(**recipient_hla),
+    )
+    if clinical:
+        from capa.api.schemas import ClinicalCovariates
+        req = PredictionRequest(
+            donor_hla=HLATyping(**donor_hla),
+            recipient_hla=HLATyping(**recipient_hla),
+            clinical=ClinicalCovariates(**clinical),
+        )
+    if _model is not None:
+        return _model_response(req)
+    return _mock_response(req)
+
+
+# ---------------------------------------------------------------------------
 # FastAPI application
 # ---------------------------------------------------------------------------
 

@@ -167,12 +167,20 @@ class CrossAttentionInteraction(nn.Module):
         Number of stacked bidirectional cross-attention blocks.
     dropout : float
         Dropout probability used in attention and projection layers.
+    use_pos_embed : bool
+        If ``True``, add a learned per-locus positional embedding (dim 32)
+        to each allele vector before the first cross-attention block.
+        The embedding table supports up to 16 loci; actual *n_loci* is
+        determined at runtime.  Default: ``False``.
 
     Raises
     ------
     ValueError
         If *embedding_dim* is not divisible by *num_heads*.
     """
+
+    #: Maximum number of loci supported by the positional embedding table.
+    MAX_LOCI: int = 16
 
     def __init__(
         self,
@@ -181,6 +189,7 @@ class CrossAttentionInteraction(nn.Module):
         num_heads: int = 8,
         num_layers: int = 2,
         dropout: float = 0.1,
+        use_pos_embed: bool = False,
     ) -> None:
         super().__init__()
         if embedding_dim % num_heads != 0:
@@ -190,6 +199,7 @@ class CrossAttentionInteraction(nn.Module):
             )
         self._embedding_dim = embedding_dim
         self._interaction_dim = interaction_dim
+        self._use_pos_embed = use_pos_embed
 
         self.blocks = nn.ModuleList(
             [
@@ -197,6 +207,16 @@ class CrossAttentionInteraction(nn.Module):
                 for _ in range(num_layers)
             ]
         )
+
+        # V2: optional learned per-locus positional embedding projected to
+        # embedding_dim so it can be added to the allele embeddings.
+        if use_pos_embed:
+            _POS_DIM = 32
+            self.pos_embed = nn.Embedding(self.MAX_LOCI, _POS_DIM)
+            self.pos_proj = nn.Linear(_POS_DIM, embedding_dim, bias=False)
+        else:
+            self.pos_embed = None  # type: ignore[assignment]
+            self.pos_proj = None   # type: ignore[assignment]
 
         # Project concatenated pooled vectors → interaction_dim
         self.projection = nn.Sequential(
@@ -254,6 +274,15 @@ class CrossAttentionInteraction(nn.Module):
             Interaction feature vector, shape ``(batch, interaction_dim)``.
         """
         d, r = donor, recipient
+
+        # Add learned per-locus positional bias before the first block
+        if self._use_pos_embed and self.pos_embed is not None and self.pos_proj is not None:
+            n_loci = d.size(1)
+            positions = torch.arange(n_loci, device=d.device)  # (n_loci,)
+            pos_bias = self.pos_proj(self.pos_embed(positions))  # (n_loci, embedding_dim)
+            d = d + pos_bias.unsqueeze(0)  # broadcast over batch
+            r = r + pos_bias.unsqueeze(0)
+
         d2r_weights: list[Tensor] = []
         r2d_weights: list[Tensor] = []
 

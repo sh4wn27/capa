@@ -27,6 +27,8 @@ class HLATyping(BaseModel):
     C: str | None = Field(default=None, examples=["C*07:02"])
     DRB1: str | None = Field(default=None, examples=["DRB1*15:01"])
     DQB1: str | None = Field(default=None, examples=["DQB1*06:02"])
+    DPB1: str | None = Field(default=None, examples=["DPB1*04:01"],
+                              description="HLA-DPB1 allele (optional; enables 6-locus mode).")
 
 
 class ClinicalCovariates(BaseModel):

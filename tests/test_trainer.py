@@ -195,10 +195,10 @@ class TestTrainerConstruction:
         t = _make_trainer(tmp_path)
         assert isinstance(t.optimizer, AdamW)
 
-    def test_scheduler_is_cosine(self, tmp_path: Path) -> None:
-        from torch.optim.lr_scheduler import CosineAnnealingLR
+    def test_scheduler_is_reduce_on_plateau(self, tmp_path: Path) -> None:
+        from torch.optim.lr_scheduler import ReduceLROnPlateau
         t = _make_trainer(tmp_path)
-        assert isinstance(t.scheduler, CosineAnnealingLR)
+        assert isinstance(t.scheduler, ReduceLROnPlateau)
 
     def test_runs_dir_created(self, tmp_path: Path) -> None:
         t = _make_trainer(tmp_path)

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FlaskConical,
@@ -13,6 +13,7 @@ import {
   Download,
   Info,
   Sparkles,
+  WifiOff,
 } from "lucide-react";
 import { Button }      from "@/components/ui/button";
 import { Input }       from "@/components/ui/input";
@@ -405,7 +406,19 @@ export default function PredictPage() {
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState<string | null>(null);
 
+  /* Demo-mode: true when the Python backend is unreachable */
+  const [isDemoMode, setIsDemoMode] = useState(false);
+
   const resultsRef = useRef<HTMLDivElement>(null);
+
+  /* Poll backend health once on mount */
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/predict", { method: "GET" })
+      .then((r) => { if (!cancelled) setIsDemoMode(!r.ok); })
+      .catch(() => { if (!cancelled) setIsDemoMode(true); });
+    return () => { cancelled = true; };
+  }, []);
 
   /* Try Example — fill + show instant mock result */
   function fillExample() {
@@ -439,6 +452,15 @@ export default function PredictPage() {
     setLoading(true);
     setError(null);
     try {
+      if (isDemoMode) {
+        // Backend offline — return mock result immediately
+        await new Promise((r) => setTimeout(r, 600));
+        setResult(buildMockResult());
+        setTimeout(() => {
+          resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 100);
+        return;
+      }
       const req: PredictionRequest = {
         donor_hla:     donorHla,
         recipient_hla: recipientHla,
@@ -497,6 +519,19 @@ export default function PredictPage() {
           </div>
         </div>
       </div>
+
+      {/* ── Demo-mode banner ─────────────────────────────────────────── */}
+      {isDemoMode ? (
+        <div className="bg-amber-50 border-b border-amber-200">
+          <div className="container max-w-7xl px-6 py-2.5 flex items-center gap-2.5 text-sm text-amber-800">
+            <WifiOff className="h-4 w-4 shrink-0 text-amber-600" />
+            <span>
+              <strong>Demo mode</strong> — the prediction backend is offline.
+              Results shown are illustrative mock values and do not reflect real model output.
+            </span>
+          </div>
+        </div>
+      ) : null}
 
       {/* ── Main layout ──────────────────────────────────────────────── */}
       <div className="container max-w-7xl px-6 py-8">

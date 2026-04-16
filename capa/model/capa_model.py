@@ -274,6 +274,9 @@ class CAPAModel(nn.Module):
         Number of cross-attention layers.
     dropout : float
         Dropout probability throughout.
+    use_pos_embed : bool
+        Pass ``True`` to add learned per-locus positional embeddings to
+        allele vectors before cross-attention (V2 feature).  Default: ``False``.
     cat_embed_dim : int
         Categorical embedding dimension in :class:`ClinicalEncoder`.
     n_loci : int | None
@@ -293,6 +296,7 @@ class CAPAModel(nn.Module):
         num_heads: int = 8,
         num_layers: int = 2,
         dropout: float = 0.1,
+        use_pos_embed: bool = False,
         cat_embed_dim: int = 8,
         # Backward-compatibility alias
         n_loci: int | None = None,
@@ -327,6 +331,7 @@ class CAPAModel(nn.Module):
             num_heads=num_heads,
             num_layers=num_layers,
             dropout=dropout,
+            use_pos_embed=use_pos_embed,
         )
 
         self.clinical_encoder = ClinicalEncoder(
