@@ -36,7 +36,7 @@ export default function PaperPage() {
             for post-transplant outcome prediction
           </h1>
           <p className="mx-auto mt-5 max-w-xl text-black/50">
-            Huanxuan Li (Shawn) · 2025 · Preprint
+            Huanxuan Li (Shawn) · 2026 · Preprint
           </p>
           <div className="mt-8 flex justify-center gap-4">
             <Button asChild variant="blush" size="lg">
@@ -143,11 +143,11 @@ export default function PaperPage() {
         <div className="container max-w-3xl px-6">
           <Badge variant="blush" className="mb-4">Citation</Badge>
           <pre className="rounded-xl bg-muted border border-border p-5 text-xs font-mono text-foreground overflow-auto scrollbar-thin leading-relaxed">
-{`@article{capa2025,
+{`@article{capa2026,
   title   = {Structure-aware HLA mismatch representations
              for post-transplant outcome prediction},
   author  = {Li, Huanxuan},
-  year    = {2025},
+  year    = {2026},
   note    = {Preprint},
   url     = {https://github.com/sh4wn27/capa}
 }`}

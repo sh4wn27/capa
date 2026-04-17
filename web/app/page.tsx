@@ -660,7 +660,7 @@ export default function HomePage() {
 
           {/* Bottom bar */}
           <div className="mt-12 pt-6 border-t border-white/8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-white/25">
-            <p>© {new Date().getFullYear()} Huanxuan Li (Shawn) · MIT License</p>
+            <p>© 2026 Huanxuan Li (Shawn) · MIT License</p>
             <p>
               Built with Next.js · Tailwind CSS · ESM-2 · PyTorch
             </p>

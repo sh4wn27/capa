@@ -1,5 +1,4 @@
-import Link from "next/link";
-import { ExternalLink, Database, Microscope, ArrowRight, FileText } from "lucide-react";
+import { ExternalLink, Microscope, FileText } from "lucide-react";
 import { GithubIcon } from "@/components/ui/github-icon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -446,14 +445,16 @@ export default function AboutPage() {
         <div className="container max-w-7xl px-6">
           <Badge variant="blush" className="mb-6">People</Badge>
           <h2 className="text-2xl font-semibold text-navy mb-8">Contributors</h2>
-          <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blush-100 text-blush-600 font-semibold text-lg select-none font-display">
-              H
-            </div>
-            <div>
-              <p className="font-semibold text-foreground">Huanxuan Li (Shawn)</p>
-              <p className="text-sm text-muted-foreground">Lead developer · Architecture, training pipeline, web interface</p>
-            </div>
+          <div>
+            <a
+              href="https://sh4wn.org"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-foreground hover:text-blush transition-colors"
+            >
+              Huanxuan Li (Shawn)
+            </a>
+            <p className="text-sm text-muted-foreground mt-0.5">Lead developer · Architecture, training pipeline, web interface</p>
           </div>
         </div>
       </section>
@@ -462,23 +463,22 @@ export default function AboutPage() {
       <section className="bg-[#F8F9FC] py-20 border-t border-border">
         <div className="container max-w-7xl px-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
           <div>
-            <h2 className="text-xl font-semibold text-navy">Interested in contributing?</h2>
+            <h2 className="text-xl font-semibold text-navy">Questions or want to contribute?</h2>
             <p className="text-muted-foreground mt-1 text-sm">
-              CAPA is open source. Pull requests, issues, and feedback are welcome.
+              CAPA is open source. Reach out directly or open an issue on GitHub.
             </p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
+            <Button asChild variant="blush">
+              <a href="mailto:shawnli1028@gmail.com">
+                Get in touch
+              </a>
+            </Button>
             <Button asChild variant="default">
               <a href="https://github.com/sh4wn27/capa" target="_blank" rel="noopener noreferrer">
                 <GithubIcon className="h-4 w-4" />
                 GitHub
               </a>
-            </Button>
-            <Button asChild variant="blush">
-              <Link href="/predict">
-                Try the tool
-                <ArrowRight className="h-4 w-4" />
-              </Link>
             </Button>
           </div>
         </div>
