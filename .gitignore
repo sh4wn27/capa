@@ -133,3 +133,5 @@ Desktop.ini
 !.env.example
 secrets/
 credentials/
+.vercel
+.env*.local
