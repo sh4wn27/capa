@@ -31,7 +31,7 @@ import { predictRisk, type PredictionRequest, type PredictionResponse } from "@/
 import { cn } from "@/lib/utils";
 
 /* ─── constants ─────────────────────────────────────────────────────── */
-const LOCI = ["A", "B", "C", "DRB1", "DQB1"] as const;
+const LOCI = ["A", "B", "C", "DRB1", "DQB1", "DPB1"] as const;
 type Locus = (typeof LOCI)[number];
 
 const ease = [0.21, 0.47, 0.32, 0.98] as [number, number, number, number];

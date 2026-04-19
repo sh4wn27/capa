@@ -213,10 +213,13 @@ def _model_response(req: PredictionRequest) -> PredictionResponse:
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    global _model, _model_version, _startup_ts, _device, _startup_error
+    global _model, _model_version, _startup_ts, _device, _startup_error, _LOCI
 
     _startup_ts = time.monotonic()
     cfg = get_config()
+
+    # Sync _LOCI with whatever the config says (may include DPB1 if 6-locus mode).
+    _LOCI = list(cfg.model.hla_loci)
 
     # Determine device
     if torch.cuda.is_available():

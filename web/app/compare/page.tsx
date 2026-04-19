@@ -24,7 +24,7 @@ import { comparedonors, type ComparisonRequest, type DonorRiskSummary } from "@/
 import { cn } from "@/lib/utils";
 
 /* ─── constants ─────────────────────────────────────────────────────── */
-const LOCI = ["A", "B", "C", "DRB1", "DQB1"] as const;
+const LOCI = ["A", "B", "C", "DRB1", "DQB1", "DPB1"] as const;
 type Locus = (typeof LOCI)[number];
 
 /* ─── mock comparison data for demo mode ─────────────────────────────── */

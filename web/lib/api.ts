@@ -4,6 +4,7 @@ export interface HLATyping {
   C?: string;
   DRB1?: string;
   DQB1?: string;
+  DPB1?: string;
 }
 
 export interface ClinicalCovariates {
