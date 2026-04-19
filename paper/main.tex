@@ -40,7 +40,7 @@
 %% ── Page style (OUP-like header) ────────────────────────────
 \pagestyle{fancy}
 \fancyhf{}
-\fancyhead[L]{\small\textit{CAPA} \hfill Bioinformatics}
+\fancyhead[L]{\small\textit{CAPA}}
 \fancyhead[R]{\small\thepage}
 \renewcommand{\headrulewidth}{0.4pt}
 
@@ -79,7 +79,11 @@ interaction features are extracted by a bidirectional cross-attention network
 and passed to a DeepHit head that jointly estimates the discrete-time
 cumulative incidence functions for all three competing events over a 730-day
 horizon.  Only the interaction network and survival head (${\sim}2.8$M
-parameters) are trained; ESM-2 remains frozen.
+parameters) are trained by default; ESM-2 is frozen but can optionally be
+partially fine-tuned via a second AdamW parameter group.  Post-hoc isotonic
+calibration is applied per event and time bin to improve CIF reliability.
+A multi-donor comparison endpoint ranks up to 20 candidates by composite
+GvHD+TRM risk.
 
 \medskip\noindent\textbf{Results:}
 On the public UCI Bone Marrow Transplant dataset ($n=187$ paediatric patients,
@@ -98,8 +102,9 @@ dataset with high-resolution allele-level data, which we identify as the primary
 direction for future work.
 
 \medskip\noindent\textbf{Availability and Implementation:}
-Source code, pre-trained weights, and a web interface are freely available at
-\url{https://github.com/sh4wn27/capa?tab=readme-ov-file} under the MIT licence.
+Source code, pre-trained weights, and a web interface (including multi-donor
+comparison) are freely available at
+\url{https://github.com/sh4wn27/capa} under the MIT licence.
 
 \medskip\noindent\textbf{Keywords:} HLA; protein language model; competing
 risks; haematopoietic stem cell transplantation; graft-versus-host disease;
@@ -302,11 +307,16 @@ in the final (33rd) transformer layer:
   \label{eq:esm_pool}
 \end{equation}
 where $\mathbf{h}^{(33)}_i(a) \in \mathbb{R}^{1280}$ is the final-layer hidden
-state at sequence position $i$.  ESM-2 weights are kept \emph{fully frozen};
-no transplantation-specific fine-tuning is performed.  Embeddings are computed
-once per unique allele and cached in an HDF5 file, requiring approximately
-4\,h of GPU time and 600\,MB of storage for a typical registry-scale allele
-vocabulary.  A prototype cache of 98 alleles spanning all five loci is
+state at sequence position $i$.  By default, ESM-2 weights are kept \emph{fully frozen}; no fine-tuning is
+performed.  Optionally, the final $n$ transformer layers ($n \in \{0,1,2,4\}$,
+controlled by \texttt{esm\_finetune\_layers} in the YAML config) can be
+unfrozen and optimised jointly with the interaction network using a separate
+AdamW parameter group at one-hundredth of the base learning rate, allowing
+task-specific adaptation of deep contextual representations when sufficient
+labelled data are available.  Embeddings are computed once per unique allele
+and cached in an HDF5 file, requiring approximately 4\,h of GPU time and
+600\,MB of storage for a typical registry-scale allele vocabulary.  A prototype
+cache of 98 alleles spanning the five primary loci (and DPB1 when supplied) is
 distributed with the open-source release to support architecture testing.
 
 \subsection{Donor--Recipient Interaction Network}
@@ -317,16 +327,38 @@ Let $\mathbf{D} = [\mathbf{e}^d_1, \ldots, \mathbf{e}^d_L]^\top \in
 \mathbb{R}^{L \times d}$ and $\mathbf{R} = [\mathbf{e}^r_1, \ldots,
 \mathbf{e}^r_L]^\top \in \mathbb{R}^{L \times d}$ denote the row-stacked
 ESM-2 embedding matrices for the donor and recipient, respectively, where
-$L = 5$ (loci) and $d = 1280$.  Both matrices are projected to a common
-interaction dimension $d' = 128$ via independent learned linear layers
-$\mathbf{W}^d_{\mathrm{proj}}, \mathbf{W}^r_{\mathrm{proj}} \in
-\mathbb{R}^{d \times d'}$:
+$L \in \{5, 6\}$ (five primary loci A, B, C, DRB1, DQB1; optionally
+extended to six by including DPB1) and $d = 1280$.  Both matrices are
+projected to a common interaction dimension $d' = 128$ via independent
+learned linear layers $\mathbf{W}^d_{\mathrm{proj}},
+\mathbf{W}^r_{\mathrm{proj}} \in \mathbb{R}^{d \times d'}$:
 \begin{equation}
   \tilde{\mathbf{D}} = \mathbf{D}\mathbf{W}^d_{\mathrm{proj}},
   \qquad
   \tilde{\mathbf{R}} = \mathbf{R}\mathbf{W}^r_{\mathrm{proj}}.
   \label{eq:proj}
 \end{equation}
+
+\paragraph{Locus positional embeddings (optional).}
+Because cross-attention is permutation-equivariant with respect to the
+sequence of loci, we optionally add a learned per-locus positional bias
+before the first cross-attention layer.  A shared embedding table
+$\mathbf{P} \in \mathbb{R}^{L_{\max} \times 32}$ (with $L_{\max} = 16$ to
+accommodate future multi-locus extensions) is projected to $d'$ via a
+learned linear layer and added to both $\tilde{\mathbf{D}}$ and
+$\tilde{\mathbf{R}}$:
+\begin{equation}
+  \tilde{\mathbf{D}} \leftarrow \tilde{\mathbf{D}}
+    + \mathbf{P}_{1:L}\,\mathbf{W}_{\mathrm{pos}},
+  \qquad
+  \tilde{\mathbf{R}} \leftarrow \tilde{\mathbf{R}}
+    + \mathbf{P}_{1:L}\,\mathbf{W}_{\mathrm{pos}},
+\end{equation}
+where $\mathbf{W}_{\mathrm{pos}} \in \mathbb{R}^{32 \times d'}$.  This
+adds 544 parameters and allows the cross-attention heads to incorporate
+locus identity when computing attention scores.  Positional embeddings are
+disabled by default (\texttt{interaction\_pos\_embed: false} in the config)
+and should be enabled when the locus ordering is fixed and meaningful.
 
 \paragraph{Bidirectional cross-attention.}
 We apply $N = 2$ stacked bidirectional cross-attention layers
@@ -376,7 +408,7 @@ with $\mathbf{W}_1 \in \mathbb{R}^{d' \times 4d'}$ and $\mathbf{W}_2 \in
 applied after the attention and feed-forward sublayers during training.
 
 \paragraph{Interaction feature vector.}
-After $N = 2$ layers, each stream is mean-pooled over the $L = 5$ locus
+After $N = 2$ layers, each stream is mean-pooled over the $L$ locus
 positions, and the two pooled vectors are concatenated to form the
 256-dimensional interaction representation:
 \begin{equation}
@@ -513,6 +545,22 @@ the highest mean concordance index across all three events on the validation
 set was retained.  Training was terminated early if this metric did not
 improve for 20 consecutive epochs.
 
+\paragraph{Post-hoc isotonic calibration.}
+Raw DeepHit CIF outputs can be miscalibrated, particularly at the tails of the
+follow-up horizon.  After the model checkpoint with the best validation
+C-index is selected, we fit a per-(event $\times$ time-bin) isotonic
+regression calibrator on the validation set:
+\begin{equation}
+  \hat{F}^{\mathrm{cal}}_k(t) = g_{k,t}(\hat{F}_k(t)),
+\end{equation}
+where each $g_{k,t}$ is a piecewise-constant isotonic regression
+\citep{barlow1972isotonic} fitted by \texttt{sklearn.isotonic.IsotonicRegression}
+with increasing constraint.  Monotonicity of the calibrated CIF over time is
+restored by applying a cumulative maximum across time bins after calibration.
+The calibrator is serialised alongside the model checkpoint and applied at
+inference time; it introduces no additional free parameters into the survival
+head.
+
 \paragraph{Hyperparameter selection.}
 Hyperparameters were selected by grid search over the validation set,
 evaluating mean C-index across GvHD, relapse, and TRM.  The ranges explored
@@ -617,7 +665,8 @@ be interpreted as indicative rather than definitive.
 
 To illustrate the representational quality of the ESM-2 embedding pipeline, we
 applied UMAP dimensionality reduction \citep{mcinnes2018umap} to a prototype
-set of 98 HLA allele embeddings spanning all five loci (A, B, C, DRB1, DQB1),
+set of 98 HLA allele embeddings spanning the five primary loci (A, B, C,
+DRB1, DQB1; DPB1 is supported as an optional sixth locus),
 computed using the same embedding procedure described in Section~\ref{sec:esm2}
 (Figure~\ref{fig:umap}).
 
@@ -837,11 +886,15 @@ cohort) cannot be reliably evaluated.  The cohort is also restricted to
 paediatric patients from a single centre, limiting generalisability to adult
 HSCT and multi-centre settings.
 
-Fine-tuning ESM-2 on HLA-specific or immunology-specific protein sequences
-is a promising direction for improving embedding quality beyond what the
-general-purpose UR50D training achieves.  Incorporating linkage disequilibrium
-structure across loci---rather than treating loci as independent in the
-embedding step---is another architectural extension worth exploring.
+The CAPA V2 release includes partial fine-tuning of the final $n$ ESM-2
+transformer layers jointly with the interaction network, enabling the model to
+adapt general-purpose UR50D representations towards HLA-specific structural
+features when training data are sufficient.  This mechanism is disabled in the
+default configuration to preserve embedding quality on small datasets but can
+be activated via \texttt{esm\_finetune\_layers} in the YAML config.
+Incorporating linkage disequilibrium structure across loci---rather than
+treating loci as independent in the embedding step---remains an architectural
+extension worth exploring in future work.
 
 %% ── 5. Conclusion ───────────────────────────────────────────────────────────
 \section{Conclusion}
@@ -858,8 +911,10 @@ for the absence of a strong structural prior.  The key bottleneck for CAPA is
 data: the UCI BMT dataset records only aggregate mismatch scores, not allele
 identities.  Deploying CAPA's full embedding pipeline on a registry dataset with
 high-resolution HLA typing is the primary direction for future work.  All code,
-the interactive web interface, and model weights trained on synthetic allele data
-are released under the MIT licence to lower the barrier to this next step.
+the interactive web interface (including a multi-donor comparison tool for
+side-by-side ranking of up to 20 candidate donors by composite GvHD+TRM risk),
+and model weights trained on synthetic allele data are released under the MIT
+licence to lower the barrier to this next step.
 
 %% ── Back matter ─────────────────────────────────────────────────────────────
 \section*{Conflict of Interest}
