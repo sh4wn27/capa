@@ -80,7 +80,7 @@ _device: torch.device = torch.device("cpu")
 # Any other string is an unexpected load error.
 _startup_error: str | None = "no_checkpoint"
 
-_LOCI: list[str] = ["A", "B", "C", "DRB1", "DQB1"]
+_LOCI: list[str] = ["A", "B", "C", "DRB1", "DQB1", "DPB1"]
 _TIME_BINS: int = 100
 _MAX_DAYS: float = 730.0
 
@@ -132,9 +132,14 @@ def _mock_response(req: PredictionRequest) -> PredictionResponse:
     def _score(cif: list[float], extra: float = 0.0) -> float:
         return float(min(1.0, max(0.0, cif[-1] + extra)))
 
-    # Synthetic 5×5 attention — diagonal dominant with mismatch loci highlighted
+    # Synthetic n×n attention — diagonal dominant with mismatch loci highlighted
+    # Size adapts to the number of loci actually provided
+    n_loci = sum(
+        1 for loc in _LOCI if getattr(req.donor_hla, loc) is not None
+    )
+    n_loci = max(n_loci, 1)
     rng = np.random.default_rng(mm)
-    attn = rng.dirichlet(alpha=[2.0] * 5, size=5).tolist()
+    attn = rng.dirichlet(alpha=[2.0] * n_loci, size=n_loci).tolist()
 
     return PredictionResponse(
         gvhd=EventRisk(

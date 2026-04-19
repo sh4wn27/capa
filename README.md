@@ -14,6 +14,7 @@ Instead of categorical HLA match/mismatch scores, CAPA learns **continuous, biol
 | Treats all mismatches as equal | Captures structural/functional similarity |
 | Cox PH for single endpoint | DeepHit for competing risks |
 | Black-box predictions | Cross-attention interpretability |
+| Single-donor evaluation | Multi-donor ranking comparison |
 
 ---
 
@@ -22,7 +23,7 @@ Instead of categorical HLA match/mismatch scores, CAPA learns **continuous, biol
 **Requirements:** Python 3.11+, [uv](https://github.com/astral-sh/uv)
 
 ```bash
-git clone https://github.com/capa-project/capa.git
+git clone https://github.com/sh4wn27/capa.git
 cd capa
 uv sync
 ```
@@ -36,10 +37,7 @@ For GPU support (recommended for ESM-2 inference), install PyTorch with CUDA sep
 ### 1. Download data and sequences
 
 ```bash
-# Download IPD-IMGT/HLA allele sequences
 uv run python scripts/download_hla_seqs.py
-
-# Download UCI BMT dataset and preprocess
 uv run python scripts/preprocess.py
 ```
 
@@ -49,10 +47,16 @@ uv run python scripts/preprocess.py
 uv run python scripts/train.py --config configs/default.yaml
 ```
 
+Override any hyperparameter inline:
+
+```bash
+CAPA_TRAINING__LR=5e-4 uv run python scripts/train.py --config configs/default.yaml
+```
+
 ### 3. Evaluate
 
 ```bash
-uv run python scripts/evaluate.py --checkpoint runs/best/model.pt
+uv run python scripts/evaluate.py --checkpoint runs/best/model.pt --config configs/default.yaml
 ```
 
 ### 4. Predict (Python API)
@@ -63,17 +67,41 @@ from capa.api.predict import predict_risk
 result = predict_risk(
     donor_hla={"A": "A*02:01", "B": "B*07:02", "DRB1": "DRB1*15:01"},
     recipient_hla={"A": "A*24:02", "B": "B*07:02", "DRB1": "DRB1*15:01"},
-    clinical_covariates={"age_recipient": 8, "disease": "ALL", "conditioning": "MAC"},
 )
-# result.gvhd_risk, result.relapse_risk, result.trm_risk — cumulative incidence curves
+# result.gvhd.risk_score, result.relapse.risk_score, result.trm.risk_score
+# result.gvhd.cumulative_incidence  — 100-bin CIF over 0–730 days
 ```
 
-### 5. Web frontend (local)
+### 5. Multi-donor comparison (Python API)
+
+```python
+import httpx
+
+resp = httpx.post("http://localhost:8000/compare", json={
+    "recipient_hla": {"A": "A*24:02", "DRB1": "DRB1*15:01"},
+    "donors": [
+        {"label": "Donor A", "donor_hla": {"A": "A*02:01", "DRB1": "DRB1*15:01"}},
+        {"label": "Donor B", "donor_hla": {"A": "A*24:02", "DRB1": "DRB1*07:01"}},
+        {"label": "Donor C", "donor_hla": {"A": "A*02:01", "DRB1": "DRB1*07:01"}},
+    ],
+})
+data = resp.json()
+print(data["best_donor_label"])       # e.g. "Donor A"
+for d in data["donors"]:
+    print(d["rank"], d["label"], d["gvhd_risk"])
+```
+
+### 6. Web frontend (local)
 
 ```bash
-cd web
-npm install
-npm run dev   # http://localhost:3000
+cd web && npm install && npm run dev   # http://localhost:3000
+```
+
+Or with Docker:
+
+```bash
+docker compose up backend             # Python API only
+docker compose --profile fullstack up # API + Next.js frontend
 ```
 
 ---
@@ -82,18 +110,19 @@ npm run dev   # http://localhost:3000
 
 ```
 capa/              # Python package
-├── config.py      # Pydantic settings & hyperparameters
-├── data/          # Dataset loading, HLA parsing, splits
+├── config.py      # Pydantic settings & hyperparameters (YAML + env var override)
+├── data/          # Dataset loading, HLA parsing, stratified splits
 ├── embeddings/    # ESM-2 encoder + HDF5 embedding cache
 ├── model/         # Cross-attention interaction + DeepHit survival head
-├── training/      # Training loop, evaluation metrics
+├── training/      # Training loop, evaluation metrics, isotonic calibration
 ├── interpret/     # Attention maps, SHAP explanations
-└── api/           # Inference pipeline + Pydantic schemas
-scripts/           # CLI entry points (train, evaluate, preprocess)
+└── api/           # FastAPI inference server + Pydantic schemas
+configs/           # YAML config files (default.yaml)
+scripts/           # CLI entry points (train, evaluate, preprocess, compare)
 web/               # Next.js 14 frontend (Vercel deployment)
 notebooks/         # EDA, embedding exploration, model development
 paper/             # LaTeX manuscript
-tests/             # pytest test suite (>80% coverage target)
+tests/             # pytest test suite (92% coverage)
 ```
 
 ---
@@ -101,16 +130,17 @@ tests/             # pytest test suite (>80% coverage target)
 ## Model Architecture
 
 ```
-Donor HLA alleles + Recipient HLA alleles + Clinical covariates
+Donor HLA alleles (A/B/C/DRB1/DQB1/DPB1) + Recipient HLA alleles + Clinical covariates
       │
       ▼
 [HLA Sequence Lookup]  →  amino acid sequences per allele
       │
       ▼
-[ESM-2 Encoder]  →  1280-dim embedding per allele (frozen, cached)
-      │
+[ESM-2 Encoder]  →  1280-dim embedding per allele
+      │             (frozen by default; last-N-layer fine-tuning supported)
       ▼
 [Donor Matrix: n_loci × 1280]   [Recipient Matrix: n_loci × 1280]
+      │         + locus positional embeddings (optional)
       └──────────┬──────────────────────────┘
                  ▼
 [Cross-Attention Interaction Network]  →  128-dim interaction features
@@ -123,18 +153,35 @@ Donor HLA alleles + Recipient HLA alleles + Clinical covariates
                  │
                  ▼
 Cumulative incidence curves · risk scores · attention weights
+                 │
+                 ▼
+[Isotonic Calibration]  →  calibrated per-(event × time-bin) probabilities
 ```
+
+---
+
+## Configuration
+
+All hyperparameters live in `configs/default.yaml`. Override any field with an environment variable using the `CAPA_` prefix and `__` as separator:
+
+```bash
+CAPA_MODEL__INTERACTION_DIM=256 uv run python scripts/train.py
+```
+
+Priority: **env vars** > **YAML file** > **pydantic defaults**.
 
 ---
 
 ## Development
 
 ```bash
-uv run pytest                  # run tests
+uv run pytest                  # run tests (789 passing, 92% coverage)
 uv run ruff check .            # lint
 uv run ruff format .           # format
 uv run mypy capa/              # type check
 ```
+
+CI runs on every push: lint, type check, unit tests, API smoke tests, and Next.js production build.
 
 ---
 
@@ -142,12 +189,6 @@ uv run mypy capa/              # type check
 
 - **UCI Bone Marrow Transplant Dataset** — 187 pediatric allogeneic HSCT patients. Download instructions in `data/README.md`.
 - **IPD-IMGT/HLA Database** — full protein sequences for all known HLA alleles. Downloaded automatically by `scripts/download_hla_seqs.py`.
-
----
-
-## Current Phase
-
-**Phase 1**: Data pipeline + HLA embedding engine. See `capa/data/` and `capa/embeddings/`.
 
 ---
 
