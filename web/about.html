@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>About — CAPA</title>
+<meta name="description" content="The motivation, method, and limitations behind CAPA — a structure-aware approach to HLA mismatch modelling for transplant outcome prediction." />
+<link rel="stylesheet" href="styles.css" />
+<style>
+  .page-hero { padding-block: clamp(48px, 7vw, 88px) clamp(36px, 5vw, 56px); }
+  .page-hero .kicker { display: flex; align-items: center; gap: 14px; margin-bottom: 26px; }
+  .page-hero h1 { font-size: clamp(2.4rem, 5vw, 4.2rem); letter-spacing: -0.02em; max-width: 16ch; }
+  .page-hero h1 em { font-style: italic; color: var(--accent-ink); }
+  .page-lede { font-family: var(--serif); font-size: clamp(1.25rem, 2vw, 1.6rem); line-height: 1.45;
+    color: var(--ink-2); max-width: 54ch; margin-top: 28px; }
+
+  /* article layout — sidenotes column */
+  .article { display: grid; grid-template-columns: 200px minmax(0, 680px); gap: clamp(28px, 5vw, 72px);
+    padding-block: clamp(40px, 6vw, 80px); align-items: start; }
+  .article .aside { position: sticky; top: 84px; }
+  .toc { display: flex; flex-direction: column; gap: 2px; }
+  .toc a { font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.02em; color: var(--ink-3);
+    padding: 7px 0; border-bottom: 1px solid var(--line-2); transition: color .15s; display: flex; gap: 10px; }
+  .toc a:hover, .toc a.active { color: var(--ink); }
+  .toc a .n { color: var(--accent-ink); }
+
+  .prose > section { margin-bottom: clamp(44px, 6vw, 72px); scroll-margin-top: 80px; }
+  .prose h2 { font-size: clamp(1.7rem, 2.6vw, 2.3rem); margin-bottom: 20px; }
+  .prose h3 { font-family: var(--sans); font-weight: 600; font-size: 1.05rem; margin: 28px 0 10px; letter-spacing: -0.01em; }
+  .prose p { font-family: var(--serif); font-size: 1.18rem; line-height: 1.72; color: var(--ink); margin-bottom: 20px; }
+  .prose p .lead-cap::first-letter { } /* reserved */
+  .prose p b { font-weight: 600; }
+  .prose .small { font-family: var(--sans); font-size: 14px; color: var(--ink-3); }
+  .prose ul { font-family: var(--serif); font-size: 1.18rem; line-height: 1.6; color: var(--ink); padding-left: 0; list-style: none; margin: 0 0 20px; }
+  .prose ul li { padding-left: 26px; position: relative; margin-bottom: 12px; }
+  .prose ul li::before { content: '→'; position: absolute; left: 0; color: var(--accent-ink); font-family: var(--sans); }
+
+  .pullquote { font-family: var(--serif); font-style: italic; font-size: clamp(1.4rem, 2.4vw, 1.95rem);
+    line-height: 1.4; color: var(--ink); border-left: 2px solid var(--accent); padding: 6px 0 6px 28px; margin: 36px 0; }
+
+  .callout { border: 1px solid var(--line); border-radius: 6px; background: var(--paper-2); padding: 24px 26px; margin: 32px 0; }
+  .callout .c-tag { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--accent-ink); margin-bottom: 10px; }
+  .callout p { font-family: var(--sans); font-size: 15px; line-height: 1.66; color: var(--ink-2); margin: 0; }
+
+  .defn { display: grid; grid-template-columns: 130px 1fr; gap: 18px; padding: 16px 0; border-bottom: 1px solid var(--line-2); }
+  .defn dt { font-family: var(--mono); font-size: 12.5px; color: var(--ink); letter-spacing: 0.02em; }
+  .defn dd { margin: 0; font-size: 15px; color: var(--ink-2); line-height: 1.6; }
+
+  .author { display: flex; align-items: center; gap: 16px; margin-top: 8px; }
+  .author .ava { width: 48px; height: 48px; border-radius: 50%; border: 1.5px solid var(--ink);
+    display: grid; place-items: center; font-family: var(--serif); font-style: italic; font-size: 20px; }
+  .author .meta { font-size: 13.5px; line-height: 1.4; }
+  .author .meta b { font-weight: 600; }
+  .author .meta span { color: var(--ink-3); font-family: var(--mono); font-size: 11.5px; }
+
+  @media (max-width: 880px) {
+    .article { grid-template-columns: 1fr; }
+    .article .aside { position: static; margin-bottom: 8px; }
+    .toc { flex-direction: row; flex-wrap: wrap; gap: 8px; }
+    .toc a { border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; }
+    .defn { grid-template-columns: 1fr; gap: 4px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="index.html"><span class="brand-txt"><b>CAPA</b> <span>/ Alloimmunity</span></span></a>
+    <nav class="nav-links" data-nav-menu>
+      <a href="index.html">Home</a><a href="predict.html">Predict</a><a href="compare.html">Compare</a>
+      <a href="about.html" class="active">About</a><a href="paper.html">Paper</a>
+    </nav>
+    <div class="nav-cta">
+      <a class="gh" href="https://github.com/sh4wn27/capa" target="_blank" rel="noopener"><svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a>
+      <a class="btn btn-primary" href="predict.html">Predict <span class="arr">→</span></a>
+    </div>
+  </div>
+</header>
+
+<section class="page-hero wrap">
+  <div class="kicker">
+    <span class="eyebrow">About the project</span>
+    <span class="tag"><span class="dot"></span>Proof-of-concept</span>
+  </div>
+  <h1>Reading HLA the way the <em>immune system</em> does</h1>
+  <p class="page-lede">CAPA — Computational Architecture for Predicting Alloimmunity — treats HLA molecules as protein sequences, not categorical labels, to predict post-transplant outcomes as competing risks.</p>
+</section>
+
+<hr class="rule" />
+
+<div class="article wrap">
+  <!-- TOC -->
+  <aside class="aside">
+    <nav class="toc" id="toc">
+      <a href="#problem"><span class="n">01</span> The problem</a>
+      <a href="#idea"><span class="n">02</span> The core idea</a>
+      <a href="#method"><span class="n">03</span> How it works</a>
+      <a href="#data"><span class="n">04</span> Data & evaluation</a>
+      <a href="#limits"><span class="n">05</span> Limitations</a>
+      <a href="#author"><span class="n">06</span> Author & license</a>
+    </nav>
+  </aside>
+
+  <!-- PROSE -->
+  <article class="prose">
+    <section id="problem">
+      <h2>The problem with match counting</h2>
+      <p>Haematopoietic stem cell transplantation (HSCT) can cure otherwise fatal blood cancers, but its success hinges on <b>human leukocyte antigen (HLA) compatibility</b> between donor and recipient. The immune consequences of a mismatch — graft-versus-host disease, relapse, transplant-related mortality — are what determine whether a patient survives.</p>
+      <p>Yet clinical practice still reduces this rich biology to a count. A donor is described as a 9/10 or 10/10 match: the number of matching alleles across a handful of loci. This treats every mismatch as equivalent and binary, when in reality two alleles can differ by a single, immunologically silent amino acid — or by a substitution that radically reshapes the peptide-binding groove.</p>
+      <div class="pullquote">A match score throws away almost everything the protein is telling us.</div>
+    </section>
+
+    <section id="idea">
+      <h2>The core idea</h2>
+      <p>HLA molecules are proteins. Protein language models — trained on hundreds of millions of sequences — learn representations that capture structural and functional similarity. CAPA's premise is simple: <b>encode each allele with a protein language model, and let the geometry of that embedding space stand in for compatibility.</b></p>
+      <p>Two alleles that fold and present peptides similarly land near each other in embedding space, even if their names differ. Two that diverge functionally are pushed apart, even if they share a serological group. This is a continuous, learned notion of mismatch — the opposite of a binary count.</p>
+      <div class="callout">
+        <div class="c-tag">Why it matters</div>
+        <p>Continuous embeddings let a model reason about <i>degree</i> and <i>direction</i> of mismatch, and to generalise to allele pairs it has never seen in training — something a lookup table of match scores can never do.</p>
+      </div>
+    </section>
+
+    <section id="method">
+      <h2>How it works</h2>
+      <p>The pipeline has three stages, each deliberately kept interpretable.</p>
+      <h3>1 · Sequence retrieval</h3>
+      <p>Donor and recipient alleles at five loci — A, B, C, DRB1, DQB1 — are resolved to full protein sequences via the IPD-IMGT/HLA database.</p>
+      <h3>2 · ESM-2 embedding</h3>
+      <p>Each sequence is passed through frozen <b>ESM-2 (650M parameters)</b> to produce a 1 280-dimensional vector. Freezing the language model keeps the representation general and the trainable model small.</p>
+      <h3>3 · Cross-attention & DeepHit</h3>
+      <p>A cross-attention network models the interaction between donor and recipient embeddings, and a <b>DeepHit</b> head jointly predicts the cumulative incidence of three competing risks. Competing-risks modelling matters because a patient who relapses cannot then experience transplant-related mortality — the events compete.</p>
+      <dl style="margin-top:24px">
+        <div class="defn"><dt>GvHD</dt><dd>Graft-versus-host disease — donor immune cells attack recipient tissue.</dd></div>
+        <div class="defn"><dt>Relapse</dt><dd>Return of the underlying malignancy after transplant.</dd></div>
+        <div class="defn"><dt>TRM</dt><dd>Transplant-related mortality from non-relapse causes.</dd></div>
+      </dl>
+    </section>
+
+    <section id="data">
+      <h2>Data & evaluation</h2>
+      <p>CAPA was developed and evaluated on the public <b>UCI Bone Marrow Transplant (children)</b> dataset — 187 paediatric HSCT patients. Performance was measured with the time-dependent concordance index and Brier score against Cox proportional-hazards and Fine–Gray baselines.</p>
+      <p>On the held-out test set, the structure-aware model matched or exceeded classical baselines for relapse and TRM concordance, while producing calibrated, case-specific incidence curves rather than a single risk class.</p>
+      <div class="callout">
+        <div class="c-tag">Reproducibility</div>
+        <p>All code, trained weights, and evaluation notebooks are open source under the MIT license. The dataset is publicly available from the UCI Machine Learning Repository.</p>
+      </div>
+    </section>
+
+    <section id="limits">
+      <h2>Limitations & honest caveats</h2>
+      <p>This is a proof-of-concept, and the constraints are real:</p>
+      <ul>
+        <li><b>Small cohort.</b> 187 patients is far too few to make clinical claims; confidence intervals are wide and some events are too rare to evaluate.</li>
+        <li><b>Single dataset.</b> Results have not yet been replicated on an independent, larger transplant registry.</li>
+        <li><b>Not for clinical use.</b> CAPA is a research artifact intended to demonstrate a representational idea, not a decision-support tool.</li>
+      </ul>
+      <p class="small">The right next step is external validation on a large multi-centre cohort. Contributions and replications are welcome via the repository.</p>
+    </section>
+
+    <section id="author">
+      <h2>Author & license</h2>
+      <p>CAPA is an independent open-source research project, released under the MIT license.</p>
+      <div style="display:flex;gap:14px;margin-top:8px;flex-wrap:wrap">
+        <a class="btn btn-primary" href="paper.html">Read the paper <span class="arr">→</span></a>
+        <a class="btn btn-ghost" href="https://github.com/sh4wn27/capa" target="_blank" rel="noopener">View on GitHub</a>
+      </div>
+    </section>
+  </article>
+</div>
+
+<footer class="footer">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div class="footer-about">
+        <a class="brand" href="index.html"><span class="brand-txt"><b>CAPA</b></span></a>
+        <p>Computational Architecture for Predicting Alloimmunity. An open-source proof-of-concept for structure-aware HLA mismatch modelling.</p>
+        <p class="mono" style="font-size:12px;margin-top:14px"><a href="https://github.com/sh4wn27/capa" target="_blank" rel="noopener" style="border-bottom:1px solid var(--line)">github.com/sh4wn27/capa</a></p>
+      </div>
+      <div class="footer-col"><h4>Navigation</h4><ul>
+        <li><a href="index.html">Home</a></li><li><a href="predict.html">Predict</a></li><li><a href="compare.html">Compare</a></li><li><a href="about.html">About</a></li><li><a href="paper.html">Paper</a></li>
+      </ul></div>
+      <div class="footer-col"><h4>Resources</h4><ul>
+        <li><a href="https://github.com/sh4wn27/capa" target="_blank" rel="noopener">GitHub Repository</a></li>
+        <li><a href="https://archive.ics.uci.edu/dataset/565/bone+marrow+transplant+children" target="_blank" rel="noopener">UCI BMT Dataset</a></li>
+        <li><a href="https://www.ebi.ac.uk/ipd/imgt/hla/" target="_blank" rel="noopener">IPD-IMGT/HLA</a></li>
+        <li><a href="https://huggingface.co/facebook/esm2_t33_650M_UR50D" target="_blank" rel="noopener">ESM-2 Model</a></li>
+      </ul></div>
+    </div>
+    <div class="footer-bottom"><span>© 2026 Huanxuan Li (Shawn) · MIT License</span><span>Next.js · Tailwind · ESM-2 · PyTorch</span></div>
+  </div>
+</footer>
+
+<script>
+  /* TOC scroll-spy */
+  (function () {
+    const links = [...document.querySelectorAll('#toc a')];
+    const map = new Map(links.map(a => [a.getAttribute('href').slice(1), a]));
+    const secs = [...document.querySelectorAll('.prose section')];
+    const spy = new IntersectionObserver((es) => {
+      es.forEach(e => { if (e.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'));
+        const a = map.get(e.target.id); if (a) a.classList.add('active');
+      }});
+    }, { rootMargin: '-20% 0px -70% 0px' });
+    secs.forEach(s => spy.observe(s));
+  })();
+</script>
+<script src="app.js"></script>
+</body>
+</html>

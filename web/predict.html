@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Predict — CAPA</title>
+<meta name="description" content="Enter donor and recipient HLA typing and receive competing-risk cumulative incidence curves for GvHD, relapse, and transplant-related mortality." />
+<link rel="stylesheet" href="styles.css" />
+<style>
+  .tool-head { padding-block: clamp(40px, 6vw, 64px) clamp(20px, 3vw, 32px); }
+  .tool-head .kicker { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+  .tool-head h1 { font-size: clamp(2.2rem, 4vw, 3.4rem); letter-spacing: -0.02em; }
+  .tool-head h1 em { font-style: italic; color: var(--accent-ink); }
+  .tool-head p { color: var(--ink-2); font-size: 17px; max-width: 56ch; margin-top: 16px; line-height: 1.6; }
+
+  .tool-grid { display: grid; grid-template-columns: 388px minmax(0,1fr); gap: clamp(28px, 4vw, 56px);
+    padding-bottom: clamp(56px, 8vw, 110px); align-items: start; }
+
+  /* ---- input panel ---- */
+  .panel { border: 1px solid var(--line); border-radius: 8px; background: var(--paper-2); position: sticky; top: 80px; overflow: hidden; }
+  .panel-hd { padding: 18px 22px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; }
+  .panel-hd .ph-t { font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-2); }
+  .panel-hd .ph-presets { display: flex; gap: 6px; }
+  .preset-btn { font-family: var(--mono); font-size: 10.5px; padding: 4px 9px; border: 1px solid var(--line);
+    border-radius: 4px; background: var(--paper); color: var(--ink-2); cursor: pointer; transition: all .15s; }
+  .preset-btn:hover { border-color: var(--ink); color: var(--ink); }
+  .panel-body { padding: 20px 22px; }
+  .locus-table { display: grid; grid-template-columns: 56px 1fr 1fr; gap: 8px 10px; align-items: center; }
+  .locus-table .lh { font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--ink-3); padding-bottom: 4px; }
+  .locus-table .lh:first-child { grid-column: 1; }
+  .locus-name { font-family: var(--mono); font-size: 13px; color: var(--ink); font-weight: 500; }
+  .hla-in { width: 100%; font-family: var(--mono); font-size: 13px; padding: 9px 10px; border: 1px solid var(--line);
+    border-radius: 5px; background: var(--paper); color: var(--ink); transition: border-color .15s, box-shadow .15s; }
+  .hla-in:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-2); }
+  .hla-in.bad { border-color: var(--risk-gvhd); }
+  .panel-foot { padding: 18px 22px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 12px; }
+  .predict-btn { justify-content: center; width: 100%; font-size: 15px; padding: 14px; }
+  .predict-btn:disabled { opacity: .55; cursor: not-allowed; }
+  .match-readout { display: flex; align-items: center; justify-content: space-between; font-family: var(--mono); font-size: 11.5px; color: var(--ink-3); }
+  .match-readout b { color: var(--ink); }
+
+  /* ---- results ---- */
+  .res-empty { border: 1px dashed var(--line); border-radius: 8px; padding: 64px 40px; text-align: center; color: var(--ink-3); }
+  .res-empty svg { width: 40px; height: 40px; margin-bottom: 16px; color: var(--ink-3); opacity: .6; }
+  .res-empty p { font-family: var(--serif); font-style: italic; font-size: 17px; }
+
+  .results { display: none; flex-direction: column; gap: 24px; }
+  .results.show { display: flex; }
+
+  .risk-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .rcard { border: 1px solid var(--line); border-radius: 7px; padding: 16px 18px; background: var(--paper-2); position: relative; overflow: hidden; }
+  .rcard::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--c); }
+  .rcard .rc-lbl { display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 11px;
+    letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-2); margin-bottom: 10px; }
+  .rcard .rc-lbl .dot { width: 8px; height: 8px; border-radius: 2px; background: var(--c); }
+  .rcard .rc-val { font-family: var(--serif); font-size: 2.4rem; line-height: 1; letter-spacing: -0.02em; }
+  .rcard .rc-val sup { font-size: 0.9rem; color: var(--ink-3); font-family: var(--sans); }
+  .rcard .rc-meta { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); margin-top: 6px; }
+  .rcard .rc-bar { height: 4px; background: var(--paper-3); border-radius: 2px; margin-top: 12px; overflow: hidden; }
+  .rcard .rc-bar i { display: block; height: 100%; background: var(--c); border-radius: 2px; width: 0; transition: width 1s cubic-bezier(.2,.7,.2,1); }
+
+  .chart-card { border: 1px solid var(--line); border-radius: 8px; padding: 22px 24px 16px; background: var(--paper-2); }
+  .chart-card .cc-hd { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; }
+  .chart-card .cc-t { font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-2); }
+  .chart-card .cc-n { font-family: var(--mono); font-size: 10px; color: var(--ink-3); }
+  .legend { display: flex; gap: 18px; margin-top: 10px; flex-wrap: wrap; }
+  .legend span { display: inline-flex; align-items: center; gap: 7px; font-family: var(--mono); font-size: 11px; color: var(--ink-2); cursor: pointer; user-select: none; }
+  .legend span.off { opacity: .35; }
+  .legend i { width: 14px; height: 3px; border-radius: 2px; }
+  .cif-path { transition: opacity .2s; }
+
+  /* attribution */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .attr-row { display: grid; grid-template-columns: 86px 1fr 52px; gap: 10px; align-items: center; margin-bottom: 9px; }
+  .attr-row .ar-lbl { font-family: var(--mono); font-size: 12px; color: var(--ink); }
+  .attr-row .ar-track { height: 8px; background: var(--paper-3); border-radius: 2px; position: relative; }
+  .attr-row .ar-fill { position: absolute; top: 0; bottom: 0; left: 50%; border-radius: 2px; transition: width .8s cubic-bezier(.2,.7,.2,1), left .8s; }
+  .attr-row .ar-val { font-family: var(--mono); font-size: 11.5px; text-align: right; color: var(--ink-2); }
+  .attn-grid { display: grid; gap: 3px; }
+  .attn-grid .ag-row { display: grid; grid-template-columns: 52px 1fr; gap: 8px; align-items: center; }
+  .attn-grid .ag-lbl { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); }
+  .attn-cells { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; }
+  .attn-cells i { aspect-ratio: 2.4; border-radius: 2px; }
+  .attn-x { display: grid; grid-template-columns: 52px 1fr; gap: 8px; margin-top: 4px; }
+  .attn-x .axl { display: grid; grid-template-columns: repeat(5,1fr); gap: 3px; }
+  .attn-x .axl span { font-family: var(--mono); font-size: 9px; color: var(--ink-3); text-align: center; }
+
+  .disclaimer { font-family: var(--mono); font-size: 11px; color: var(--ink-3); line-height: 1.6;
+    border-top: 1px solid var(--line-2); padding-top: 16px; }
+  .disclaimer b { color: var(--risk-gvhd); }
+
+  @media (max-width: 880px) {
+    .tool-grid { grid-template-columns: 1fr; }
+    .panel { position: static; }
+    .risk-cards { grid-template-columns: 1fr; }
+    .two-col { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="index.html"><span class="brand-txt"><b>CAPA</b> <span>/ Alloimmunity</span></span></a>
+    <nav class="nav-links" data-nav-menu>
+      <a href="index.html">Home</a><a href="predict.html" class="active">Predict</a><a href="compare.html">Compare</a>
+      <a href="about.html">About</a><a href="paper.html">Paper</a>
+    </nav>
+    <div class="nav-cta">
+      <a class="gh" href="https://github.com/sh4wn27/capa" target="_blank" rel="noopener"><svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a>
+      <a class="btn btn-primary" href="compare.html">Compare <span class="arr">→</span></a>
+    </div>
+  </div>
+</header>
+
+<section class="tool-head wrap">
+  <div class="kicker">
+    <span class="eyebrow">Prediction tool</span>
+    <span class="tag"><span class="dot"></span>Demo · synthetic inference</span>
+  </div>
+  <h1>Predict competing-risk <em>outcomes</em></h1>
+  <p>Enter donor and recipient HLA typing across five loci. CAPA returns cumulative-incidence curves, per-risk estimates, and interpretability views. Use a preset to start instantly.</p>
+</section>
+
+<hr class="rule" />
+
+<div class="tool-grid wrap" style="padding-top:clamp(28px,4vw,44px)">
+  <!-- INPUT PANEL -->
+  <form class="panel" id="form" autocomplete="off">
+    <div class="panel-hd">
+      <span class="ph-t">HLA Typing</span>
+      <div class="ph-presets">
+        <button type="button" class="preset-btn" data-preset="match">10/10</button>
+        <button type="button" class="preset-btn" data-preset="single">9/10</button>
+        <button type="button" class="preset-btn" data-preset="haplo">Haplo</button>
+      </div>
+    </div>
+    <div class="panel-body">
+      <div class="locus-table">
+        <span class="lh">Locus</span><span class="lh">Donor</span><span class="lh">Recipient</span>
+      </div>
+      <div class="locus-table" id="loci" style="margin-top:8px"></div>
+    </div>
+    <div class="panel-foot">
+      <div class="match-readout"><span>Allele match</span><span><b id="matchN">—</b> / 10</span></div>
+      <button type="submit" class="btn btn-primary predict-btn" id="run">Run prediction <span class="arr">→</span></button>
+    </div>
+  </form>
+
+  <!-- RESULTS -->
+  <div>
+    <div class="res-empty" id="empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 20V4M3 20h18M3 15c4-1 6-7 9-7s5 4 9 3"/></svg>
+      <p>Enter HLA typing and run a prediction to see results.</p>
+    </div>
+
+    <div class="results" id="results">
+      <!-- risk summary cards -->
+      <div class="risk-cards">
+        <div class="rcard" style="--c:var(--risk-gvhd)"><div class="rc-lbl"><span class="dot"></span>GvHD</div><div class="rc-val"><span id="v-gvhd">0</span><sup>%</sup></div><div class="rc-meta">5-yr cumulative incidence</div><div class="rc-bar"><i id="b-gvhd"></i></div></div>
+        <div class="rcard" style="--c:var(--risk-relapse)"><div class="rc-lbl"><span class="dot"></span>Relapse</div><div class="rc-val"><span id="v-relapse">0</span><sup>%</sup></div><div class="rc-meta">5-yr cumulative incidence</div><div class="rc-bar"><i id="b-relapse"></i></div></div>
+        <div class="rcard" style="--c:var(--risk-trm)"><div class="rc-lbl"><span class="dot"></span>TRM</div><div class="rc-val"><span id="v-trm">0</span><sup>%</sup></div><div class="rc-meta">5-yr cumulative incidence</div><div class="rc-bar"><i id="b-trm"></i></div></div>
+      </div>
+
+      <!-- CIF chart -->
+      <div class="chart-card">
+        <div class="cc-hd"><span class="cc-t">Cumulative incidence functions</span><span class="cc-n">0 – 72 months</span></div>
+        <svg viewBox="0 0 640 260" width="100%" preserveAspectRatio="xMidYMid meet" id="cifChart" role="img" aria-label="Predicted cumulative incidence curves">
+          <line x1="48" y1="14" x2="48" y2="220" class="s-line" stroke-width="1"/>
+          <line x1="48" y1="220" x2="624" y2="220" class="s-axis" stroke-width="1"/>
+          <g class="s-line2" stroke-width="1"><line x1="48" y1="169" x2="624" y2="169"/><line x1="48" y1="117" x2="624" y2="117"/><line x1="48" y1="66" x2="624" y2="66"/></g>
+          <g font-family="IBM Plex Mono, monospace" font-size="9" class="t-mut">
+            <text x="42" y="223" text-anchor="end">0</text><text x="42" y="172" text-anchor="end">.25</text>
+            <text x="42" y="120" text-anchor="end">.50</text><text x="42" y="69" text-anchor="end">.75</text><text x="42" y="17" text-anchor="end">1.0</text>
+            <text x="48" y="238" text-anchor="start">0</text><text x="336" y="238" text-anchor="middle">36 mo</text><text x="624" y="238" text-anchor="end">72 mo</text>
+          </g>
+          <path class="cif-path s-gvhd" id="p-gvhd" fill="none" stroke-width="2.6" d=""/>
+          <path class="cif-path s-relapse" id="p-relapse" fill="none" stroke-width="2.6" d=""/>
+          <path class="cif-path s-trm" id="p-trm" fill="none" stroke-width="2.6" d=""/>
+        </svg>
+        <div class="legend" id="legend">
+          <span data-k="gvhd"><i style="background:var(--risk-gvhd)"></i>GvHD</span>
+          <span data-k="relapse"><i style="background:var(--risk-relapse)"></i>Relapse</span>
+          <span data-k="trm"><i style="background:var(--risk-trm)"></i>TRM</span>
+        </div>
+      </div>
+
+      <!-- interpretability -->
+      <div class="two-col">
+        <div class="chart-card">
+          <div class="cc-hd"><span class="cc-t">Locus attribution · relapse</span><span class="cc-n">SHAP, signed</span></div>
+          <div id="attr"></div>
+          <p class="disclaimer" style="margin-top:14px;border:0;padding:0">Positive (right) increases predicted risk; negative (left) decreases it.</p>
+        </div>
+        <div class="chart-card">
+          <div class="cc-hd"><span class="cc-t">Cross-attention</span><span class="cc-n">donor → recipient</span></div>
+          <div class="attn-grid" id="attn"></div>
+          <div class="attn-x"><span></span><div class="axl"><span>A</span><span>B</span><span>C</span><span>DRB1</span><span>DQB1</span></div></div>
+        </div>
+      </div>
+
+      <p class="disclaimer"><b>Research demo only.</b> Outputs are generated by a deterministic synthetic model for interface demonstration and must not inform any clinical decision.</p>
+    </div>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div class="footer-about">
+        <a class="brand" href="index.html"><span class="brand-txt"><b>CAPA</b></span></a>
+        <p>Computational Architecture for Predicting Alloimmunity. An open-source proof-of-concept for structure-aware HLA mismatch modelling.</p>
+        <p class="mono" style="font-size:12px;margin-top:14px"><a href="https://github.com/sh4wn27/capa" target="_blank" rel="noopener" style="border-bottom:1px solid var(--line)">github.com/sh4wn27/capa</a></p>
+      </div>
+      <div class="footer-col"><h4>Navigation</h4><ul>
+        <li><a href="index.html">Home</a></li><li><a href="predict.html">Predict</a></li><li><a href="compare.html">Compare</a></li><li><a href="about.html">About</a></li><li><a href="paper.html">Paper</a></li>
+      </ul></div>
+      <div class="footer-col"><h4>Resources</h4><ul>
+        <li><a href="https://github.com/sh4wn27/capa" target="_blank" rel="noopener">GitHub Repository</a></li>
+        <li><a href="https://archive.ics.uci.edu/dataset/565/bone+marrow+transplant+children" target="_blank" rel="noopener">UCI BMT Dataset</a></li>
+        <li><a href="https://www.ebi.ac.uk/ipd/imgt/hla/" target="_blank" rel="noopener">IPD-IMGT/HLA</a></li>
+        <li><a href="https://huggingface.co/facebook/esm2_t33_650M_UR50D" target="_blank" rel="noopener">ESM-2 Model</a></li>
+      </ul></div>
+    </div>
+    <div class="footer-bottom"><span>© 2026 Huanxuan Li (Shawn) · MIT License</span><span>Next.js · Tailwind · ESM-2 · PyTorch</span></div>
+  </div>
+</footer>
+
+<script src="model.js"></script>
+<script>
+  (function () {
+    const LOCI = ['A', 'B', 'C', 'DRB1', 'DQB1'];
+    const PRESETS = {
+      match:  { A:['02:01','02:01'], B:['07:02','07:02'], C:['07:02','07:02'], DRB1:['15:01','15:01'], DQB1:['06:02','06:02'] },
+      single: { A:['02:01','02:01'], B:['07:02','08:01'], C:['07:02','07:02'], DRB1:['15:01','15:01'], DQB1:['06:02','06:02'] },
+      haplo:  { A:['02:01','01:01'], B:['07:02','08:01'], C:['07:02','03:04'], DRB1:['15:01','04:01'], DQB1:['06:02','03:02'] }
+    };
+
+    const lociWrap = document.getElementById('loci');
+    const inputs = {};
+    LOCI.forEach(l => {
+      const name = document.createElement('div'); name.className = 'locus-name'; name.textContent = l;
+      const d = mkInput(l, 'd'); const r = mkInput(l, 'r');
+      lociWrap.append(name, d, r);
+      inputs[l] = { d, r };
+    });
+    function mkInput(locus, side) {
+      const i = document.createElement('input');
+      i.className = 'hla-in'; i.placeholder = '02:01'; i.dataset.locus = locus; i.dataset.side = side;
+      i.addEventListener('input', updateMatch);
+      return i;
+    }
+
+    function readState() {
+      const s = {};
+      LOCI.forEach(l => { s[l] = [inputs[l].d.value.trim(), inputs[l].r.value.trim()]; });
+      return s;
+    }
+    function applyPreset(p) {
+      const data = PRESETS[p];
+      LOCI.forEach(l => { inputs[l].d.value = data[l][0]; inputs[l].r.value = data[l][1]; });
+      updateMatch();
+    }
+    function updateMatch() {
+      const s = readState();
+      let matches = 0, filled = 0;
+      LOCI.forEach(l => {
+        const [d, r] = s[l];
+        if (d && r) { filled += 2; if (d === r) matches += 2; }
+      });
+      document.getElementById('matchN').textContent = filled ? matches : '—';
+    }
+
+    document.querySelectorAll('.preset-btn').forEach(b => b.addEventListener('click', () => applyPreset(b.dataset.preset)));
+
+    document.getElementById('form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const s = readState();
+      const allFilled = LOCI.every(l => s[l][0] && s[l][1]);
+      if (!allFilled) {
+        LOCI.forEach(l => { [inputs[l].d, inputs[l].r].forEach(inp => inp.classList.toggle('bad', !inp.value.trim())); });
+        return;
+      }
+      LOCI.forEach(l => { inputs[l].d.classList.remove('bad'); inputs[l].r.classList.remove('bad'); });
+      const out = window.CAPAModel.predict(s);
+      render(out);
+    });
+
+    function render(out) {
+      document.getElementById('empty').style.display = 'none';
+      document.getElementById('results').classList.add('show');
+
+      // CIF paths
+      ['gvhd', 'relapse', 'trm'].forEach(k => {
+        document.getElementById('p-' + k).setAttribute('d', out.paths[k]);
+      });
+
+      // cards (animate counters; final state set immediately so it's correct even without rAF)
+      ['gvhd', 'relapse', 'trm'].forEach(k => {
+        const target = Math.round(out.fiveYr[k] * 100);
+        animateCount(document.getElementById('v-' + k), target);
+        document.getElementById('b-' + k).style.width = Math.min(100, target * 1.4) + '%';
+      });
+
+      // attribution
+      const attr = document.getElementById('attr'); attr.innerHTML = '';
+      out.attribution.forEach(a => {
+        const row = document.createElement('div'); row.className = 'attr-row';
+        const mag = Math.min(48, Math.abs(a.v) * 90);
+        const pos = a.v >= 0;
+        row.innerHTML = `<div class="ar-lbl">HLA-${a.locus}</div>
+          <div class="ar-track"><div class="ar-fill" style="background:${pos ? 'var(--risk-gvhd)' : 'var(--risk-trm)'};${pos ? 'left:50%;' : 'left:' + (50 - mag) + '%;'}width:0"></div></div>
+          <div class="ar-val">${pos ? '+' : ''}${a.v.toFixed(2)}</div>`;
+        attr.appendChild(row);
+        const fill = row.querySelector('.ar-fill');
+        requestAnimationFrame(() => { fill.style.width = mag + '%'; });
+        setTimeout(() => { fill.style.width = mag + '%'; }, 60);
+      });
+
+      // attention grid
+      const attn = document.getElementById('attn'); attn.innerHTML = '';
+      out.attention.forEach((rowVals, i) => {
+        const row = document.createElement('div'); row.className = 'ag-row';
+        const lbl = document.createElement('div'); lbl.className = 'ag-lbl'; lbl.textContent = LOCI[i];
+        const cells = document.createElement('div'); cells.className = 'attn-cells';
+        rowVals.forEach(v => {
+          const c = document.createElement('i');
+          c.style.background = `color-mix(in oklch, var(--accent) ${Math.round(8 + v * 88)}%, transparent)`;
+          cells.appendChild(c);
+        });
+        row.append(lbl, cells); attn.appendChild(row);
+      });
+    }
+
+    function animateCount(el, target) {
+      el.textContent = String(target); // correct final value regardless of rAF throttling
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      const dur = 700, t0 = performance.now();
+      function step(t) {
+        const p = Math.min(1, (t - t0) / dur);
+        const e = 1 - Math.pow(1 - p, 3);
+        el.textContent = Math.round(target * e);
+        if (p < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    }
+
+    // legend toggle
+    document.getElementById('legend').addEventListener('click', (e) => {
+      const span = e.target.closest('span[data-k]'); if (!span) return;
+      span.classList.toggle('off');
+      const k = span.dataset.k;
+      document.getElementById('p-' + k).style.opacity = span.classList.contains('off') ? '0.12' : '1';
+    });
+
+    // boot with a preset
+    applyPreset('single');
+  })();
+</script>
+<script src="app.js"></script>
+</body>
+</html>
