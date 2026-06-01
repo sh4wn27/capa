@@ -21,7 +21,7 @@
     grotesk:    { name: 'Grotesk',     stack: "'Hanken Grotesk', system-ui, sans-serif" }
   };
 
-  const DEFAULTS = { accent: 'clinical', display: 'newsreader' };
+  const DEFAULTS = { accent: 'oxblood', display: 'newsreader' };
   const STORE = 'capa.tweaks.v1';
 
   function load() {

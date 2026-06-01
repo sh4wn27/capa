@@ -21,10 +21,10 @@
   --line:    oklch(0.205 0.014 260 / 0.14);
   --line-2:  oklch(0.205 0.014 260 / 0.07);
 
-  /* accent — clinical ink-blue (tweakable) */
-  --accent:    oklch(0.48 0.12 255);
-  --accent-2:  oklch(0.48 0.12 255 / 0.10);
-  --accent-ink: oklch(0.40 0.13 255);
+  /* accent — oxblood red (tweakable) */
+  --accent:    oklch(0.46 0.13 25);
+  --accent-2:  oklch(0.46 0.13 25 / 0.10);
+  --accent-ink: oklch(0.39 0.14 25);
 
   /* categorical competing-risk colors (shared L/C, varied hue) */
   --risk-gvhd:    oklch(0.60 0.15 28);   /* warm red */
