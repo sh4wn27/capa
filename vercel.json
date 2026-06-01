@@ -1,3 +1,6 @@
 {
-  "outputDirectory": "web"
+  "outputDirectory": "web",
+  "buildCommand": "echo static",
+  "installCommand": "echo skip",
+  "framework": null
 }
