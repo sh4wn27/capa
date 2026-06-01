@@ -202,7 +202,9 @@
   </div>
 </footer>
 
+<script src="config.js"></script>
 <script src="model.js"></script>
+<script src="api-client.js"></script>
 <script>
   (function () {
     const LOCI = ['A', 'B', 'C', 'DRB1', 'DQB1'];
@@ -222,7 +224,7 @@
       const cell = document.createElement('div'); cell.className = 'ral';
       const k = document.createElement('span'); k.className = 'rk'; k.textContent = l;
       const inp = document.createElement('input'); inp.value = RECIP[l]; inp.dataset.locus = l;
-      inp.addEventListener('input', run);
+      inp.addEventListener('input', runDebounced);
       cell.append(k, inp); recipWrap.appendChild(cell); recipInputs[l] = inp;
     });
 
@@ -233,7 +235,7 @@
       LOCI.forEach(l => {
         const k = document.createElement('div'); k.className = 'dl-k'; k.textContent = l;
         const inp = document.createElement('input'); inp.value = DONORS[side][l]; inp.dataset.locus = l; inp.dataset.side = side;
-        inp.addEventListener('input', run);
+        inp.addEventListener('input', runDebounced);
         wrap.append(k, inp); donorInputs[side][l] = inp;
       });
     });
@@ -253,20 +255,33 @@
     }
 
     let lastOut = { A: null, B: null };
+    let _runTimer = null;
 
-    function run() {
+    async function run() {
+      // mark mismatched loci immediately (no need to wait for API)
       ['A', 'B'].forEach(side => {
-        const out = window.CAPAModel.predict(stateFor(side));
-        lastOut[side] = out;
-        // mark mismatched loci
         LOCI.forEach(l => {
           const d = donorInputs[side][l].value.trim(), r = recipInputs[l].value.trim();
           donorInputs[side][l].classList.toggle('mm', d && r && d !== r);
         });
-        renderMetrics(side, out);
       });
+
+      // fetch both donors in parallel
+      const [outA, outB] = await Promise.all([
+        window.CAPAModel.predictAsync(stateFor('A')),
+        window.CAPAModel.predictAsync(stateFor('B')),
+      ]);
+      lastOut.A = outA;
+      lastOut.B = outB;
+      renderMetrics('A', outA);
+      renderMetrics('B', outB);
       drawOverlay();
       renderVerdict();
+    }
+
+    function runDebounced() {
+      clearTimeout(_runTimer);
+      _runTimer = setTimeout(run, 500);
     }
 
     function renderMetrics(side, out) {
@@ -295,7 +310,8 @@
     }
 
     function pathFor(out, risk) {
-      // recompute a smooth path from plateau (reuse engine's shape by sampling fiveYr + load)
+      // use real CIF path from API when available
+      if (out && out.paths && out.paths[risk]) return out.paths[risk];
       const plateau = out.fiveYr[risk];
       const shape = risk === 'gvhd' ? 3.4 : risk === 'relapse' ? 2.2 : 1.6;
       const X0 = 48, X1 = 624, Y0 = 220, Y1 = 14, N = 40, pts = [];

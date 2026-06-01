@@ -227,7 +227,9 @@
   </div>
 </footer>
 
+<script src="config.js"></script>
 <script src="model.js"></script>
+<script src="api-client.js"></script>
 <script>
   (function () {
     const LOCI = ['A', 'B', 'C', 'DRB1', 'DQB1'];
@@ -274,7 +276,7 @@
 
     document.querySelectorAll('.preset-btn').forEach(b => b.addEventListener('click', () => applyPreset(b.dataset.preset)));
 
-    document.getElementById('form').addEventListener('submit', (e) => {
+    document.getElementById('form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const s = readState();
       const allFilled = LOCI.every(l => s[l][0] && s[l][1]);
@@ -283,7 +285,12 @@
         return;
       }
       LOCI.forEach(l => { inputs[l].d.classList.remove('bad'); inputs[l].r.classList.remove('bad'); });
-      const out = window.CAPAModel.predict(s);
+      const btn = document.getElementById('run');
+      btn.disabled = true;
+      btn.innerHTML = 'Running…';
+      const out = await window.CAPAModel.predictAsync(s);
+      btn.disabled = false;
+      btn.innerHTML = 'Run prediction <span class="arr">→</span>';
       render(out);
     });
 
