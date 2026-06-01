@@ -1,5 +1,5 @@
 {
-  "outputDirectory": "web",
+  "outputDirectory": ".",
   "buildCommand": "echo static",
   "installCommand": "echo skip",
   "framework": null
