@@ -251,35 +251,65 @@ async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # File exists — attempt to load it
     try:
+        import re as _re
+
         logger.info("Loading CAPA checkpoint from %s", ckpt_path)
         state = torch.load(ckpt_path, map_location=_device, weights_only=False)
 
+        # Extract state_dict and version from any checkpoint format
+        if hasattr(state, "model_state"):
+            state_dict = state.model_state
+            _model_version = str(getattr(state, "version", ckpt_path.stem))
+        elif isinstance(state, dict) and "model_state_dict" in state:
+            state_dict = state["model_state_dict"]
+            _model_version = str(state.get("version", ckpt_path.stem))
+        else:
+            state_dict = state
+            _model_version = ckpt_path.stem
+
+        # Infer actual model dims from the checkpoint weights so we never
+        # get a size-mismatch when the checkpoint was trained with different
+        # hyperparameters than the current config.
         mc = cfg.model
+        proj_key = "interaction.blocks.0.d2r.in_proj_weight"
+        if proj_key in state_dict:
+            _embed_dim = state_dict[proj_key].shape[1]
+            _inter_dim = state_dict[proj_key].shape[0] // 3
+        else:
+            _embed_dim = cfg.embedding.embedding_dim
+            _inter_dim = mc.interaction_dim
+
+        # Find a valid num_heads that divides interaction_dim
+        _num_heads = next(
+            (h for h in [mc.interaction_heads, 8, 4, 2, 1] if _inter_dim % h == 0),
+            1,
+        )
+
+        # Count transformer layers present in the checkpoint
+        _layer_ids = {
+            int(m.group(1))
+            for k in state_dict
+            if (m := _re.match(r"interaction\.blocks\.(\d+)\.", k))
+        }
+        _num_layers = max(_layer_ids) + 1 if _layer_ids else mc.interaction_layers
+
+        logger.info(
+            "Checkpoint dims — embedding: %d, interaction: %d, heads: %d, layers: %d",
+            _embed_dim, _inter_dim, _num_heads, _num_layers,
+        )
+
         _model = CAPAModel(
-            embedding_dim=cfg.embedding.embedding_dim,
+            embedding_dim=_embed_dim,
             loci=mc.hla_loci,
             clinical_dim=mc.clinical_dim,
-            interaction_dim=mc.interaction_dim,
-            num_heads=mc.interaction_heads,
-            num_layers=mc.interaction_layers,
-            dropout=0.0,  # inference — no dropout
+            interaction_dim=_inter_dim,
+            num_heads=_num_heads,
+            num_layers=_num_layers,
+            dropout=0.0,
             time_bins=mc.time_bins,
             num_events=mc.num_events,
         )
-
-        # Support three checkpoint formats:
-        #   1. CheckpointState dataclass (trainer.py) — has .model_state
-        #   2. dict with "model_state_dict" key
-        #   3. bare state_dict
-        if hasattr(state, "model_state"):
-            _model.load_state_dict(state.model_state)
-            _model_version = getattr(state, "version", ckpt_path.stem)
-        elif isinstance(state, dict) and "model_state_dict" in state:
-            _model.load_state_dict(state["model_state_dict"])
-            _model_version = str(state.get("version", ckpt_path.stem))
-        else:
-            _model.load_state_dict(state)
-            _model_version = ckpt_path.stem
+        _model.load_state_dict(state_dict)
 
         _model.to(_device)
         _model.eval()
