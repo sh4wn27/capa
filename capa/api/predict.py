@@ -267,9 +267,14 @@ async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             num_events=mc.num_events,
         )
 
-        # Support checkpoints saved as {"model_state_dict": ..., "version": ...}
-        # or bare state_dicts
-        if isinstance(state, dict) and "model_state_dict" in state:
+        # Support three checkpoint formats:
+        #   1. CheckpointState dataclass (trainer.py) — has .model_state
+        #   2. dict with "model_state_dict" key
+        #   3. bare state_dict
+        if hasattr(state, "model_state"):
+            _model.load_state_dict(state.model_state)
+            _model_version = getattr(state, "version", ckpt_path.stem)
+        elif isinstance(state, dict) and "model_state_dict" in state:
             _model.load_state_dict(state["model_state_dict"])
             _model_version = str(state.get("version", ckpt_path.stem))
         else:
