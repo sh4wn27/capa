@@ -267,25 +267,43 @@ async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             state_dict = state
             _model_version = ckpt_path.stem
 
-        # Infer actual model dims from the checkpoint weights so we never
-        # get a size-mismatch when the checkpoint was trained with different
+        # Infer actual model dims from checkpoint weight shapes so we never
+        # hit a size-mismatch when the checkpoint was trained with different
         # hyperparameters than the current config.
+        #
+        # Architecture:
+        #   projection = Linear(embedding_dim*2 → interaction_dim*4) + Linear(→ interaction_dim)
+        #   survival_head input = interaction_dim + clinical_dim
         mc = cfg.model
-        proj_key = "interaction.blocks.0.d2r.in_proj_weight"
-        if proj_key in state_dict:
-            _embed_dim = state_dict[proj_key].shape[1]
-            _inter_dim = state_dict[proj_key].shape[0] // 3
+
+        # embedding_dim: projection.0 input is embedding_dim * 2
+        proj0 = "interaction.projection.0.weight"
+        if proj0 in state_dict:
+            _embed_dim = state_dict[proj0].shape[1] // 2
         else:
             _embed_dim = cfg.embedding.embedding_dim
+
+        # interaction_dim: projection.3 output
+        proj3 = "interaction.projection.3.weight"
+        if proj3 in state_dict:
+            _inter_dim = state_dict[proj3].shape[0]
+        else:
             _inter_dim = mc.interaction_dim
 
-        # Find a valid num_heads that divides interaction_dim
+        # clinical_dim: survival_head input minus interaction_dim
+        sh0 = "survival_head.shared.0.weight"
+        if sh0 in state_dict:
+            _clinical_dim = state_dict[sh0].shape[1] - _inter_dim
+        else:
+            _clinical_dim = mc.clinical_dim
+
+        # num_heads: must divide embedding_dim; try config value first
         _num_heads = next(
-            (h for h in [mc.interaction_heads, 8, 4, 2, 1] if _inter_dim % h == 0),
+            (h for h in [mc.interaction_heads, 8, 4, 2, 1] if _embed_dim % h == 0),
             1,
         )
 
-        # Count transformer layers present in the checkpoint
+        # num_layers: count interaction blocks in state_dict
         _layer_ids = {
             int(m.group(1))
             for k in state_dict
@@ -293,21 +311,26 @@ async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         }
         _num_layers = max(_layer_ids) + 1 if _layer_ids else mc.interaction_layers
 
+        # use_pos_embed: check if pos_embed weights exist
+        _use_pos_embed = any("pos_embed" in k for k in state_dict)
+
         logger.info(
-            "Checkpoint dims — embedding: %d, interaction: %d, heads: %d, layers: %d",
-            _embed_dim, _inter_dim, _num_heads, _num_layers,
+            "Checkpoint dims — embedding: %d, interaction: %d, "
+            "clinical: %d, heads: %d, layers: %d, pos_embed: %s",
+            _embed_dim, _inter_dim, _clinical_dim, _num_heads, _num_layers, _use_pos_embed,
         )
 
         _model = CAPAModel(
             embedding_dim=_embed_dim,
             loci=mc.hla_loci,
-            clinical_dim=mc.clinical_dim,
+            clinical_dim=_clinical_dim,
             interaction_dim=_inter_dim,
             num_heads=_num_heads,
             num_layers=_num_layers,
             dropout=0.0,
             time_bins=mc.time_bins,
             num_events=mc.num_events,
+            use_pos_embed=_use_pos_embed,
         )
         _model.load_state_dict(state_dict)
 
