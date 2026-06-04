@@ -188,7 +188,7 @@
       <div class="spec-row" style="margin-top:6px"><span class="spec-cap">Frozen embedding</span><span class="spec-cap">per allele</span></div>
       <div class="spec-flow"><span class="tk">CROSS-ATTENTION</span><span class="line"></span><span class="tk">DEEPHIT · CIF</span></div>
       <div class="mini-cifs">
-        <div class="mini-cif"><div class="mc-lbl"><span class="dot" style="background:var(--risk-gvhd)"></span>GvHD</div>
+        <div class="mini-cif"><div class="mc-lbl"><span class="dot" style="background:var(--risk-gvhd)"></span>GvHD <span style="font-family:var(--mono);font-size:9px;color:var(--ink-3);margin-left:4px">aspirational</span></div>
           <svg viewBox="0 0 100 38" width="100%" height="34"><path d="M0 36 C 20 36, 30 22, 50 16 S 80 8, 100 6" fill="none" class="s-gvhd" stroke-width="2"/></svg></div>
         <div class="mini-cif"><div class="mc-lbl"><span class="dot" style="background:var(--risk-relapse)"></span>Relapse</div>
           <svg viewBox="0 0 100 38" width="100%" height="34"><path d="M0 36 C 25 34, 35 28, 55 24 S 85 19, 100 18" fill="none" class="s-relapse" stroke-width="2"/></svg></div>
@@ -264,19 +264,19 @@
     <span class="num">§ 02</span>
     <div>
       <p class="eyebrow" style="margin-bottom:14px">Key results</p>
-      <h2>Outperforming traditional baselines</h2>
+      <h2>Proof-of-concept on UCI BMT (n = 187)</h2>
     </div>
   </div>
 
   <div class="results-grid">
     <div class="reveal">
       <div class="stats">
-        <div class="stat"><div class="s-num">0.84</div><div class="s-lbl">C-index, relapse</div><div class="s-meta">Fine–Gray · 95% CI 0.69–1.00</div></div>
-        <div class="stat"><div class="s-num">0.75</div><div class="s-lbl">C-index, relapse</div><div class="s-meta">Cox-PH · 95% CI 0.53–1.00</div></div>
-        <div class="stat"><div class="s-num">187</div><div class="s-lbl">Patients (UCI BMT)</div><div class="s-meta">Paediatric HSCT cohort</div></div>
-        <div class="stat"><div class="s-num">3</div><div class="s-lbl">Competing risks</div><div class="s-meta">GvHD · Relapse · TRM</div></div>
+        <div class="stat"><div class="s-num">0.81</div><div class="s-lbl">C-index, relapse — CAPA</div><div class="s-meta">Single test split · n = 29 · CI wide</div></div>
+        <div class="stat"><div class="s-num">0.84</div><div class="s-lbl">C-index, relapse — Fine–Gray</div><div class="s-meta">Best baseline · 95% CI 0.69–1.00</div></div>
+        <div class="stat"><div class="s-num">187</div><div class="s-lbl">Patients (UCI BMT)</div><div class="s-meta">Paediatric HSCT · single cohort</div></div>
+        <div class="stat"><div class="s-num">3</div><div class="s-lbl">Competing risks modelled</div><div class="s-meta">GvHD (aspirational) · Relapse · TRM</div></div>
       </div>
-      <p style="margin-top:28px;color:var(--ink-2);font-size:15px;line-height:1.66;max-width:42ch">Evaluated on the UCI Bone Marrow Transplant dataset (n = 187) using time-dependent C-index and Brier score.</p>
+      <p style="margin-top:28px;color:var(--ink-2);font-size:15px;line-height:1.66;max-width:42ch">Single held-out test split (n = 29). Confidence intervals on all metrics span most of [0, 1] — treat point estimates as exploratory, not definitive. GvHD had only 2 events in the test fold and is not evaluable.</p>
     </div>
 
     <div class="reveal">
@@ -314,12 +314,13 @@
   <!-- journal table -->
   <div class="reveal" style="margin-top:64px;max-width:760px">
     <table class="jtable">
-      <caption>Time-dependent C-index — UCI BMT · n = 29 test patients. GvHD not evaluable (2 events). Fine–Gray is the best baseline.</caption>
+      <caption>Time-dependent C-index — UCI BMT · n = 29 test patients · single split. All CIs span most of [0, 1]; treat as exploratory. GvHD: 2 events in test fold — not evaluable.</caption>
       <thead><tr><th>Model</th><th>GvHD</th><th>Relapse</th><th>TRM</th></tr></thead>
       <tbody>
         <tr><td>Cox-PH (cause-specific)</td><td>—</td><td>0.75</td><td>0.65</td></tr>
-        <tr><td>Fine–Gray <span style="font-family:var(--sans);font-size:11px;color:var(--ink-3)">best</span></td><td>—</td><td class="best">0.84</td><td class="best">0.66</td></tr>
+        <tr><td>Fine–Gray <span style="font-family:var(--sans);font-size:11px;color:var(--ink-3)">best baseline</span></td><td>—</td><td class="best">0.84</td><td class="best">0.66</td></tr>
         <tr><td>DeepHit (tabular HLA)</td><td>—</td><td>0.67</td><td>0.41</td></tr>
+        <tr style="border-top:1.5px solid var(--line)"><td><b>CAPA</b> <span style="font-family:var(--sans);font-size:11px;color:var(--ink-3)">(ESM-2 + cross-attn)</span></td><td>—</td><td>0.81</td><td>0.63</td></tr>
       </tbody>
     </table>
   </div>

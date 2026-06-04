@@ -114,7 +114,7 @@
   <div class="col">
     <div class="abstract">
       <div class="a-lbl">Abstract</div>
-      <p>Outcome of haematopoietic stem cell transplantation depends critically on HLA compatibility, conventionally encoded as a binary match/mismatch count that discards most immunological information. We propose CAPA, a framework that represents each HLA allele with a frozen protein language model (ESM-2, 650M) and learns donor–recipient interaction via cross-attention, feeding a DeepHit head that jointly predicts cumulative incidence of GvHD, relapse, and transplant-related mortality as competing risks. On the public UCI Bone Marrow Transplant cohort (n = 187), the structure-aware representation matches or exceeds Cox and Fine–Gray baselines on time-dependent concordance for relapse and TRM, while producing calibrated, case-specific incidence curves. We release all code and weights as an open, reproducible proof-of-concept and discuss the small-cohort limitations frankly.</p>
+      <p>Outcome of haematopoietic stem cell transplantation depends critically on HLA compatibility, conventionally encoded as a binary match/mismatch count that discards most immunological information. We propose CAPA, a framework that represents each HLA allele with a frozen protein language model (ESM-2, 650M) and learns donor–recipient interaction via cross-attention, feeding a DeepHit head that jointly predicts cumulative incidence of GvHD, relapse, and transplant-related mortality as competing risks. On the public UCI Bone Marrow Transplant cohort (n = 187), the structure-aware representation achieves comparable time-dependent concordance to Cox and Fine–Gray baselines for relapse and TRM (C-index 0.81 vs. Fine–Gray 0.84 on a single 29-patient test split), while producing calibrated, case-specific incidence curves. Confidence intervals are wide given the small test set; we present this as a methodology demonstration rather than a benchmark claim. We release all code and weights as an open, reproducible proof-of-concept and discuss the small-cohort limitations frankly.</p>
     </div>
 
     <section id="s1">
@@ -168,7 +168,7 @@
 
     <section id="s3">
       <h2><span class="sn">3</span> Results</h2>
-      <p>On the held-out test split, the structure-aware model achieves the highest time-dependent concordance for relapse among all evaluated methods, and is competitive on TRM.<sup>[4]</sup> GvHD was not robustly evaluable owing to too few events in the test fold.</p>
+      <p>On a single held-out test split (n = 29), CAPA reaches a time-dependent C-index of 0.81 for relapse and 0.63 for TRM. The best classical baseline — Fine–Gray — achieves 0.84 and 0.66 respectively. Confidence intervals on all metrics are wide (bootstrap CIs span most of [0, 1] given n = 29), so these estimates should be treated as exploratory. GvHD was not evaluable owing to only 2 events in the test fold.<sup>[4]</sup></p>
 
       <table class="jtable" style="margin:24px 0">
         <caption>Table 1 — Time-dependent C-index on the UCI BMT test set (n = 29). Higher is better; — denotes not evaluable.</caption>

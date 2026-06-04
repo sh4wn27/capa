@@ -132,7 +132,7 @@
       <h3>3 · Cross-attention & DeepHit</h3>
       <p>A cross-attention network models the interaction between donor and recipient embeddings, and a <b>DeepHit</b> head jointly predicts the cumulative incidence of three competing risks. Competing-risks modelling matters because a patient who relapses cannot then experience transplant-related mortality — the events compete.</p>
       <dl style="margin-top:24px">
-        <div class="defn"><dt>GvHD</dt><dd>Graft-versus-host disease — donor immune cells attack recipient tissue.</dd></div>
+        <div class="defn"><dt>GvHD</dt><dd>Graft-versus-host disease — donor immune cells attack recipient tissue. <b>Note:</b> GvHD prediction is aspirational in the current version. The UCI BMT cohort has too few GvHD events to evaluate; a larger dataset is needed.</dd></div>
         <div class="defn"><dt>Relapse</dt><dd>Return of the underlying malignancy after transplant.</dd></div>
         <div class="defn"><dt>TRM</dt><dd>Transplant-related mortality from non-relapse causes.</dd></div>
       </dl>
@@ -141,7 +141,11 @@
     <section id="data">
       <h2>Data & evaluation</h2>
       <p>CAPA was developed and evaluated on the public <b>UCI Bone Marrow Transplant (children)</b> dataset — 187 paediatric HSCT patients. Performance was measured with the time-dependent concordance index and Brier score against Cox proportional-hazards and Fine–Gray baselines.</p>
-      <p>On the held-out test set, the structure-aware model matched or exceeded classical baselines for relapse and TRM concordance, while producing calibrated, case-specific incidence curves rather than a single risk class.</p>
+      <p>On a single held-out test split (n = 29), CAPA reaches a C-index of 0.81 for relapse and 0.63 for TRM. The best classical baseline — Fine–Gray — reaches 0.84 and 0.66 respectively. Confidence intervals on all metrics are wide enough to span most of [0, 1], so these point estimates should be read as <b>exploratory signals, not definitive comparisons</b>. GvHD was not evaluable: only 2 events fell in the test fold.</p>
+      <div class="callout">
+        <div class="c-tag">Evaluation caveat</div>
+        <p>A single 29-patient test split is one draw from a noisy distribution. Repeated stratified k-fold cross-validation on the full cohort would give a much more honest picture. That analysis is on the roadmap; results here should be treated as a methodology demonstration, not a benchmark claim.</p>
+      </div>
       <div class="callout">
         <div class="c-tag">Reproducibility</div>
         <p>All code, trained weights, and evaluation notebooks are open source under the MIT license. The dataset is publicly available from the UCI Machine Learning Repository.</p>
@@ -153,6 +157,8 @@
       <p>This is a proof-of-concept, and the constraints are real:</p>
       <ul>
         <li><b>Small cohort.</b> 187 patients is far too few to make clinical claims; confidence intervals are wide and some events are too rare to evaluate.</li>
+        <li><b>Single test split.</b> The test set contains 29 patients — one draw from a noisy distribution. Bootstrap CIs on every metric touch 1.0. Repeated stratified k-fold cross-validation is the right approach and is on the roadmap.</li>
+        <li><b>GvHD not evaluable.</b> Only 2 GvHD events in the test fold. The architecture outputs a GvHD curve, but no performance claim can be made until evaluated on a larger cohort with more events.</li>
         <li><b>Single dataset.</b> Results have not yet been replicated on an independent, larger transplant registry.</li>
         <li><b>Not for clinical use.</b> CAPA is a research artifact intended to demonstrate a representational idea, not a decision-support tool.</li>
       </ul>
