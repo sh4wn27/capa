@@ -524,6 +524,130 @@ uv sync</pre>
       </div>
     </section>
 
+    <section id="baselines">
+      <h2>Baselines &amp; ablations</h2>
+      <p>CAPA ships a full competing-risks baseline suite in <code>capa/model/baselines.py</code>. Every model exposes the same <code>fit / predict_cif → (n, K, T)</code> interface so comparisons are trivial to add.</p>
+
+      <h3>Statistical baselines</h3>
+      <table class="field-table">
+        <tr><th>Model</th><th>CLI key</th><th>What it tests</th></tr>
+        <tr><td>Fine-Gray</td><td><code>finegray</code></td><td>Standard subdistribution hazard regression (IPCW-weighted Cox, Geskus 2011). The clinical paper-review baseline.</td></tr>
+        <tr><td>Cox PH (cause-specific)</td><td><code>cox</code></td><td>Separate Cox model per event; competing events treated as censored. Simpler but statistically approximate.</td></tr>
+        <tr><td>Random Survival Forest</td><td><code>rsf</code></td><td>Non-parametric tree ensemble. Tests whether non-linear tabular interactions explain anything beyond the Cox models.</td></tr>
+        <tr><td>Gradient Boosting</td><td><code>gbm</code></td><td><code>GradientBoostingSurvivalAnalysis</code> (scikit-survival). The strongest tabular ML baseline — what CAPA must beat to claim the embedding is doing real work.</td></tr>
+        <tr><td>Eplet Proxy (Cox)</td><td><code>eplet</code></td><td>Amino acid mismatches at known eplet positions (HLAMatchmaker / PIRCHE-II approximation) as Cox covariates. The actual clinical state-of-the-art; the hardest baseline to beat.</td></tr>
+      </table>
+
+      <h3>Deep / ablation baselines</h3>
+      <table class="field-table">
+        <tr><th>Model</th><th>CLI key</th><th>What it tests</th></tr>
+        <tr><td>CAPA-OneHot</td><td><code>capa_onehot</code></td><td>Full CAPA architecture with <em>learned</em> allele embeddings — no ESM-2. Isolates whether the cross-attention architecture itself is doing work.</td></tr>
+        <tr><td>CAPA-BLOSUM</td><td><code>blosum</code></td><td>BLOSUM62 mean-pool allele embeddings (20-dim) fed into the same cross-attention network. Tests whether biochemical similarity captures what ESM-2 does, or whether evolutionary/structural context is necessary.</td></tr>
+        <tr><td>CAPA (full)</td><td><code>capa</code></td><td>ESM-2 1280-dim embeddings + cross-attention + DeepHit. The proposed model.</td></tr>
+      </table>
+
+      <h3>Running a comparison</h3>
+      <div class="code-block">
+        <div class="code-label">Synthetic smoke-test (no data needed)</div>
+        <pre><span class="cmt"># All 8 models, 200 subjects, 50 time bins</span>
+uv run python scripts/compare_baselines.py --synthetic
+
+<span class="cmt"># Specific subset — faster</span>
+uv run python scripts/compare_baselines.py --synthetic \
+  --models finegray cox gbm eplet capa_onehot blosum capa \
+  --n 500 --epochs 30 --n-bootstrap 200
+
+<span class="cmt"># Skip bootstrap CIs for quick iteration</span>
+uv run python scripts/compare_baselines.py --synthetic --n-bootstrap 0
+
+<span class="cmt"># GBM and RSF require scikit-survival</span>
+pip install scikit-survival</pre>
+      </div>
+
+      <div class="code-block">
+        <div class="code-label">Output columns</div>
+        <pre>Model                           C-idx GvHD   C-idx Relapse   C-idx TRM
+                                IBS GvHD    IBS Relapse     IBS TRM
+────────────────────────────────────────────────────────────────────
+Fine-Gray                          0.5431        0.4892       0.5017
+                                   0.2801        0.2903       0.2411
+Eplet Proxy (cause-specific Cox)   0.6012        0.5234       0.5678
+                                   0.2312        0.2701       0.2201
+CAPA-BLOSUM (ablation)             0.5892        0.5104       0.5511
+                                   0.2401        0.2819       0.2344
+CAPA (full)                        0.6423        0.5701       0.6012
+                                   0.2101        0.2612       0.2089</pre>
+      </div>
+
+      <div class="callout">
+        <div class="c-tag">Key ablation logic</div>
+        <p>CAPA vs. CAPA-BLOSUM isolates <strong>ESM-2's contribution</strong>. CAPA-BLOSUM vs. CAPA-OneHot isolates <strong>biochemical priors vs. random initialisation</strong>. CAPA vs. Eplet Proxy is the <strong>clinical comparison</strong>. All three deltas need to be positive and significant for the paper's claims to hold.</p>
+      </div>
+    </section>
+
+    <section id="evaluation">
+      <h2>Evaluation &amp; calibration</h2>
+      <p>All metrics live in <code>capa/training/evaluate.py</code>. The master function <code>evaluate_all(cif, event_times, event_types, ...)</code> returns C-index, Brier scores, IBS, and calibration curves in one call.</p>
+
+      <h3>Discrimination: C-index</h3>
+      <p>Harrell's concordance index — the probability that a patient with a higher predicted risk actually experienced the event earlier. 0.5 = random, 1.0 = perfect. Reported with 1000-replicate bootstrap 95% CI.</p>
+
+      <h3>Calibration: Brier score and decomposition</h3>
+      <p>The Brier score measures mean squared error between predicted CIF and observed event indicator. CAPA decomposes it following Murphy (1973):</p>
+      <div class="eq">BS = REL − RES + UNC</div>
+      <table class="field-table">
+        <tr><th>Component</th><th>Formula</th><th>Interpretation</th></tr>
+        <tr><td>UNC (uncertainty)</td><td>ō(1 − ō)</td><td>Base-rate difficulty — fixed for a dataset, not model-dependent.</td></tr>
+        <tr><td>REL (reliability)</td><td>Σ n_k/n · (f̄_k − ō_k)²</td><td>Calibration penalty — how far mean predictions deviate from observed rates within quantile bins. Lower is better.</td></tr>
+        <tr><td>RES (resolution)</td><td>Σ n_k/n · (ō_k − ō)²</td><td>Discrimination — how much predicted risk separates high- from low-risk patients. Higher is better.</td></tr>
+      </table>
+
+      <div class="code-block">
+        <div class="code-label">Python</div>
+        <pre><span class="kw">from</span> capa.training.evaluate <span class="kw">import</span> brier_decomposition, plot_calibration_curve
+
+<span class="cmt"># cif: (n, T), event_times: (n,), event_observed: (n,) bool</span>
+decomp = brier_decomposition(cif_k, event_times, observed, eval_time=<span class="num">365</span>, time_bins=bins)
+<span class="cmt"># {'brier_score': 0.21, 'reliability': 0.03, 'resolution': 0.08, 'uncertainty': 0.26}</span>
+
+<span class="cmt"># Reliability diagram</span>
+fig = plot_calibration_curve(calib_result, model_name=<span class="str">'CAPA'</span>, event_name=<span class="str">'GvHD'</span>)
+fig.savefig(<span class="str">'calibration_gvhd.pdf'</span>)</pre>
+      </div>
+
+      <h3>Interpretability: residue attribution &amp; biology alignment</h3>
+      <p>After training, two functions in <code>capa/interpret/attention_maps.py</code> let you ask whether the model learned immunologically meaningful patterns.</p>
+
+      <div class="code-block">
+        <div class="code-label">Python</div>
+        <pre><span class="kw">from</span> capa.interpret.attention_maps <span class="kw">import</span> (
+    residue_gradient_attribution, biology_alignment_score,
+    PEPTIDE_BINDING_GROOVE,
+)
+
+<span class="cmt"># donor_pos_embs: (n_loci, n_positions, 1280) — per-residue ESM-2, NOT mean-pooled</span>
+d_attr, r_attr = residue_gradient_attribution(
+    model, donor_pos_embs, recip_pos_embs, clinical,
+    event_k=<span class="num">0</span>,  <span class="cmt"># GvHD</span>
+)
+
+<span class="cmt"># Score against known HLA-A peptide-binding groove positions</span>
+score = biology_alignment_score(d_attr[<span class="num">0</span>], locus=<span class="str">'A'</span>)
+<span class="cmt"># {'enrichment': 2.1, 'auroc': 0.72, 'mean_rank_ratio': 0.28}</span>
+<span class="cmt"># AUROC > 0.65 means the model preferentially attends known groove residues</span></pre>
+      </div>
+
+      <div class="callout">
+        <div class="c-tag">Known positions reference</div>
+        <p><code>PEPTIDE_BINDING_GROOVE</code> is a curated dict of critical residues per locus (HLA-A: positions 9, 24, 44, 45, 62, 66, 74–77, 80–81, 95, 99, 116, 143, 147, 152, 156, 163; DRB1: 13, 26, 28, 30–31, 37, 47, 57, 60, 67, 70–71, 74, 86). Sources: HLAMatchmaker v3, Duquesnoy 2002/2008, Siu 2020 NEJM Evid.</p>
+      </div>
+
+      <div style="display:flex;gap:14px;margin-top:36px;flex-wrap:wrap">
+        <a class="btn btn-primary" href="predict.html">Try it live <span class="arr">→</span></a>
+        <a class="btn btn-ghost" href="https://github.com/sh4wn27/capa" target="_blank" rel="noopener">View source</a>
+      </div>
+    </section>
+
   </article>
 </div>
 
