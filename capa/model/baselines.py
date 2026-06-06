@@ -890,3 +890,560 @@ class CAPAOneHotBaseline(BaselineModel):
             0, T_model - 1,
         ).astype(int)
         return cif_np[:, :, indices]              # (n, K, T)
+
+
+# ---------------------------------------------------------------------------
+# 5. Gradient Boosting Survival Analysis (scikit-survival)
+# ---------------------------------------------------------------------------
+
+class GradientBoostingBaseline(BaselineModel):
+    """Cause-specific Gradient Boosting Survival Analysis (scikit-survival).
+
+    Wraps :class:`sksurv.ensemble.GradientBoostingSurvivalAnalysis` — one
+    model per competing event using cause-specific censoring (competing events
+    treated as censored at their observed time).
+
+    Requires scikit-survival::
+
+        pip install scikit-survival
+
+    Parameters
+    ----------
+    num_events : int
+    n_estimators : int
+    learning_rate : float
+    max_depth : int
+    subsample : float
+        Fraction of training samples used per tree (< 1.0 enables stochastic GBM).
+    random_state : int
+    """
+
+    def __init__(
+        self,
+        num_events: int = 3,
+        n_estimators: int = 100,
+        learning_rate: float = 0.1,
+        max_depth: int = 3,
+        subsample: float = 1.0,
+        random_state: int = 42,
+    ) -> None:
+        self._num_events = num_events
+        self._n_estimators = n_estimators
+        self._learning_rate = learning_rate
+        self._max_depth = max_depth
+        self._subsample = subsample
+        self._random_state = random_state
+        self._models: list[Any] = []
+
+    @property
+    def name(self) -> str:
+        return "Gradient Boosting (cause-specific)"
+
+    @staticmethod
+    def _check_sksurv() -> None:
+        try:
+            import sksurv  # noqa: F401
+        except ImportError as e:
+            raise ImportError(
+                "scikit-survival is required for GradientBoostingBaseline.\n"
+                "Install: pip install scikit-survival"
+            ) from e
+
+    def fit(self, X: np.ndarray, times: F64, event_types: I64) -> None:
+        """Fit one GBM per event using cause-specific censoring."""
+        self._check_sksurv()
+        from sksurv.ensemble import GradientBoostingSurvivalAnalysis
+
+        self._models = []
+        for k in range(1, self._num_events + 1):
+            event_k = (event_types == k).astype(bool)
+            y = np.array(
+                list(zip(event_k, times.astype(float))),
+                dtype=[("event", bool), ("time", float)],
+            )
+            model = GradientBoostingSurvivalAnalysis(
+                n_estimators=self._n_estimators,
+                learning_rate=self._learning_rate,
+                max_depth=self._max_depth,
+                subsample=self._subsample,
+                random_state=self._random_state,
+            )
+            try:
+                model.fit(X, y)
+            except Exception as exc:
+                logger.warning("GBM event %d fit failed: %s — null model", k, exc)
+                model = None  # type: ignore[assignment]
+            self._models.append(model)
+        logger.info("GBM: fitted %d cause-specific models", self._num_events)
+
+    def predict_cif(self, X: np.ndarray, time_bins: F64) -> F64:
+        """Predict CIF (n, K, T) from GBM survival functions."""
+        self._check_sksurv()
+        n = len(X)
+        T = len(time_bins)
+        K = self._num_events
+        cif = np.zeros((n, K, T), dtype=np.float64)
+
+        for k, model in enumerate(self._models):
+            if model is None:
+                continue
+            surv_fns = model.predict_survival_function(X)
+            for i, fn in enumerate(surv_fns):
+                s_vals = np.interp(time_bins, fn.x, fn.y, left=1.0, right=fn.y[-1])
+                cif[i, k, :] = np.clip(1.0 - s_vals, 0.0, 1.0)
+        return cif
+
+
+# ---------------------------------------------------------------------------
+# 6. Eplet proxy baseline (approximates HLAMatchmaker / PIRCHE-II scoring)
+# ---------------------------------------------------------------------------
+
+# Per-locus polymorphic positions known to drive eplet mismatches (1-indexed).
+# Sources: HLAMatchmaker v3 eplet registry; Duquesnoy 2002, 2008;
+#          IMGT/HLA polymorphism atlas; Siu et al. NEJM Evidence 2020.
+_EPLET_POSITIONS: dict[str, list[int]] = {
+    "A": [9, 24, 44, 45, 62, 63, 66, 74, 76, 77, 80, 81, 95,
+          99, 114, 116, 143, 147, 152, 156, 163],
+    "B": [9, 24, 44, 45, 58, 62, 63, 66, 67, 70, 71, 74, 76,
+          77, 80, 81, 95, 97, 99, 116, 143, 147, 152, 156, 163],
+    "C": [9, 24, 44, 45, 66, 74, 76, 77, 80, 81, 116, 147, 152, 156, 163],
+    "DRB1": [13, 26, 28, 30, 31, 37, 47, 57, 60, 67, 70, 71, 74, 86],
+    "DQB1": [26, 30, 45, 52, 57, 87],
+}
+
+
+def compute_eplet_features(
+    donor_alleles: list[list[str]],
+    recip_alleles: list[list[str]],
+    loci: list[str],
+    seq_db: Any | None = None,
+) -> pd.DataFrame:
+    """Compute per-locus eplet-proxy mismatch features for a cohort.
+
+    When *seq_db* is provided (a :class:`~capa.embeddings.hla_sequences.HLASequenceDB`),
+    counts amino acid mismatches at known polymorphic eplet positions.
+    Without *seq_db*, falls back to allele-level mismatch (0/1 per locus).
+
+    Parameters
+    ----------
+    donor_alleles : list[list[str]], shape (n, n_loci)
+    recip_alleles : list[list[str]], shape (n, n_loci)
+    loci : list[str]
+        Locus names in order.
+    seq_db : HLASequenceDB | None
+        If provided, enables position-level mismatch scoring.
+
+    Returns
+    -------
+    pd.DataFrame, shape (n, n_loci + 2)
+        Columns: ``{locus}_eplet_mm``, ``total_eplet_mm``, ``n_mm_loci``.
+    """
+    n = len(donor_alleles)
+    rows: list[dict[str, float]] = []
+
+    for i in range(n):
+        row: dict[str, float] = {}
+        total = 0.0
+        n_mm = 0
+        for j, locus in enumerate(loci):
+            d_allele = donor_alleles[i][j] if j < len(donor_alleles[i]) else None
+            r_allele = recip_alleles[i][j] if j < len(recip_alleles[i]) else None
+
+            if d_allele == r_allele:
+                score = 0.0
+            elif seq_db is None:
+                score = 1.0  # allele-level mismatch (cruder proxy)
+            else:
+                try:
+                    d_seq = seq_db.get_by_name(d_allele) if d_allele else ""
+                    r_seq = seq_db.get_by_name(r_allele) if r_allele else ""
+                    ep_pos = _EPLET_POSITIONS.get(locus, [])
+                    mm_count = sum(
+                        1
+                        for pos in ep_pos
+                        if (pi := pos - 1) < len(d_seq) and pi < len(r_seq)
+                        and d_seq[pi] != r_seq[pi]
+                    )
+                    score = float(mm_count)
+                except (KeyError, IndexError, AttributeError):
+                    score = float(bool(d_allele and r_allele and d_allele != r_allele))
+
+            row[f"{locus}_eplet_mm"] = score
+            total += score
+            if score > 0:
+                n_mm += 1
+
+        row["total_eplet_mm"] = total
+        row["n_mm_loci"] = float(n_mm)
+        rows.append(row)
+
+    return pd.DataFrame(rows)
+
+
+class EpletProxyBaseline(BaselineModel):
+    """Cox PH model with eplet-proxy mismatch features as covariates.
+
+    Represents the current clinical standard — HLAMatchmaker / PIRCHE-II
+    eplet scoring — approximated by counting amino acid mismatches at known
+    polymorphic positions.  Pre-compute features with
+    :func:`compute_eplet_features` and pass the resulting DataFrame as *X*.
+
+    Uses cause-specific Cox PH (same treatment as :class:`CoxPHBaseline`).
+
+    Parameters
+    ----------
+    num_events : int
+    penalizer : float
+    """
+
+    def __init__(self, num_events: int = 3, penalizer: float = 0.1) -> None:
+        self._num_events = num_events
+        self._penalizer = penalizer
+        self._fitters: list[Any] = []
+
+    @property
+    def name(self) -> str:
+        return "Eplet Proxy (cause-specific Cox)"
+
+    def fit(self, X: pd.DataFrame, times: F64, event_types: I64) -> None:
+        """Fit one Cox PH per event on the eplet feature matrix."""
+        from lifelines import CoxPHFitter
+
+        self._fitters = []
+        for k in range(1, self._num_events + 1):
+            observed = (event_types == k).astype(int)
+            df = X.copy()
+            df["_duration"] = times.astype(float)
+            df["_event"] = observed
+            fitter = CoxPHFitter(penalizer=self._penalizer)
+            try:
+                fitter.fit(df, duration_col="_duration", event_col="_event")
+            except Exception as exc:
+                logger.warning(
+                    "EpletProxy event %d fit failed: %s — null model", k, exc
+                )
+                fitter = None  # type: ignore[assignment]
+            self._fitters.append(fitter)
+        logger.info("EpletProxy: fitted %d cause-specific Cox models", self._num_events)
+
+    def predict_cif(self, X: pd.DataFrame, time_bins: F64) -> F64:
+        """Predict CIF (n, K, T) from eplet-proxy Cox models."""
+        n = len(X)
+        T = len(time_bins)
+        K = self._num_events
+        cif = np.zeros((n, K, T), dtype=np.float64)
+
+        for k, fitter in enumerate(self._fitters):
+            if fitter is None:
+                continue
+            sf = fitter.predict_survival_function(X, times=time_bins)
+            cif[:, k, :] = np.clip(1.0 - sf.values.T, 0.0, 1.0)
+        return cif
+
+
+# ---------------------------------------------------------------------------
+# 7. BLOSUM62 embedding helpers + CAPA-BLOSUM ablation
+# ---------------------------------------------------------------------------
+
+# Standard BLOSUM62 substitution matrix.
+# Row/column order: A R N D C Q E G H I L K M F P S T W Y V
+_AA_ORDER = list("ARNDCQEGHILKMFPSTWYV")
+_BLOSUM62_ROWS: list[list[int]] = [
+    [ 4, -1, -2, -2,  0, -1, -1,  0, -2, -1, -1, -1, -1, -2, -1,  1,  0, -3, -2,  0],  # A
+    [-1,  5,  0, -2, -3,  1,  0, -2,  0, -3, -2,  2, -1, -3, -2, -1, -1, -3, -2, -3],  # R
+    [-2,  0,  6,  1, -3,  0,  0,  0,  1, -3, -3,  0, -2, -3, -2,  1,  0, -4, -2, -3],  # N
+    [-2, -2,  1,  6, -3,  0,  2, -1, -1, -3, -4, -1, -3, -3, -1,  0, -1, -4, -3, -3],  # D
+    [ 0, -3, -3, -3,  9, -3, -4, -3, -3, -1, -1, -3, -1, -2, -3, -1, -1, -2, -2, -1],  # C
+    [-1,  1,  0,  0, -3,  5,  2, -2,  0, -3, -2,  1,  0, -3, -1,  0, -1, -2, -1, -2],  # Q
+    [-1,  0,  0,  2, -4,  2,  5, -2,  0, -3, -3,  1, -2, -3, -1,  0, -1, -3, -2, -2],  # E
+    [ 0, -2,  0, -1, -3, -2, -2,  6, -2, -4, -4, -2, -3, -3, -2,  0, -2, -2, -3, -3],  # G
+    [-2,  0,  1, -1, -3,  0,  0, -2,  8, -3, -3, -1, -2, -1, -2, -1, -2, -2,  2, -3],  # H
+    [-1, -3, -3, -3, -1, -3, -3, -4, -3,  4,  2, -3,  1,  0, -3, -2, -1, -3, -1,  3],  # I
+    [-1, -2, -3, -4, -1, -2, -3, -4, -3,  2,  4, -2,  2,  0, -3, -2, -1, -2, -1,  1],  # L
+    [-1,  2,  0, -1, -3,  1,  1, -2, -1, -3, -2,  5, -1, -3, -1,  0, -1, -3, -2, -2],  # K
+    [-1, -1, -2, -3, -1,  0, -2, -3, -2,  1,  2, -1,  5,  0, -2, -1, -1, -1, -1,  1],  # M
+    [-2, -3, -3, -3, -2, -3, -3, -3, -1,  0,  0, -3,  0,  6, -4, -2, -2,  1,  3, -1],  # F
+    [-1, -2, -2, -1, -3, -1, -1, -2, -2, -3, -3, -1, -2, -4,  7, -1, -1, -4, -3, -2],  # P
+    [ 1, -1,  1,  0, -1,  0,  0,  0, -1, -2, -2,  0, -1, -2, -1,  4,  1, -3, -2, -2],  # S
+    [ 0, -1,  0, -1, -1, -1, -1, -2, -2, -1, -1, -1, -1, -2, -1,  1,  5, -2, -2,  0],  # T
+    [-3, -3, -4, -4, -2, -2, -3, -2, -2, -3, -2, -3, -1,  1, -4, -3, -2, 11,  2, -3],  # W
+    [-2, -2, -2, -3, -2, -1, -2, -3,  2, -1, -1, -2, -1,  3, -3, -2, -2,  2,  7, -1],  # Y
+    [ 0, -3, -3, -3, -1, -2, -2, -3, -3,  3,  1, -2,  1, -1, -2, -2,  0, -3, -1,  4],  # V
+]
+_BLOSUM62_LOOKUP: dict[str, np.ndarray] = {
+    aa: np.array(row, dtype=np.float32)
+    for aa, row in zip(_AA_ORDER, _BLOSUM62_ROWS)
+}
+BLOSUM62_DIM = 20  # public alias used by downstream code
+
+
+def blosum_embed_sequence(sequence: str, max_len: int = 400) -> np.ndarray:
+    """Encode an amino acid sequence to a 20-dim BLOSUM62 mean-pool vector.
+
+    Each position is looked up in the BLOSUM62 matrix (its row vector).
+    Unknown characters and gaps map to the zero vector.  The mean over all
+    positions is returned.
+
+    Parameters
+    ----------
+    sequence : str
+        Single-letter IUPAC amino acid sequence.
+    max_len : int
+        Truncate sequences longer than this (HLA proteins ≤ 380 AA).
+
+    Returns
+    -------
+    np.ndarray, shape (20,) float32
+    """
+    seq = sequence[:max_len]
+    if not seq:
+        return np.zeros(BLOSUM62_DIM, dtype=np.float32)
+    zero = np.zeros(BLOSUM62_DIM, dtype=np.float32)
+    rows = np.stack(
+        [_BLOSUM62_LOOKUP.get(aa, zero) for aa in seq], axis=0
+    )  # (L, 20)
+    return rows.mean(axis=0)
+
+
+class _BLOSUMModel(nn.Module):
+    """Internal: CAPA cross-attention with a linear projection from BLOSUM62 space."""
+
+    def __init__(
+        self,
+        blosum_dim: int,
+        interaction_dim: int,
+        clinical_raw: int,
+        clinical_dim: int,
+        num_events: int,
+        time_bins: int,
+        num_heads: int = 4,
+        num_layers: int = 2,
+        dropout: float = 0.1,
+    ) -> None:
+        super().__init__()
+        self._num_events = num_events
+        self._time_bins = time_bins
+
+        self.proj = nn.Linear(blosum_dim, interaction_dim)
+        self.interaction = CrossAttentionInteraction(
+            embedding_dim=interaction_dim,
+            interaction_dim=interaction_dim,
+            num_heads=num_heads,
+            num_layers=num_layers,
+            dropout=dropout,
+        )
+        self.clinical_proj = nn.Sequential(
+            nn.Linear(clinical_raw, clinical_dim),
+            nn.GELU(),
+            nn.LayerNorm(clinical_dim),
+        )
+        self.head = DeepHitHead(
+            input_dim=interaction_dim + clinical_dim,
+            num_events=num_events,
+            time_bins=time_bins,
+            dropout=dropout,
+        )
+
+    def forward(self, donor: Tensor, recip: Tensor, clinical: Tensor) -> Tensor:
+        """(B, L, 20), (B, L, 20), (B, C) → logits (B, K, T)."""
+        d = self.proj(donor)   # (B, L, interaction_dim)
+        r = self.proj(recip)
+        inter = self.interaction(d, r)
+        clin = self.clinical_proj(clinical)
+        return self.head(torch.cat([inter, clin], dim=-1))
+
+    def cif(self, donor: Tensor, recip: Tensor, clinical: Tensor) -> Tensor:
+        """Return CIF (B, K, T) in [0, 1]."""
+        out = self.forward(donor, recip, clinical)
+        B = out.shape[0]
+        joint = F.softmax(out.view(B, -1), dim=-1).view(
+            B, self._num_events, self._time_bins
+        )
+        return torch.cumsum(joint, dim=2)
+
+
+class CAPABLOSUMBaseline(BaselineModel):
+    """CAPA ablation: BLOSUM62 allele embeddings instead of ESM-2.
+
+    Encodes each HLA allele as a 20-dimensional mean-pooled BLOSUM62 vector
+    and passes it through the same cross-attention architecture as the full
+    CAPA model.  This ablation tests whether amino acid biochemical similarity
+    is sufficient, or whether ESM-2's evolutionary and structural context is
+    necessary.
+
+    Interface mirrors :class:`CAPAOneHotBaseline`.  DataLoader batches must
+    contain:
+
+    * ``donor_embeddings``    — (B, n_loci, 20) float32 pre-computed BLOSUM62
+    * ``recipient_embeddings`` — same
+    * ``clinical_features``   — (B, C) float32
+    * ``event_times``         — (B,) int64
+    * ``event_types``         — (B,) int64
+
+    Use :func:`blosum_embed_sequence` to pre-compute the embeddings.
+
+    Parameters
+    ----------
+    num_events, time_bins, n_loci, raw_clinical_dim, clinical_dim,
+    interaction_dim, num_heads, num_layers, max_epochs, patience,
+    learning_rate, weight_decay, alpha, sigma, batch_size, device : see docstring
+    """
+
+    def __init__(
+        self,
+        num_events: int = 3,
+        time_bins: int = 100,
+        n_loci: int = 5,
+        raw_clinical_dim: int = 4,
+        clinical_dim: int = 32,
+        interaction_dim: int = 64,
+        num_heads: int = 4,
+        num_layers: int = 2,
+        max_epochs: int = 50,
+        patience: int = 10,
+        learning_rate: float = 1e-3,
+        weight_decay: float = 1e-4,
+        alpha: float = 0.5,
+        sigma: float = 0.1,
+        batch_size: int = 32,
+        device: str = "cpu",
+    ) -> None:
+        self._num_events = num_events
+        self._time_bins = time_bins
+        self._n_loci = n_loci
+        self._raw_clinical_dim = raw_clinical_dim
+        self._clinical_dim = clinical_dim
+        self._interaction_dim = interaction_dim
+        self._num_heads = num_heads
+        self._num_layers = num_layers
+        self._max_epochs = max_epochs
+        self._patience = patience
+        self._lr = learning_rate
+        self._wd = weight_decay
+        self._alpha = alpha
+        self._sigma = sigma
+        self._batch_size = batch_size
+        self._device = torch.device(device)
+        self.model: _BLOSUMModel | None = None
+        self._history: dict[str, list[float]] = {}
+
+    @property
+    def name(self) -> str:
+        return "CAPA-BLOSUM (ablation)"
+
+    def fit(
+        self,
+        train_loader: DataLoader[Any],
+        val_loader: DataLoader[Any],
+    ) -> None:
+        """Train CAPA-BLOSUM.
+
+        Batch keys: ``donor_embeddings``, ``recipient_embeddings``,
+        ``clinical_features``, ``event_times``, ``event_types``.
+        """
+        self.model = _BLOSUMModel(
+            blosum_dim=BLOSUM62_DIM,
+            interaction_dim=self._interaction_dim,
+            clinical_raw=self._raw_clinical_dim,
+            clinical_dim=self._clinical_dim,
+            num_events=self._num_events,
+            time_bins=self._time_bins,
+            num_heads=self._num_heads,
+            num_layers=self._num_layers,
+        ).to(self._device)
+
+        optimizer = torch.optim.AdamW(
+            self.model.parameters(), lr=self._lr, weight_decay=self._wd
+        )
+
+        best_cindex = -1.0
+        no_improve = 0
+
+        for epoch in range(1, self._max_epochs + 1):
+            self.model.train()
+            total_loss, n_batches = 0.0, 0
+            for batch in train_loader:
+                optimizer.zero_grad()
+                d = batch["donor_embeddings"].to(self._device)
+                r = batch["recipient_embeddings"].to(self._device)
+                c = batch["clinical_features"].to(self._device)
+                t = batch["event_times"].to(self._device)
+                e = batch["event_types"].to(self._device)
+                logits = self.model(d, r, c)
+                loss = deephit_loss(logits, t, e, alpha=self._alpha, sigma=self._sigma)
+                loss.backward()
+                nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
+                optimizer.step()
+                total_loss += loss.item()
+                n_batches += 1
+
+            val_c = self._val_cindex(val_loader)
+            logger.info(
+                "CAPA-BLOSUM epoch %d/%d  loss=%.4f  val_c=%.4f",
+                epoch, self._max_epochs, total_loss / max(n_batches, 1), val_c,
+            )
+
+            if val_c > best_cindex:
+                best_cindex = val_c
+                no_improve = 0
+                self._best_state = {
+                    k: v.cpu().clone() for k, v in self.model.state_dict().items()
+                }
+            else:
+                no_improve += 1
+                if no_improve >= self._patience:
+                    logger.info("CAPA-BLOSUM early stop (best val C=%.4f)", best_cindex)
+                    break
+
+        if hasattr(self, "_best_state"):
+            self.model.load_state_dict(
+                {k: v.to(self._device) for k, v in self._best_state.items()}
+            )
+        logger.info("CAPA-BLOSUM complete (best val C-index=%.4f)", best_cindex)
+
+    @torch.no_grad()
+    def _val_cindex(self, val_loader: DataLoader[Any]) -> float:
+        assert self.model is not None
+        self.model.eval()
+        all_times, all_risks, all_obs = [], [], []
+        for batch in val_loader:
+            d = batch["donor_embeddings"].to(self._device)
+            r = batch["recipient_embeddings"].to(self._device)
+            c = batch["clinical_features"].to(self._device)
+            cif_t = self.model.cif(d, r, c)
+            risk = cif_t[:, 0, cif_t.shape[2] // 2].cpu().numpy()
+            all_times.append(batch["event_times"].numpy().astype(float))
+            all_risks.append(risk)
+            all_obs.append((batch["event_types"].numpy() == 1).astype(bool))
+        if not all_times:
+            return 0.5
+        t = np.concatenate(all_times)
+        ri = np.concatenate(all_risks)
+        o = np.concatenate(all_obs)
+        if o.sum() < 2:
+            return 0.5
+        c_val = concordance_index(t, ri, o)
+        return float(c_val) if not np.isnan(c_val) else 0.5
+
+    @torch.no_grad()
+    def predict_cif(
+        self,
+        donor_emb: np.ndarray,   # (n, n_loci, 20)
+        recip_emb: np.ndarray,   # (n, n_loci, 20)
+        clinical: np.ndarray,    # (n, C)
+        time_bins: F64,
+    ) -> F64:
+        """Predict CIF (n, K, T) from BLOSUM62 allele embeddings."""
+        assert self.model is not None
+        self.model.eval()
+        d_t = torch.tensor(donor_emb, dtype=torch.float32, device=self._device)
+        r_t = torch.tensor(recip_emb, dtype=torch.float32, device=self._device)
+        c_t = torch.tensor(clinical,  dtype=torch.float32, device=self._device)
+        cif_t = self.model.cif(d_t, r_t, c_t)
+        cif_np = cif_t.cpu().numpy()
+        T_model = cif_np.shape[2]
+        indices = np.clip(
+            np.searchsorted(np.arange(T_model, dtype=np.float64), time_bins),
+            0, T_model - 1,
+        ).astype(int)
+        return cif_np[:, :, indices]

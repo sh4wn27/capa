@@ -53,7 +53,7 @@ logger = logging.getLogger(__name__)
 
 _EVENT_NAMES = ["GvHD", "Relapse", "TRM"]
 _HLA_LOCI = ["A", "B", "C", "DRB1", "DQB1"]
-_ALL_MODELS = ["finegray", "cox", "rsf", "capa_onehot", "capa"]
+_ALL_MODELS = ["finegray", "cox", "rsf", "gbm", "eplet", "capa_onehot", "blosum", "capa"]
 
 # Synthetic allele pool: 10 alleles per locus
 _ALLELE_POOL: dict[str, list[str]] = {
@@ -86,7 +86,9 @@ def _parse_args() -> argparse.Namespace:
 
     p.add_argument("--models", nargs="+", default=_ALL_MODELS,
                    choices=_ALL_MODELS + ["all"],
-                   help="Which models to include.")
+                   help="Which models to include.  "
+                        "gbm=Gradient Boosting, eplet=Eplet Proxy Cox, "
+                        "blosum=CAPA-BLOSUM ablation.")
     p.add_argument("--epochs", type=int, default=20,
                    help="Max epochs for deep models.")
     p.add_argument("--embedding-dim", type=int, default=32,
@@ -506,6 +508,57 @@ def main() -> None:
             logger.error("RSF failed: %s", exc)
             comparison["Random Survival Forest"] = {"error": str(exc)}
 
+    # ── Gradient Boosting ─────────────────────────────────────────────
+    if "gbm" in models_to_run:
+        logger.info("Fitting Gradient Boosting…")
+        from capa.model.baselines import GradientBoostingBaseline
+        gbm = GradientBoostingBaseline(num_events=num_events, n_estimators=50)
+        t0 = time.perf_counter()
+        try:
+            X_np = train_data["tabular_X"].to_numpy(dtype=np.float64)
+            gbm.fit(X_np, train_data["times"].astype(float), train_data["event_types"])
+            cif_gbm = gbm.predict_cif(
+                test_data["tabular_X"].to_numpy(dtype=np.float64), time_bins_arr
+            )
+            elapsed = time.perf_counter() - t0
+            row = _eval(cif_gbm)
+            row["train_time_s"] = elapsed
+            comparison[gbm.name] = row
+            logger.info("GBM done (%.1fs)", elapsed)
+        except ImportError as exc:
+            logger.warning("GBM skipped: %s", exc)
+            comparison[gbm.name] = {"error": str(exc)}
+        except Exception as exc:
+            logger.error("GBM failed: %s", exc)
+            comparison[gbm.name] = {"error": str(exc)}
+
+    # ── Eplet proxy ───────────────────────────────────────────────────
+    if "eplet" in models_to_run:
+        logger.info("Fitting Eplet Proxy…")
+        from capa.model.baselines import EpletProxyBaseline, compute_eplet_features
+        t0 = time.perf_counter()
+        try:
+            train_ep = compute_eplet_features(
+                train_data["donor_alleles"], train_data["recipient_alleles"],
+                _HLA_LOCI, seq_db=None,
+            )
+            test_ep = compute_eplet_features(
+                test_data["donor_alleles"], test_data["recipient_alleles"],
+                _HLA_LOCI, seq_db=None,
+            )
+            ep = EpletProxyBaseline(num_events=num_events)
+            ep.fit(train_ep, train_data["times"].astype(float), train_data["event_types"])
+            cif_ep = ep.predict_cif(test_ep, time_bins_arr)
+            elapsed = time.perf_counter() - t0
+            row = _eval(cif_ep)
+            row["train_time_s"] = elapsed
+            comparison[ep.name] = row
+            logger.info("EpletProxy done (%.1fs)", elapsed)
+        except Exception as exc:
+            import traceback
+            logger.error("EpletProxy failed: %s\n%s", exc, traceback.format_exc())
+            comparison["Eplet Proxy (cause-specific Cox)"] = {"error": str(exc)}
+
     # ── CAPA-OneHot ───────────────────────────────────────────────────
     if "capa_onehot" in models_to_run:
         logger.info("Fitting CAPA-OneHot (ablation)…")
@@ -563,6 +616,67 @@ def main() -> None:
             import traceback
             logger.error("CAPA-OneHot failed: %s\n%s", exc, traceback.format_exc())
             comparison["CAPA-OneHot (ablation)"] = {"error": str(exc)}
+
+    # ── CAPA-BLOSUM ───────────────────────────────────────────────────
+    if "blosum" in models_to_run:
+        logger.info("Fitting CAPA-BLOSUM (ablation)…")
+        from capa.model.baselines import (
+            CAPABLOSUMBaseline, BLOSUM62_DIM, blosum_embed_sequence,
+        )
+
+        def _make_blosum_loader(
+            d_alleles: list, r_alleles: list, clin: np.ndarray,
+            times: np.ndarray, etypes: np.ndarray, shuffle: bool,
+        ) -> DataLoader:
+            n = len(times)
+            n_loci = len(_HLA_LOCI)
+            # Encode alleles: (n, n_loci, 20) — synthetic alleles have no real
+            # sequences so embed zeros; replace with seq_db lookup on real data.
+            d_emb = np.zeros((n, n_loci, BLOSUM62_DIM), dtype=np.float32)
+            r_emb = np.zeros((n, n_loci, BLOSUM62_DIM), dtype=np.float32)
+            ds = _CAPADataset(d_emb, r_emb, clin, times, etypes)
+            return DataLoader(ds, batch_size=32, shuffle=shuffle)
+
+        bl_train = _make_blosum_loader(
+            train_data["donor_alleles"], train_data["recipient_alleles"],
+            train_data["clinical_cont"], train_data["times"], train_data["event_types"],
+            shuffle=True,
+        )
+        bl_val = _make_blosum_loader(
+            val_data["donor_alleles"], val_data["recipient_alleles"],
+            val_data["clinical_cont"], val_data["times"], val_data["event_types"],
+            shuffle=False,
+        )
+
+        bl = CAPABLOSUMBaseline(
+            num_events=num_events,
+            time_bins=time_bins,
+            n_loci=len(_HLA_LOCI),
+            raw_clinical_dim=4,
+            clinical_dim=16,
+            interaction_dim=args.interaction_dim,
+            max_epochs=args.epochs,
+            patience=max(5, args.epochs // 4),
+            device=args.device,
+        )
+        t0 = time.perf_counter()
+        try:
+            bl.fit(bl_train, bl_val)
+
+            n_test = len(test_data["times"])
+            test_d_emb = np.zeros((n_test, len(_HLA_LOCI), BLOSUM62_DIM), dtype=np.float32)
+            test_r_emb = np.zeros((n_test, len(_HLA_LOCI), BLOSUM62_DIM), dtype=np.float32)
+            cif_bl = bl.predict_cif(test_d_emb, test_r_emb,
+                                    test_data["clinical_cont"], time_bins_arr)
+            elapsed = time.perf_counter() - t0
+            row = _eval(cif_bl)
+            row["train_time_s"] = elapsed
+            comparison[bl.name] = row
+            logger.info("CAPA-BLOSUM done (%.1fs)", elapsed)
+        except Exception as exc:
+            import traceback
+            logger.error("CAPA-BLOSUM failed: %s\n%s", exc, traceback.format_exc())
+            comparison["CAPA-BLOSUM (ablation)"] = {"error": str(exc)}
 
     # ── Full CAPA (synthetic embeddings) ─────────────────────────────
     if "capa" in models_to_run:

@@ -715,3 +715,155 @@ def evaluate_all(
         n_subjects=n,
         eval_times=eval_times.tolist(),
     )
+
+
+# ---------------------------------------------------------------------------
+# Brier score decomposition: reliability, resolution, uncertainty
+# ---------------------------------------------------------------------------
+
+def brier_decomposition(
+    cif: F64,
+    event_times: F64,
+    event_observed: Bool,
+    eval_time: float,
+    time_bins: F64,
+    n_bins: int = 10,
+) -> dict[str, float]:
+    """Decompose the Brier score into calibration and discrimination components.
+
+    Applies the Murphy (1973) decomposition for proper scoring rules::
+
+        BS = REL − RES + UNC
+
+    where
+
+    * **UNC** = ō(1 − ō) — base-rate uncertainty (independent of the model).
+    * **REL** (reliability) = Σ_k (n_k/n)(f̄_k − ō_k)² — calibration penalty;
+      0 means perfect calibration within each bin (lower is better).
+    * **RES** (resolution) = Σ_k (n_k/n)(ō_k − ō)² — ability to separate
+      high- from low-risk subjects (higher is better).
+
+    Subjects are grouped into *n_bins* quantile bins of predicted CIF.
+
+    Parameters
+    ----------
+    cif : F64, shape (n, T)
+        Predicted CIF for one event.
+    event_times : F64, shape (n,)
+    event_observed : Bool, shape (n,)
+    eval_time : float
+    time_bins : F64, shape (T,)
+    n_bins : int
+        Number of quantile bins.
+
+    Returns
+    -------
+    dict with keys ``brier_score``, ``reliability``, ``resolution``,
+    ``uncertainty``.
+    """
+    t_idx = min(int(np.searchsorted(time_bins, eval_time)), cif.shape[1] - 1)
+    predicted = cif[:, t_idx].astype(np.float64)
+    outcome = ((event_times <= eval_time) & event_observed).astype(np.float64)
+    n = len(predicted)
+
+    o_bar = outcome.mean()
+    unc = o_bar * (1.0 - o_bar)
+
+    # Quantile-bin the predictions
+    quantiles = np.linspace(0, 100, n_bins + 1)
+    bin_edges = np.unique(np.percentile(predicted, quantiles))
+    if len(bin_edges) < 2:
+        bin_edges = np.array([predicted.min() - 1e-9, predicted.max() + 1e-9])
+
+    rel = 0.0
+    res = 0.0
+    for lo, hi in zip(bin_edges[:-1], bin_edges[1:]):
+        mask = (predicted >= lo) & (predicted <= hi)
+        if mask.sum() == 0:
+            continue
+        n_k = int(mask.sum())
+        f_k = float(predicted[mask].mean())   # mean predicted in bin
+        o_k = float(outcome[mask].mean())     # mean observed in bin
+        rel += (n_k / n) * (f_k - o_k) ** 2
+        res += (n_k / n) * (o_k - o_bar) ** 2
+
+    bs = brier_score(cif, event_times, event_observed, eval_time, time_bins)
+
+    return {
+        "brier_score": bs,
+        "reliability": rel,   # calibration loss: lower is better
+        "resolution":  res,   # discrimination ability: higher is better
+        "uncertainty": unc,   # base-rate difficulty: not model-dependent
+    }
+
+
+# ---------------------------------------------------------------------------
+# Calibration plot (reliability diagram)
+# ---------------------------------------------------------------------------
+
+def plot_calibration_curve(
+    calib_result: "CalibrationResult",
+    *,
+    model_name: str = "Model",
+    event_name: str = "Event",
+    ax: "Any | None" = None,
+    figsize: tuple[float, float] = (5.0, 5.0),
+) -> "Any":
+    """Plot a reliability diagram for one (model, event, eval_time) triplet.
+
+    Subjects are grouped by predicted CIF into quantile bins; the mean
+    predicted value and observed event rate are plotted against each other.
+    A perfectly calibrated model lies on the 45° diagonal.
+
+    Parameters
+    ----------
+    calib_result : CalibrationResult
+        Pre-computed calibration data from :func:`calibration_curve`.
+    model_name : str
+        Label for the model (shown in the legend).
+    event_name : str
+        Name of the competing event (shown in the title).
+    ax : plt.Axes | None
+        Existing axes; a new figure is created if ``None``.
+    figsize : tuple[float, float]
+
+    Returns
+    -------
+    plt.Figure
+    """
+    import matplotlib.pyplot as plt
+
+    own_fig = ax is None
+    if own_fig:
+        fig, ax = plt.subplots(figsize=figsize)
+    else:
+        fig = ax.figure
+    assert ax is not None
+
+    pred = calib_result.predicted_mean
+    obs  = calib_result.observed_mean
+    ns   = calib_result.n_per_bin
+
+    ax.plot([0, 1], [0, 1], "k--", lw=1, alpha=0.5, label="Perfect calibration")
+
+    # Scatter with marker size proportional to bin count
+    max_n = max(ns) if ns else 1
+    sizes = [max(20.0, 220.0 * n / max_n) for n in ns]
+    ax.scatter(pred, obs, s=sizes, zorder=5, label=model_name)
+    if len(pred) > 1:
+        ax.plot(pred, obs, lw=1.5, alpha=0.7)
+
+    ax.set_xlim(-0.02, 1.02)
+    ax.set_ylim(-0.02, 1.02)
+    ax.set_xlabel("Mean predicted CIF", fontsize=11)
+    ax.set_ylabel("Observed cumulative incidence", fontsize=11)
+    ax.set_title(
+        f"Calibration — {event_name}  (t = {calib_result.eval_time:.1f})",
+        fontsize=12,
+    )
+    ax.legend(fontsize=9)
+    ax.grid(alpha=0.3)
+
+    if own_fig:
+        fig.tight_layout()
+    return fig

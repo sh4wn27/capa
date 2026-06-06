@@ -1185,3 +1185,197 @@ def generate_population_map(
         logger.info("Population figures saved to %s", out_dir)
 
     return figures
+
+
+# ---------------------------------------------------------------------------
+# Known immunological positions for validation of interpretability
+# ---------------------------------------------------------------------------
+
+# Critical HLA positions (1-indexed) from the peptide-binding groove and
+# T-cell recognition face.  Sources: HLAMatchmaker v3 eplet registry;
+# Duquesnoy 2002, 2008 (Hum Immunol); IMGT/HLA polymorphism atlas;
+# Siu et al. 2020 (NEJM Evid); Geneugelijk & Spierings 2018 (Front Immunol).
+PEPTIDE_BINDING_GROOVE: dict[str, list[int]] = {
+    # HLA class I alpha-1/alpha-2 domains
+    "A":    [9, 24, 44, 45, 62, 63, 66, 74, 76, 77, 80, 81, 95,
+             99, 114, 116, 143, 147, 152, 156, 163, 166, 167, 171],
+    "B":    [9, 24, 44, 45, 58, 62, 63, 66, 67, 70, 71, 74, 76,
+             77, 80, 81, 95, 97, 99, 116, 138, 143, 147, 152, 156, 163],
+    "C":    [9, 24, 44, 45, 66, 74, 76, 77, 80, 81, 116, 147, 152, 156, 163],
+    # HLA class II beta1 domain
+    "DRB1": [13, 26, 28, 30, 31, 37, 38, 47, 57, 60, 67, 70, 71, 74, 86],
+    "DQB1": [26, 30, 45, 52, 57, 87],
+    "DQA1": [26, 50, 54, 68],
+    "DPB1": [35, 45, 55, 56, 65, 69],
+}
+
+
+# ---------------------------------------------------------------------------
+# Residue-level gradient attribution
+# ---------------------------------------------------------------------------
+
+def residue_gradient_attribution(
+    model: nn.Module,
+    donor_pos_embs: torch.Tensor,      # (n_loci, n_positions, D) float
+    recip_pos_embs: torch.Tensor,      # (n_loci, n_positions, D) float
+    clinical_features: torch.Tensor,   # (1, clinical_dim) float
+    *,
+    event_k: int = 0,
+    time_bin: int | None = None,
+    device: str | torch.device | None = None,
+) -> tuple[F32, F32]:
+    """Compute per-residue gradient attribution for donor and recipient HLA.
+
+    Backpropagates the CIF of *event_k* at *time_bin* through the mean-pool
+    operation back to the per-position embeddings.  The L2 norm of the
+    gradient at each position is the importance score.
+
+    This identifies which amino acid positions in each HLA protein most
+    influence the predicted risk.  High importance at known peptide-binding
+    groove positions is evidence that the model learned biologically relevant
+    features.
+
+    Parameters
+    ----------
+    model : CAPAModel
+        Trained CAPA model (must use CrossAttentionInteraction).
+    donor_pos_embs : Tensor, shape (n_loci, n_positions, D)
+        Per-position ESM-2 embeddings for the donor (NOT mean-pooled).
+    recip_pos_embs : Tensor, shape (n_loci, n_positions, D)
+    clinical_features : Tensor, shape (1, clinical_dim)
+    event_k : int
+        0-indexed event to attribute.
+    time_bin : int | None
+        Time bin index for the risk score.  Defaults to the last bin.
+    device : str | torch.device | None
+
+    Returns
+    -------
+    (donor_attr, recip_attr)
+        Each is an ``(n_loci, n_positions)`` float32 array.
+        Higher values indicate more influence on the predicted risk.
+    """
+    if device is None:
+        try:
+            device = next(model.parameters()).device
+        except StopIteration:
+            device = torch.device("cpu")
+    device = torch.device(device)
+
+    model.eval()
+
+    d_pos = donor_pos_embs.to(device).float().detach().requires_grad_(True)
+    r_pos = recip_pos_embs.to(device).float().detach().requires_grad_(True)
+    clin  = clinical_features.to(device).float()
+
+    # Mean-pool positions → locus embeddings, then add batch dim
+    d_locus = d_pos.mean(dim=1).unsqueeze(0)   # (1, n_loci, D)
+    r_locus = r_pos.mean(dim=1).unsqueeze(0)
+
+    logits = model(d_locus, r_locus, clin)      # (1, K, T)
+
+    joint = torch.nn.functional.softmax(
+        logits.view(1, -1), dim=-1
+    ).view(1, logits.shape[1], logits.shape[2])
+    cif = torch.cumsum(joint, dim=2)            # (1, K, T)
+
+    t_bin = cif.shape[2] - 1 if time_bin is None else int(time_bin)
+    risk = cif[0, event_k, t_bin]
+    risk.backward()
+
+    zero_d = np.zeros(tuple(d_pos.shape[:2]), dtype=np.float32)
+    zero_r = np.zeros(tuple(r_pos.shape[:2]), dtype=np.float32)
+
+    d_attr = (
+        d_pos.grad.norm(dim=-1).detach().cpu().numpy().astype(np.float32)
+        if d_pos.grad is not None else zero_d
+    )
+    r_attr = (
+        r_pos.grad.norm(dim=-1).detach().cpu().numpy().astype(np.float32)
+        if r_pos.grad is not None else zero_r
+    )
+    return d_attr, r_attr
+
+
+# ---------------------------------------------------------------------------
+# Biological alignment scoring
+# ---------------------------------------------------------------------------
+
+def biology_alignment_score(
+    attribution: F32,
+    locus: str,
+    *,
+    one_indexed: bool = True,
+) -> dict[str, float]:
+    """Score how well attribution aligns with known immunological positions.
+
+    Computes three complementary measures comparing the model's per-position
+    importance to the curated :data:`PEPTIDE_BINDING_GROOVE` positions:
+
+    * **enrichment** — ratio of attribution mass in known positions to the
+      fraction of positions they represent.  >1 means the model concentrates
+      attention on immunologically important residues.
+    * **auroc** — AUROC treating groove positions as positives and position
+      importance as the score; 0.5 = random, 1.0 = perfect.
+    * **mean_rank_ratio** — mean fractional rank of known positions
+      (0 = highest ranked, 1 = lowest ranked).
+
+    Parameters
+    ----------
+    attribution : F32, shape (n_positions,)
+        Per-position importance for one locus.
+    locus : str
+        HLA locus name (e.g. ``"A"``, ``"DRB1"``).
+    one_indexed : bool
+        Whether :data:`PEPTIDE_BINDING_GROOVE` positions are 1-indexed (default True).
+
+    Returns
+    -------
+    dict with keys ``enrichment``, ``auroc``, ``mean_rank_ratio``.
+    All values are ``float``; NaN when no known positions fall in range.
+    """
+    known = PEPTIDE_BINDING_GROOVE.get(locus, [])
+    n = len(attribution)
+    nan_result: dict[str, float] = {
+        "enrichment": float("nan"),
+        "auroc": float("nan"),
+        "mean_rank_ratio": float("nan"),
+    }
+    if not known or n == 0:
+        return nan_result
+
+    offset = 1 if one_indexed else 0
+    known_idx = [p - offset for p in known if 0 <= (p - offset) < n]
+    if not known_idx:
+        return nan_result
+
+    known_mask = np.zeros(n, dtype=bool)
+    known_mask[known_idx] = True
+
+    # Mass enrichment: fraction of attribution in known positions vs. expected
+    total = float(attribution.sum())
+    if total < 1e-12:
+        enrichment = 1.0
+    else:
+        known_mass = float(attribution[known_mask].sum())
+        known_frac = len(known_idx) / n
+        enrichment = (known_mass / total) / known_frac
+
+    # AUROC
+    try:
+        from sklearn.metrics import roc_auc_score  # type: ignore[import-untyped]
+        auroc = float(roc_auc_score(known_mask.astype(int), attribution.astype(np.float64)))
+    except Exception:
+        auroc = float("nan")
+
+    # Mean rank ratio: lower → known positions are ranked higher
+    order = np.argsort(attribution)[::-1]
+    rank_of = np.empty(n, dtype=int)
+    rank_of[order] = np.arange(n)
+    mean_rank_ratio = float(rank_of[known_mask].mean() / n)
+
+    return {
+        "enrichment": float(enrichment),
+        "auroc": float(auroc),
+        "mean_rank_ratio": float(mean_rank_ratio),
+    }
