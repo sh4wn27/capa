@@ -328,6 +328,58 @@
 
 <hr class="rule" />
 
+<!-- ===================== VS. EXISTING APPROACHES ===================== -->
+<section class="section wrap">
+  <div class="sec-head reveal">
+    <span class="num">§ 03</span>
+    <div>
+      <p class="eyebrow" style="margin-bottom:14px">Why not just count mismatches?</p>
+      <h2>How CAPA differs from existing tools</h2>
+    </div>
+  </div>
+  <p class="reveal" style="max-width:58ch;color:var(--ink-2);font-size:18px;line-height:1.6;margin-bottom:48px">Clinical standard practice and current immunogenetics tools encode HLA compatibility as a count. CAPA treats it as a continuous, learned relationship in protein embedding space.</p>
+
+  <div class="reveal" style="overflow-x:auto">
+    <table class="jtable" style="width:100%">
+      <caption>Methodological comparison — not a performance benchmark. HLAMatchmaker and PIRCHE-II are validated at scale; CAPA is validated on n&nbsp;=&nbsp;187.</caption>
+      <thead>
+        <tr>
+          <th>Approach</th>
+          <th>Mismatch representation</th>
+          <th>Trained on outcomes?</th>
+          <th>Competing-risk output</th>
+          <th>Unseen alleles</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b>Allele match counting</b><br><span style="font-family:var(--sans);font-size:11px;color:var(--ink-3)">clinical standard · 8/8, 10/10</span></td>
+          <td>Binary per locus</td>
+          <td>No — rule-based</td>
+          <td>No</td>
+          <td>No</td>
+        </tr>
+        <tr>
+          <td><b>HLAMatchmaker / PIRCHE-II</b><br><span style="font-family:var(--sans);font-size:11px;color:var(--ink-3)">eplet &amp; peptidome tools</span></td>
+          <td>Eplet or peptide counts</td>
+          <td>No — curated biology rules</td>
+          <td>No</td>
+          <td>Partial</td>
+        </tr>
+        <tr style="border-top:1.5px solid var(--line)">
+          <td><b>CAPA</b><br><span style="font-family:var(--sans);font-size:11px;color:var(--ink-3)">this work · proof-of-concept · n&nbsp;=&nbsp;187</span></td>
+          <td>Continuous 1&nbsp;280-dim protein embedding</td>
+          <td>Yes — end-to-end from outcomes</td>
+          <td>Yes — GvHD · Relapse · TRM</td>
+          <td>Yes — any allele with a sequence</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<hr class="rule" />
+
 <!-- ===================== ABOUT TEASER ===================== -->
 <section class="section wrap">
   <div class="about-grid">

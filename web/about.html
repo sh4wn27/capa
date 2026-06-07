@@ -120,6 +120,13 @@
         <div class="c-tag">Why it matters</div>
         <p>Continuous embeddings let a model reason about <i>degree</i> and <i>direction</i> of mismatch, and to generalise to allele pairs it has never seen in training — something a lookup table of match scores can never do.</p>
       </div>
+
+      <h3>What already exists — and where it stops</h3>
+      <p>Two tools dominate current clinical practice. <b>HLAMatchmaker</b> counts mismatched <i>eplets</i> — short amino-acid motifs on the HLA surface that trigger antibody responses. <b>PIRCHE-II</b> enumerates T-cell-presented peptides derived from mismatched residues. Both improve on simple allele counting by capturing finer-grained surface differences. But they share three critical limits: the rules are curated by hand rather than learned from outcomes; they produce a mismatch count, not a survival prediction; and they cannot output competing-risk trajectories or generalise to rare alleles absent from their reference tables.</p>
+      <div class="callout">
+        <div class="c-tag">How CAPA differs</div>
+        <p>CAPA learns a continuous embedding directly from protein sequence, not from curated rule tables. The cross-attention network is trained end-to-end on transplant survival outcomes, so the learned representation is adapted to predicting GvHD, relapse, and TRM jointly — not just counting surface mismatches. And because any allele with a sequence in IPD-IMGT/HLA can be embedded, the model generalises to rare alleles that eplet reference sets do not cover. The trade-off: CAPA is validated on n&nbsp;=&nbsp;187 patients, while HLAMatchmaker and PIRCHE-II are supported by thousands. Scaling to registry-level data is the necessary next step.</p>
+      </div>
     </section>
 
     <section id="method">
