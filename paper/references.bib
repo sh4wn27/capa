@@ -110,6 +110,17 @@
   pages   = {195--199},
 }
 
+@article{putter2007competing,
+  author  = {Putter, Hein and Fiocco, Marta and Geskus, Ronald B.},
+  title   = {Tutorial in biostatistics: competing risks and multi-state models},
+  journal = {Statistics in Medicine},
+  year    = {2007},
+  volume  = {26},
+  number  = {11},
+  pages   = {2389--2430},
+  doi     = {10.1002/sim.2712},
+}
+
 @article{fine1999subdistribution,
   author  = {Fine, Jason P. and Gray, Robert J.},
   title   = {A Proportional Hazards Model for the Subdistribution of a Competing Risk},
@@ -193,8 +204,6 @@
   number  = {6},
   pages   = {386--391},
   doi     = {10.1097/01.moh.0000143701.88042.d9},
-  % NOTE: this paper is in Curr Opin Haematol, NOT NEJM.
-  % The Petersdorf NEJM paper is petersdorf2015hladp (NEJM 2015;373:599–609).
 }
 
 @article{lee2007hlamismatch,
@@ -294,8 +303,6 @@
   number  = {17},
   pages   = {1177--1185},
   doi     = {10.1056/NEJM199810223391701},
-  % Landmark NEJM paper establishing allele-level HLA class I matching in HSCT.
-  % Often cited alongside Lee 2007 Blood for HLA matching evidence.
 }
 
 % ── HLA databases and sequences ──────────────────────────────────────────────
@@ -343,8 +350,6 @@
   volume  = {194},
   pages   = {105480},
   doi     = {10.1016/j.knosys.2020.105480},
-  % NOTE: published 2020 (not 2019); first author is Gudyś.
-  % Key retained as sikora2019rulekit to avoid breaking existing \cite commands.
 }
 
 @article{sikora2019guider,
@@ -360,19 +365,24 @@
 
 % ── Machine learning methods ─────────────────────────────────────────────────
 
-@article{lundberg2017shap,
-  author  = {Lundberg, Scott M. and Lee, Su-In},
-  title   = {A Unified Approach to Interpreting Model Predictions},
-  journal = {Advances in Neural Information Processing Systems},
-  year    = {2017},
-  volume  = {30},
+@inproceedings{lundberg2017shap,
+  author    = {Lundberg, Scott M. and Lee, Su-In},
+  title     = {A Unified Approach to Interpreting Model Predictions},
+  booktitle = {Advances in Neural Information Processing Systems},
+  year      = {2017},
+  volume    = {30},
+  pages     = {4765--4774},
+  publisher = {Curran Associates, Inc.},
 }
 
-@article{mcinnes2018umap,
-  author  = {McInnes, Leland and Healy, John and Melville, James},
-  title   = {{UMAP}: Uniform Manifold Approximation and Projection for Dimension Reduction},
-  journal = {arXiv preprint arXiv:1802.03426},
-  year    = {2018},
+@misc{mcinnes2018umap,
+  author        = {McInnes, Leland and Healy, John and Melville, James},
+  title         = {{UMAP}: Uniform Manifold Approximation and Projection for Dimension Reduction},
+  year          = {2018},
+  eprint        = {1802.03426},
+  archivePrefix = {arXiv},
+  primaryClass  = {stat.ML},
+  url           = {https://arxiv.org/abs/1802.03426},
 }
 
 @article{srivastava2014dropout,
@@ -386,23 +396,26 @@
   pages   = {1929--1958},
 }
 
-@article{loshchilov2019adamw,
-  author  = {Loshchilov, Ilya and Hutter, Frank},
-  title   = {Decoupled Weight Decay Regularization},
-  journal = {International Conference on Learning Representations},
-  year    = {2019},
+@inproceedings{loshchilov2019adamw,
+  author    = {Loshchilov, Ilya and Hutter, Frank},
+  title     = {Decoupled Weight Decay Regularization},
+  booktitle = {International Conference on Learning Representations},
+  year      = {2019},
+  url       = {https://openreview.net/forum?id=Bkg6RiCqY7},
 }
 
-@misc{paszke2019pytorch,
-  author  = {Paszke, Adam and Gross, Sam and Massa, Francisco and Lerer, Adam and
-             Bradbury, James and Chanan, Gregory and Killeen, Trevor and Lin, Zeming and
-             Gimelshein, Natalia and Antiga, Luca and Desmaison, Alban and
-             K{\"o}pf, Andreas and Yang, Edward and DeVito, Zachary and
-             Raison, Martin and Tejani, Alykhan and Chilamkurthy, Sasank and
-             Steiner, Benoit and Fang, Lu and Bai, Junjie and Chintala, Soumith},
-  title   = {{PyTorch}: An Imperative Style, High-Performance Deep Learning Library},
-  year    = {2019},
-  url     = {https://pytorch.org},
+@inproceedings{paszke2019pytorch,
+  author    = {Paszke, Adam and Gross, Sam and Massa, Francisco and Lerer, Adam and
+               Bradbury, James and Chanan, Gregory and Killeen, Trevor and Lin, Zeming and
+               Gimelshein, Natalia and Antiga, Luca and Desmaison, Alban and
+               K{\"o}pf, Andreas and Yang, Edward and DeVito, Zachary and
+               Raison, Martin and Tejani, Alykhan and Chilamkurthy, Sasank and
+               Steiner, Benoit and Fang, Lu and Bai, Junjie and Chintala, Soumith},
+  title     = {{PyTorch}: An Imperative Style, High-Performance Deep Learning Library},
+  booktitle = {Advances in Neural Information Processing Systems},
+  year      = {2019},
+  volume    = {32},
+  publisher = {Curran Associates, Inc.},
 }
 
 @article{davidson2019lifelines,
@@ -416,11 +429,14 @@
   doi     = {10.21105/joss.01317},
 }
 
-@article{ba2016layernorm,
-  author  = {Ba, Jimmy Lei and Kiros, Jamie Ryan and Hinton, Geoffrey E.},
-  title   = {Layer Normalization},
-  journal = {arXiv preprint arXiv:1607.06450},
-  year    = {2016},
+@misc{ba2016layernorm,
+  author        = {Ba, Jimmy Lei and Kiros, Jamie Ryan and Hinton, Geoffrey E.},
+  title         = {Layer Normalization},
+  year          = {2016},
+  eprint        = {1607.06450},
+  archivePrefix = {arXiv},
+  primaryClass  = {stat.ML},
+  url           = {https://arxiv.org/abs/1607.06450},
 }
 
 @article{passweg2022ebmt,
@@ -490,9 +506,9 @@
 }
 
 @article{dunn2011eplets,
-  author  = {Duquesnoy, Rene J.},
-  title   = {{HLAMatchmaker}: a molecularly based algorithm for histocompatibility
-             determination. {I.} {Description} of the algorithm},
+  author  = {Duquesnoy, Ren{\'e} J.},
+  title   = {{HLAMatchmaker}: A Molecularly Based Algorithm for Histocompatibility
+             Determination. {I.} Description of the Algorithm},
   journal = {Human Immunology},
   year    = {2002},
   volume  = {63},
@@ -528,7 +544,7 @@
 
 @article{dehn2015ml_hsct,
   author  = {Dehn, Jason and Spellman, Stephen and Hurley, Carolyn K. and Shaw, Bronwen E. and
-             Bloom, Mary and upper, Hildegard and Trachtenberg, Elizabeth and Oudshoorn, Machteld and
+             Bloom, Mary and Trachtenberg, Elizabeth and Oudshoorn, Machteld and
              van Walraven, Stephanie M. and Woolfrey, Ann and others},
   title   = {Selection of unrelated donors and cord blood units for hematopoietic cell
              transplantation: guidelines from the {NMDP/CIBMTR}},

@@ -79,29 +79,52 @@ of HDF5 disk space.
 
 \subsection{Cross-Attention Architecture Details}
 
-Each cross-attention layer consists of:
+The interaction network operates at the \emph{full} ESM-2 embedding
+dimensionality $d = 1280$; no projection is applied before the first
+cross-attention layer.  Each bidirectional cross-attention block consists of:
 \begin{enumerate}
-  \item Multi-head cross-attention ($H = 8$ heads, head dimension $d' / H = 16$),
-        with separate query, key, and value projections for each stream.
-  \item Add \& Norm: residual connection followed by layer normalisation.
-  \item Position-wise feed-forward network: linear($d'$, $4d'$) -- GELU --
-        dropout($p=0.1$) -- linear($4d'$, $d'$).
-  \item Add \& Norm.
+  \item \textbf{Donor-attends-to-recipient MHA}: multi-head cross-attention
+        with $H = 8$ heads and per-head dimension $d_h = d/H = 160$.
+        Separate learned projections
+        $\mathbf{W}^Q_h, \mathbf{W}^K_h, \mathbf{W}^V_h \in \mathbb{R}^{d \times d_h}$
+        and output projection $\mathbf{W}^O \in \mathbb{R}^{d \times d}$.
+  \item \textbf{Recipient-attends-to-donor MHA}: identical architecture with
+        non-shared parameters, applied in parallel.
+  \item Add \& Norm: residual connection and layer normalisation
+        \citep{ba2016layernorm} applied independently to each stream.
 \end{enumerate}
-After $N = 2$ layers, the donor and recipient output sequences are each
-mean-pooled across the $L = 5$ locus positions to produce 128-dimensional
-vectors; these are concatenated to form the 256-dimensional interaction
-representation $\mathbf{z}_{\text{int}}$.
+There is \emph{no} position-wise feed-forward sublayer.  The block is
+intentionally minimal, comprising only the two cross-attention modules and
+their corresponding residual$+$normalisation wrappers.  This design
+minimises parameters while preserving the full expressive capacity of
+bidirectional attention at embedding dimensionality.
+
+After $N = 2$ such blocks, both streams are mean-pooled over the $L = 5$
+locus positions to produce two $d$-dimensional vectors.  These are
+concatenated to a $2d = 2560$-dimensional joint representation, then
+compressed to $d'' = 128$ by a two-layer projection MLP:
+\begin{equation}
+  \mathbf{W}_1 \in \mathbb{R}^{2560 \times 512},\quad
+  \text{GELU},\quad
+  \text{Dropout}(p = 0.1),\quad
+  \mathbf{W}_2 \in \mathbb{R}^{512 \times 128}.
+\end{equation}
 
 The total number of learnable parameters in the interaction network is
-approximately 2.1 million.
+approximately \textbf{27.6 million}.  This is dominated by the four MHA
+blocks operating at $d = 1280$: each block contributes
+$4d^2 \approx 6.6\,\text{M}$ parameters (query, key, value, and output
+projections across all heads), for a cross-attention subtotal of
+$4 \times 6.6\,\text{M} \approx 26.2\,\text{M}$.  The post-projection
+MLP adds $2560 \times 512 + 512 \times 128 \approx 1.4\,\text{M}$
+additional parameters.
 
 \subsection{Hyperparameter Selection}
 
 All hyperparameters were selected by grid search on the validation set using
 the mean concordance index across all three events as the selection criterion.
 Ranges explored were: number of cross-attention layers $N \in \{1, 2, 3\}$;
-interaction dimension $d' \in \{64, 128, 256\}$; number of heads
+interaction output dimension $d'' \in \{64, 128, 256\}$; number of heads
 $H \in \{4, 8\}$; learning rate $\in \{10^{-3}, 10^{-4}, 10^{-5}\}$; DeepHit
 loss weighting $\alpha \in \{0.2, 0.5, 0.8\}$.  The selected configuration
 is reported in the main text.
@@ -116,23 +139,27 @@ One independent Cox model was fitted per event using all non-event subjects as
 censored.  Features: age (recipient, donor), sex mismatch (binary), disease
 category (one-hot), conditioning regimen (one-hot), donor type (one-hot), graft
 source (one-hot), and per-locus mismatch flags (binary, one per locus).
-Implemented with \texttt{lifelines} (v0.29).
+Implemented with \texttt{lifelines} (v0.30) \citep{davidson2019lifelines}.
 
 \paragraph{Fine--Gray subdistribution hazards.}
 As above but using the Fine--Gray model for each event with the remaining
-events treated as competing.  Implemented with \texttt{lifelines}.
+events treated as competing.  Implemented with \texttt{lifelines} (v0.30) \citep{davidson2019lifelines}.
 
-\paragraph{Random survival forest.}
-One RSF per event in cause-specific formulation.  Hyperparameters: 500 trees,
-minimum node size 10, log-rank splitting rule.  Implemented with
-\texttt{scikit-survival} (v0.22).
+\paragraph{DeepHit (tabular HLA features).}
+A two-hidden-layer MLP ($d=64$ per layer, GELU activation, dropout $p=0.2$)
+with a DeepHit joint probability mass function head, using the same 21 tabular
+clinical and aggregate HLA features as the Cox and Fine--Gray baselines.  All
+continuous features are normalised to zero mean and unit variance; HLA mismatch
+is encoded as an aggregate count (0--3) rather than per-allele embeddings.
+Trained with the combined NLL + pairwise ranking loss, AdamW optimiser
+(learning rate $10^{-3}$, weight decay $10^{-4}$), cosine annealing, and early
+stopping (patience 25 epochs) on validation mean $C$-index.  This baseline
+isolates whether a neural survival head provides benefit over classical methods
+on small tabular data in the absence of structural allele priors.
 
-\paragraph{DeepHit (one-hot HLA).}
-Identical architecture to CAPA except that each HLA allele is represented as
-a binary mismatch flag (0/1 per locus) rather than an ESM-2 embedding.  The
-input to the interaction network is therefore a $5 \times 1$ binary vector
-for each side, projected to dimension 128 by a learnable linear layer before
-the cross-attention layers.  Trained with identical hyperparameters to CAPA.
+SHAP \citep{lundberg2017shap} feature importance for the tabular-feature
+baselines, computed on all test-set patients, is shown in Supplementary
+Figure~\ref{fig:shap}.
 
 %% ── S2. Supplementary Figures ───────────────────────────────────────────────
 \section{Supplementary Figures}
@@ -241,7 +268,14 @@ the cross-attention layers.  Trained with identical hyperparameters to CAPA.
     design values).  Inference times estimated for a single NVIDIA T4 GPU with
     batch size of 1, based on component complexity.  These values characterise
     the architecture and have not been benchmarked on the UCI BMT cohort, which
-    does not contain the allele-level data required to run the ESM-2 pipeline.}
+    does not contain the allele-level data required to run the ESM-2 pipeline.
+    The cross-attention network parameter count ($\sim$27.6\,M) is dominated
+    by the four multi-head attention blocks operating at embedding dimensionality
+    $d = 1280$ (each block: $4d^2 \approx 6.6\,\text{M}$); the post-projection
+    MLP ($2560 \times 512 + 512 \times 128$) contributes $\sim$1.4\,M.
+    The DeepHit survival head ($\sim$185\,K) corresponds to the shared MLP
+    ($160 \to 256 \to 256$) plus three event-specific linear heads
+    ($3 \times 256 \to 100$).}
   \label{tab:compute}
   \centering
   \begin{tabular}{lrr}
@@ -249,11 +283,11 @@ the cross-attention layers.  Trained with identical hyperparameters to CAPA.
     \textbf{Component} & \textbf{Parameters} & \textbf{Inference latency} \\
     \midrule
     ESM-2 650M (frozen) & 650\,M & $<$1\,ms (cached) / $\sim$120\,ms (live) \\
-    Cross-attention network & 2.1\,M & $<$5\,ms \\
-    Clinical encoder & 18\,K & $<$1\,ms \\
-    DeepHit survival head & 680\,K & $<$1\,ms \\
+    Cross-attention network & $\sim$27.6\,M & $<$5\,ms \\
+    Clinical encoder & $\sim$18\,K & $<$1\,ms \\
+    DeepHit survival head & $\sim$185\,K & $<$1\,ms \\
     \midrule
-    Total learnable & 2.8\,M & $\sim$7\,ms (with cache) \\
+    Total learnable & $\sim$27.8\,M & $\sim$7\,ms (with cache) \\
     \bottomrule
   \end{tabular}
 \end{table}
