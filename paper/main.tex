@@ -51,7 +51,7 @@ Stem Cell Transplantation}\\[6pt]
 \normalsize\textit{Original Paper} \quad $\cdot$ \quad \textit{Bioinformatics}}
 
 \author{Huanxuan Li$^{1,*}$\\[4pt]
-\small $^1$Thomas Jefferson High School for Science and Technology, Alexandira, United States\\
+\small $^1$Thomas Jefferson High School for Science and Technology, Alexandria, United States\\
 \small $^*$Correspondence: \href{mailto:2027hli@tjhsst.oredu}{2027hli@tjhsst.edu}}
 \date{}
 
@@ -78,7 +78,7 @@ interaction features are extracted by a bidirectional cross-attention network
 (2 layers, 8 heads, $d'=128$), which is concatenated with clinical covariates
 and passed to a DeepHit head that jointly estimates the discrete-time
 cumulative incidence functions for all three competing events over a 730-day
-horizon.  Only the interaction network and survival head (${\sim}2.8$M
+horizon.  Only the interaction network and survival head (${\sim}27.8$M
 parameters) are trained by default; ESM-2 is frozen but can optionally be
 partially fine-tuned via a second AdamW parameter group.  Post-hoc isotonic
 calibration is applied per event and time bin to improve CIF reliability.
@@ -214,6 +214,23 @@ direction for future work.
 %% ── 2. Methods ──────────────────────────────────────────────────────────────
 \section{Methods}
 
+\begin{figure}[t!]
+  \centering
+  \includegraphics[width=\columnwidth]{figures/fig1_architecture}
+  \caption{Overview of the CAPA architecture.  HLA allele sequences for donor
+    and recipient are encoded independently by the frozen ESM-2 650M protein
+    language model ($d=1280$ per allele).  The resulting allele matrices pass
+    through $N=2$ stacked bidirectional cross-attention blocks; both streams
+    are then mean-pooled, concatenated, and compressed to a 128-dimensional
+    interaction vector $\mathbf{z}_{\mathrm{int}}$ via a two-layer MLP.
+    Structured clinical covariates are encoded in parallel by a separate MLP
+    to a 32-dimensional vector $\mathbf{z}_{\mathrm{clin}}$.  The concatenated
+    160-dimensional vector $\mathbf{z}$ is passed to the DeepHit survival head,
+    which jointly estimates cumulative incidence functions for GvHD, relapse,
+    and TRM over a 730-day horizon.}
+  \label{fig:arch}
+\end{figure}
+
 \subsection{Dataset and Pre-processing}
 \label{sec:data}
 
@@ -328,43 +345,35 @@ Let $\mathbf{D} = [\mathbf{e}^d_1, \ldots, \mathbf{e}^d_L]^\top \in
 \mathbf{e}^r_L]^\top \in \mathbb{R}^{L \times d}$ denote the row-stacked
 ESM-2 embedding matrices for the donor and recipient, respectively, where
 $L \in \{5, 6\}$ (five primary loci A, B, C, DRB1, DQB1; optionally
-extended to six by including DPB1) and $d = 1280$.  Both matrices are
-projected to a common interaction dimension $d' = 128$ via independent
-learned linear layers $\mathbf{W}^d_{\mathrm{proj}},
-\mathbf{W}^r_{\mathrm{proj}} \in \mathbb{R}^{d \times d'}$:
-\begin{equation}
-  \tilde{\mathbf{D}} = \mathbf{D}\mathbf{W}^d_{\mathrm{proj}},
-  \qquad
-  \tilde{\mathbf{R}} = \mathbf{R}\mathbf{W}^r_{\mathrm{proj}}.
-  \label{eq:proj}
-\end{equation}
+extended to six by including DPB1) and $d = 1280$.  The cross-attention
+blocks operate directly at embedding dimensionality $d = 1280$; no
+pre-projection is applied before the first attention layer.
 
 \paragraph{Locus positional embeddings (optional).}
 Because cross-attention is permutation-equivariant with respect to the
 sequence of loci, we optionally add a learned per-locus positional bias
 before the first cross-attention layer.  A shared embedding table
 $\mathbf{P} \in \mathbb{R}^{L_{\max} \times 32}$ (with $L_{\max} = 16$ to
-accommodate future multi-locus extensions) is projected to $d'$ via a
-learned linear layer and added to both $\tilde{\mathbf{D}}$ and
-$\tilde{\mathbf{R}}$:
+accommodate future multi-locus extensions) is projected to $d$ via a
+learned linear layer $\mathbf{W}_{\mathrm{pos}} \in \mathbb{R}^{32 \times d}$
+and added to both $\mathbf{D}$ and $\mathbf{R}$:
 \begin{equation}
-  \tilde{\mathbf{D}} \leftarrow \tilde{\mathbf{D}}
+  \mathbf{D} \leftarrow \mathbf{D}
     + \mathbf{P}_{1:L}\,\mathbf{W}_{\mathrm{pos}},
   \qquad
-  \tilde{\mathbf{R}} \leftarrow \tilde{\mathbf{R}}
-    + \mathbf{P}_{1:L}\,\mathbf{W}_{\mathrm{pos}},
+  \mathbf{R} \leftarrow \mathbf{R}
+    + \mathbf{P}_{1:L}\,\mathbf{W}_{\mathrm{pos}}.
 \end{equation}
-where $\mathbf{W}_{\mathrm{pos}} \in \mathbb{R}^{32 \times d'}$.  This
-adds 544 parameters and allows the cross-attention heads to incorporate
-locus identity when computing attention scores.  Positional embeddings are
-disabled by default (\texttt{interaction\_pos\_embed: false} in the config)
-and should be enabled when the locus ordering is fixed and meaningful.
+This adds 41{,}472 parameters and allows the cross-attention heads to
+incorporate locus identity when computing attention scores.  Positional
+embeddings are disabled by default (\texttt{interaction\_pos\_embed: false}
+in the config) and should be enabled when locus ordering is fixed and meaningful.
 
 \paragraph{Bidirectional cross-attention.}
 We apply $N = 2$ stacked bidirectional cross-attention layers
-\citep{vaswani2017attention}.  At layer $\ell$, each stream uses the other
-stream as its context.  Concretely, for $H = 8$ attention heads and per-head
-dimension $d_h = d' / H = 16$, the multi-head cross-attention update is:
+\citep{vaswani2017attention}.  At layer $\ell$, each stream attends to the
+other stream as its context.  For $H = 8$ attention heads and per-head
+dimension $d_h = d / H = 160$, the multi-head cross-attention update is:
 \begin{align}
   \mathrm{MHA}(\mathbf{X}, \mathbf{Y})
     &= \mathrm{concat}\!\left(\mathrm{head}_1, \ldots, \mathrm{head}_H\right)
@@ -379,48 +388,49 @@ dimension $d_h = d' / H = 16$, the multi-head cross-attention update is:
   \label{eq:attn}
 \end{align}
 where $\mathbf{W}^Q_h, \mathbf{W}^K_h, \mathbf{W}^V_h \in
-\mathbb{R}^{d' \times d_h}$ and $\mathbf{W}^O \in \mathbb{R}^{d' \times d'}$
-are learned projection matrices.  The two streams are updated in parallel at
-each layer:
+\mathbb{R}^{d \times d_h}$ and $\mathbf{W}^O \in \mathbb{R}^{d \times d}$
+are learned projection matrices.  Each cross-attention block applies the
+donor-attends-to-recipient and recipient-attends-to-donor operations
+in parallel, each followed by a residual connection and layer normalisation
+\citep{ba2016layernorm}; there is no position-wise feed-forward sublayer:
 \begin{align}
-  \mathbf{D}^{(\ell+\nicefrac{1}{2})}
-    &= \mathrm{LayerNorm}\!\left(\tilde{\mathbf{D}}^{(\ell)}
-       + \mathrm{MHA}(\tilde{\mathbf{D}}^{(\ell)},\,
-                      \tilde{\mathbf{R}}^{(\ell)})\right),
+  \mathbf{D}^{(\ell+1)}
+    &= \mathrm{LayerNorm}\!\left(\mathbf{D}^{(\ell)}
+       + \mathrm{drop}\!\left(\mathrm{MHA}(\mathbf{D}^{(\ell)},\,
+                      \mathbf{R}^{(\ell)})\right)\right),
   \label{eq:xattn_d} \\
-  \mathbf{R}^{(\ell+\nicefrac{1}{2})}
-    &= \mathrm{LayerNorm}\!\left(\tilde{\mathbf{R}}^{(\ell)}
-       + \mathrm{MHA}(\tilde{\mathbf{R}}^{(\ell)},\,
-                      \tilde{\mathbf{D}}^{(\ell)})\right),
+  \mathbf{R}^{(\ell+1)}
+    &= \mathrm{LayerNorm}\!\left(\mathbf{R}^{(\ell)}
+       + \mathrm{drop}\!\left(\mathrm{MHA}(\mathbf{R}^{(\ell)},\,
+                      \mathbf{D}^{(\ell)})\right)\right),
   \label{eq:xattn_r}
 \end{align}
-followed by a position-wise feed-forward sublayer:
-\begin{equation}
-  \mathbf{X}^{(\ell+1)}
-    = \mathrm{LayerNorm}\!\left(\mathbf{X}^{(\ell+\nicefrac{1}{2})}
-      + \mathrm{GELU}\!\left(
-          \mathbf{X}^{(\ell+\nicefrac{1}{2})} \mathbf{W}_1
-        \right)\mathbf{W}_2\right),
-  \label{eq:ffn}
-\end{equation}
-with $\mathbf{W}_1 \in \mathbb{R}^{d' \times 4d'}$ and $\mathbf{W}_2 \in
-\mathbb{R}^{4d' \times d'}$ \citep{ba2016layernorm}.  Dropout ($p = 0.1$) is
-applied after the attention and feed-forward sublayers during training.
+where $\mathrm{drop}(\cdot)$ denotes dropout with $p = 0.1$ applied during
+training.  The two streams at layer $\ell+1$ are computed in parallel from
+the layer-$\ell$ states without sharing parameters.
 
 \paragraph{Interaction feature vector.}
 After $N = 2$ layers, each stream is mean-pooled over the $L$ locus
-positions, and the two pooled vectors are concatenated to form the
-256-dimensional interaction representation:
-\begin{equation}
+positions and the two 1280-dimensional pooled vectors are concatenated, giving
+a $2d = 2560$-dimensional representation.  A two-layer projection MLP then
+compresses this to the $d'' = 128$-dimensional interaction vector:
+\begin{align}
+  \mathbf{z}_{\mathrm{cat}}
+    &= \left[\frac{1}{L}\sum_{j=1}^{L} \mathbf{D}^{(N)}_j \;;\;
+             \frac{1}{L}\sum_{j=1}^{L} \mathbf{R}^{(N)}_j\right]
+    \in \mathbb{R}^{2d}, \label{eq:zcat}\\
   \mathbf{z}_{\mathrm{int}}
-    = \left[\frac{1}{L}\sum_{\ell=1}^{L} \mathbf{D}^{(N)}_\ell \;;\;
-            \frac{1}{L}\sum_{\ell=1}^{L} \mathbf{R}^{(N)}_\ell\right]
-    \in \mathbb{R}^{2d'}.
-  \label{eq:zint}
-\end{equation}
+    &= \mathbf{W}_2\;\mathrm{drop}\!\left(\mathrm{GELU}\!\left(
+         \mathbf{W}_1\,\mathbf{z}_{\mathrm{cat}}\right)\right)
+    \in \mathbb{R}^{d''},  \label{eq:zint}
+\end{align}
+where $\mathbf{W}_1 \in \mathbb{R}^{2d \times 4d''}$ and
+$\mathbf{W}_2 \in \mathbb{R}^{4d'' \times d''}$ with $d'' = 128$.
 The total number of learnable parameters in the interaction network
-(projections, cross-attention, feed-forward layers across both layers) is
-approximately 2.1\,M.
+(four MultiheadAttention blocks at $d=1280$ across both streams and both
+layers, plus the post-projection MLP) is approximately 27.6\,M; this count
+is dominated by the cross-attention parameter matrices operating at full
+embedding dimensionality.
 
 \subsection{Clinical Covariate Encoder}
 \label{sec:clinical}
@@ -446,7 +456,7 @@ where $\mathbf{U}_1 \in \mathbb{R}^{36 \times 64}$, $\mathbf{U}_2 \in
 \mathbb{R}^{64 \times 32}$, and $\sigma$ denotes the GELU activation.  The
 combined feature vector fed to the survival head is
 $\mathbf{z} = [\mathbf{z}_{\mathrm{int}} ; \mathbf{z}_{\mathrm{clin}}]
-\in \mathbb{R}^{288}$.
+\in \mathbb{R}^{160}$ ($d'' + 32 = 128 + 32$).
 
 \subsection{Competing-Risks Survival Head (DeepHit)}
 \label{sec:deephit}
@@ -454,10 +464,12 @@ $\mathbf{z} = [\mathbf{z}_{\mathrm{int}} ; \mathbf{z}_{\mathrm{clin}}]
 \paragraph{Joint sub-hazard parameterisation.}
 Following DeepHit \citep{lee2018deephit}, we discretise the follow-up horizon
 into $M = 100$ equally spaced bins spanning $[0, 730]$ days (bin width
-$\approx 7.3$ days).  The survival head is a two-layer fully connected network
-(dimensions: $288 \to 256 \to K \cdot M$, with GELU activations and layer
-normalisation between layers) that maps $\mathbf{z}$ to $K \cdot M = 300$
-logits.  A single softmax over all 300 outputs yields the joint probability
+$\approx 7.3$ days).  The survival head consists of a shared two-layer MLP
+backbone (dimensions: $160 \to 256 \to 256$, with GELU activations and
+dropout) followed by $K = 3$ independent event-specific linear heads, each
+mapping the 256-dimensional shared representation to $M = 100$ time-bin logits.
+The $K \cdot M = 300$ logits from all event heads are concatenated and passed
+through a single softmax, yielding the joint probability
 mass function over event types and discrete event times:
 \begin{equation}
   \pi(t, k \mid \mathbf{z})
@@ -742,17 +754,6 @@ risk scores.
   \label{fig:cif}
 \end{figure}
 
-\begin{figure}[t!]
-  \centering
-  \includegraphics[width=\columnwidth]{figures/fig6_calibration}
-  \caption{Illustrative calibration plots (prototype output).  Predicted
-    probability (x-axis) versus observed event frequency (y-axis) in 10
-    equal-frequency bins.  Diagonal dashed line: perfect calibration.
-    \emph{Note: prototype run on synthetic allele data; not from the UCI BMT
-    test set.}}
-  \label{fig:calibration}
-\end{figure}
-
 \subsection{Baseline Evaluation on Real UCI BMT Data}
 
 Table~\ref{tab:cindex} reports time-dependent concordance indices for the three
@@ -812,6 +813,17 @@ visually, with 95\,\% bootstrap confidence intervals.
     values using \texttt{scripts/generate\_figures.py} before final submission;
     the current image is a placeholder.}}
   \label{fig:comparison}
+\end{figure}
+
+\begin{figure}[t!]
+  \centering
+  \includegraphics[width=\columnwidth]{figures/fig6_calibration}
+  \caption{Illustrative calibration plots (prototype output).  Predicted
+    probability (x-axis) versus observed event frequency (y-axis) in 10
+    equal-frequency bins.  Diagonal dashed line: perfect calibration.
+    \emph{Note: prototype run on synthetic allele data; not from the UCI BMT
+    test set.}}
+  \label{fig:calibration}
 \end{figure}
 
 \subsection{Feature Importance from the Cox and Fine--Gray Models}
@@ -886,7 +898,7 @@ cohort) cannot be reliably evaluated.  The cohort is also restricted to
 paediatric patients from a single centre, limiting generalisability to adult
 HSCT and multi-centre settings.
 
-The CAPA V2 release includes partial fine-tuning of the final $n$ ESM-2
+CAPA supports partial fine-tuning of the final $n$ ESM-2
 transformer layers jointly with the interaction network, enabling the model to
 adapt general-purpose UR50D representations towards HLA-specific structural
 features when training data are sufficient.  This mechanism is disabled in the
@@ -926,7 +938,7 @@ This work was not supported by specific funding.
 \section*{Data Availability}
 The UCI Bone Marrow Transplant dataset is publicly available at
 \url{https://archive.ics.uci.edu/dataset/565}.  All code and pre-trained
-weights are available at \url{https://github.com/sh4wn27/capa?tab=readme-ov-file}.  HLA
+weights are available at \url{https://github.com/sh4wn27/capa}.  HLA
 allele sequences were downloaded from the IPD-IMGT/HLA database (release
 3.55.0) at \url{https://www.ebi.ac.uk/ipd/imgt/hla/}.
 

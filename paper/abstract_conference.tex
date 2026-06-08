@@ -1,0 +1,77 @@
+%% CAPA — 250-word conference abstract
+%% Use for: AMIA High School Scholars, BMES Poster Expo, JSHS, VJAS, Regeneron STS
+%%
+%% Title (short form for conference headers):
+%%   CAPA: Protein Language Model Embeddings for Competing-Risks Outcome
+%%   Prediction in Pediatric Hematopoietic Stem Cell Transplantation
+%%
+%% Title (full form for paper / Regeneron STS):
+%%   CAPA: Structure-Aware HLA Mismatch Representations with Protein Language
+%%   Models for Competing-Risks Survival Prediction in Paediatric Haematopoietic
+%%   Stem Cell Transplantation
+
+\documentclass[11pt,letterpaper]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\usepackage{microtype}
+
+\title{\textbf{CAPA: Protein Language Model Embeddings for\\
+Competing-Risks Outcome Prediction in Pediatric\\
+Hematopoietic Stem Cell Transplantation}}
+\author{Huanxuan (Shawn) Li\\
+\small Thomas Jefferson High School for Science and Technology\\
+\small \href{mailto:2027hli@tjhsst.edu}{2027hli@tjhsst.edu}}
+\date{}
+
+\begin{document}
+\maketitle
+
+%% ── Abstract (250 words) ──────────────────────────────────────────────────────
+
+\begin{abstract}
+
+\noindent\textbf{Background.}
+Allogeneic hematopoietic stem cell transplantation (HSCT) is curative for
+severe hematological malignancies, yet post-transplant outcomes are shaped by
+immunological interactions that categorical HLA mismatch scoring cannot fully
+capture.  Clinical practice treats all mismatches as equivalent regardless of
+amino-acid-level structural divergence, and standard survival models analyze
+graft-versus-host disease (GvHD), relapse, and transplant-related mortality
+(TRM) as independent events---despite being mutually competing.
+
+\medskip
+\noindent\textbf{Methods.}
+We present CAPA (Computational Architecture for Predicting Alloimmunity), a
+deep learning framework for pediatric HSCT outcome modeling.  Each HLA allele
+is encoded as a 1280-dimensional vector via the ESM-2 650M protein language
+model.  A bidirectional cross-attention network extracts donor--recipient
+interaction features, which are concatenated with clinical covariates and
+passed to a DeepHit survival head that jointly estimates cumulative incidence
+functions (CIFs) for GvHD, relapse, and TRM over a 730-day horizon.
+We evaluate competing-risks baselines---Fine--Gray subdistribution hazard and
+cause-specific Cox models---on the public UCI Bone Marrow Transplant dataset
+($n=187$ pediatric patients; 70/15/15 train/val/test split).
+
+\medskip
+\noindent\textbf{Results.}
+On the held-out test set ($n=29$), the Fine--Gray model reaches concordance
+indices of 0.84 (95\,\% CI 0.69--1.00) for relapse and 0.66 (0.48--0.86) for
+TRM; the cause-specific Cox model achieves 0.75 and 0.65, respectively.  A
+flat-feature DeepHit MLP performs below classical baselines, consistent with
+known training challenges on small cohorts.
+
+\medskip
+\noindent\textbf{Conclusions.}
+CAPA demonstrates a protein language model framework for structure-aware HLA
+mismatch representation in HSCT outcome modeling.  Full validation of ESM-2
+embeddings requires registry-scale allele-level data, identified as the primary
+direction for future work.  Source code and a multi-donor web interface are
+publicly available at \url{https://github.com/sh4wn27/capa}.
+
+\end{abstract}
+
+\end{document}
