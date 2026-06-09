@@ -327,7 +327,7 @@ def figure_1_architecture(data: FigureData, out: Path, formats: list[str], dpi: 
     _apply_style()
 
     fig, ax = plt.subplots(figsize=(_2COL, _2COL * 0.65))
-    ax.set_xlim(0, 10)
+    ax.set_xlim(-0.9, 9.1)
     ax.set_ylim(-0.1, 5.7)
     ax.axis("off")
     ax.set_title("CAPA Model Architecture", fontweight="bold", pad=6)
