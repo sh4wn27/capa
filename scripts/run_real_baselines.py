@@ -262,6 +262,8 @@ def train_deephit(
     device_str: str = "cpu",
 ) -> DeepHitMLP:
     """Train a flat-feature DeepHit MLP with early stopping on val C-index."""
+    torch.manual_seed(RANDOM_SEED)
+    np.random.seed(RANDOM_SEED)
     device = torch.device(device_str)
     model = DeepHitMLP(in_dim=in_dim, hidden=64, num_events=NUM_EVENTS,
                        time_bins=N_TIME_BINS).to(device)

@@ -90,10 +90,9 @@ EVENT_COLORS = {
     "TRM":     WONG["vermilion"],
 }
 MODEL_COLORS = {
-    "Cox-PH":      WONG["sky"],
-    "RSF":         WONG["green"],
-    "DeepSurv":    WONG["pink"],
-    "CAPA (ours)": WONG["orange"],
+    "Cox (cause-specific)": WONG["sky"],
+    "Fine-Gray":            WONG["green"],
+    "DeepHit (tabular)":    WONG["pink"],
 }
 LOCUS_COLORS = {
     "A":    WONG["orange"],
@@ -207,24 +206,22 @@ def _make_synthetic(rng: np.random.Generator) -> FigureData:  # noqa: PLR0914
     pred_cif = np.maximum.accumulate(pred_cif, axis=2)
 
     # --- Model comparison C-indices ---
-    events_any = (events > 0).astype(int)
-    base_c = {
-        "Cox-PH":      [0.62, 0.58, 0.64],
-        "RSF":         [0.66, 0.61, 0.67],
-        "DeepSurv":    [0.68, 0.63, 0.69],
-        "CAPA (ours)": [0.74, 0.70, 0.78],
+    # Actual held-out test-set results (n=29); see Table 1 in main paper.
+    # GvHD excluded: only 2 test-set events, insufficient for a reliable C-index.
+    model_results: dict = {
+        "Cox (cause-specific)": {
+            "Relapse": (0.754, 0.527, 1.000),
+            "TRM":     (0.647, 0.459, 0.854),
+        },
+        "Fine-Gray": {
+            "Relapse": (0.841, 0.691, 1.000),
+            "TRM":     (0.655, 0.478, 0.858),
+        },
+        "DeepHit (tabular)": {
+            "Relapse": (0.464, 0.086, 0.812),
+            "TRM":     (0.470, 0.273, 0.679),
+        },
     }
-    event_names = list(EVENT_COLORS.keys())
-    model_results: dict = {}
-    for model, (mean, lo, hi) in base_c.items():
-        model_results[model] = {}
-        for ei, ev in enumerate(event_names):
-            jitter = rng.normal(0, 0.01, 3)
-            model_results[model][ev] = (
-                float(np.clip(mean + jitter[0], 0.5, 1)),
-                float(np.clip(lo  + jitter[1], 0.4, 1)),
-                float(np.clip(hi  + jitter[2], lo, 1)),
-            )
 
     # --- Clinical covariates (8 features) ---
     age_r = rng.uniform(2, 18, n_patients)
@@ -329,9 +326,9 @@ def figure_1_architecture(data: FigureData, out: Path, formats: list[str], dpi: 
 
     _apply_style()
 
-    fig, ax = plt.subplots(figsize=(_2COL, _2COL * 0.55))
+    fig, ax = plt.subplots(figsize=(_2COL, _2COL * 0.65))
     ax.set_xlim(0, 10)
-    ax.set_ylim(0, 5.5)
+    ax.set_ylim(-0.1, 5.7)
     ax.axis("off")
     ax.set_title("CAPA Model Architecture", fontweight="bold", pad=6)
 
@@ -373,12 +370,12 @@ def figure_1_architecture(data: FigureData, out: Path, formats: list[str], dpi: 
         )
 
     # Row y positions
-    y_in   = 4.5
-    y_esm  = 3.3
-    y_int  = 2.1
-    y_clin = 2.1
-    y_cat  = 0.9
-    y_out  = 0.9
+    y_in   = 4.7
+    y_esm  = 3.5
+    y_int  = 2.3
+    y_clin = 2.3
+    y_cat  = 1.1
+    y_out  = 0.1
 
     # Donor inputs
     _box(0.1, y_in, 2.0, BOX_H, "Donor HLA alleles\n(A, B, C, DRB1, DQB1)", BOX_COLORS["input"])
@@ -401,7 +398,7 @@ def figure_1_architecture(data: FigureData, out: Path, formats: list[str], dpi: 
     _arrow(4.1, y_esm, 2.7, y_int + BOX_H)
 
     # Clinical encoder
-    _box(5.4, y_clin, 2.0, BOX_H, "Clinical Encoder\n(MLP, 64-dim)", BOX_COLORS["clinical"])
+    _box(5.4, y_clin, 2.0, BOX_H, "Clinical Encoder\n(MLP, 32-dim)", BOX_COLORS["clinical"])
     _arrow(7.1, y_in, 7.1, y_clin + BOX_H)
 
     # Concatenate arrow
@@ -420,34 +417,8 @@ def figure_1_architecture(data: FigureData, out: Path, formats: list[str], dpi: 
     _box(3.3, y_cat, 3.0, BOX_H, "DeepHit Competing-Risks Head\n(GvHD, Relapse, TRM)", BOX_COLORS["survival"])
 
     # Output
-    _box(3.3, y_out - 1.1, 3.0, BOX_H, "CIF curves · Risk scores · Attention weights", BOX_COLORS["output"])
-    _arrow(4.8, y_cat, 4.8, y_out - 1.1 + BOX_H)
-
-    # Mini CIF illustration inside output box — three small curves
-    x_cif = np.linspace(0, 1, 30)
-    for k, (ev, col) in enumerate(EVENT_COLORS.items()):
-        scale = [200, 400, 600][k]
-        y_cif = 1 - np.exp(-((x_cif * 730 / scale) ** 1.2))
-        # Map to axes coords inside the output box
-        ax.plot(
-            3.35 + x_cif * 0.6,
-            y_out - 1.1 + 0.08 + y_cif * (BOX_H - 0.16),
-            color=col, lw=0.7, label=ev,
-        )
-
-    legend_handles = [
-        mpatches.Patch(facecolor=c, label=ev, edgecolor="none")
-        for ev, c in EVENT_COLORS.items()
-    ]
-    ax.legend(
-        handles=legend_handles,
-        loc="lower right",
-        fontsize=6,
-        framealpha=0.9,
-        edgecolor="#aaaaaa",
-        title="Event",
-        title_fontsize=6,
-    )
+    _box(3.3, y_out, 3.0, BOX_H, "CIF curves · Risk scores · Attention weights", BOX_COLORS["output"])
+    _arrow(4.8, y_cat, 4.8, y_out + BOX_H)
 
     fig.tight_layout()
     _save(fig, "fig1_architecture", out, formats, dpi)
@@ -641,8 +612,8 @@ def figure_5_comparison(data: FigureData, out: Path, formats: list[str], dpi: in
         logger.warning("No model results for Fig 5 — skipping")
         return
 
-    event_names = list(EVENT_COLORS.keys())
     model_names = list(data.model_results.keys())
+    event_names = list(next(iter(data.model_results.values())).keys())
     n_models = len(model_names)
     n_events = len(event_names)
 
@@ -679,7 +650,7 @@ def figure_5_comparison(data: FigureData, out: Path, formats: list[str], dpi: in
     ax.set_xticks(x_centers)
     ax.set_xticklabels(event_names)
     ax.set_ylabel("C-index (95% CI)")
-    ax.set_ylim(0.45, 0.95)
+    ax.set_ylim(0.0, 1.10)
     ax.set_title("Model Comparison — Time-Dependent C-index", fontweight="bold")
     ax.spines[["top", "right"]].set_visible(False)
 

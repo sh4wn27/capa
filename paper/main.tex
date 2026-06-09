@@ -93,7 +93,7 @@ model achieves concordance indices of 0.84 (95\,\%~CI 0.69--1.00) for relapse
 and 0.66 (0.48--0.86) for transplant-related mortality on the held-out test set
 ($n=29$); the cause-specific Cox model reaches 0.75 (0.53--1.00) and 0.65
 (0.46--0.85) on the same end-points.  A flat-feature DeepHit MLP performs below
-the classical baselines (relapse 0.67, TRM 0.41), consistent with the known
+the classical baselines (relapse 0.46, TRM 0.47), consistent with the known
 difficulty of training deep survival models on small cohorts.  The GvHD
 end-point could not be evaluated reliably (only $n=2$ GvHD events in the test
 set).  The dataset does not contain per-allele HLA typing strings; full
@@ -837,7 +837,7 @@ Table~S2.
     \midrule
     Cox (cause-specific)           & --- & 0.754 (0.527--1.000) & 0.647 (0.459--0.854) \\
     \textbf{Fine--Gray}            & --- & \textbf{0.841} (0.691--1.000) & \textbf{0.655} (0.478--0.858) \\
-    DeepHit (tabular HLA)          & --- & 0.667 (0.129--1.000) & 0.409 (0.259--0.568) \\
+    DeepHit (tabular HLA)          & --- & 0.464 (0.086--0.812) & 0.470 (0.273--0.679) \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -939,7 +939,7 @@ relapse because the competing risk of TRM is substantial (33\,\% event rate),
 making IPCW weighting consequential.
 
 The flat-feature DeepHit MLP substantially underperforms both classical methods
-on TRM ($C = 0.41$ vs.\ 0.65--0.66), illustrating a well-documented failure
+on TRM ($C = 0.47$ vs.\ 0.65--0.66), illustrating a well-documented failure
 mode of neural competing-risks models on small-cohort tabular data
 \citep{lee2018deephit}.  With 130 training subjects distributed across four
 competing-event classes, the joint $K \times M = 300$-bin output space is
