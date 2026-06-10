@@ -1,0 +1,47 @@
+{
+  "n": 2000,
+  "epochs": 0,
+  "seed": 42,
+  "outcome_model": {
+    "GvHD": "log h = log(1/2800) + 3.5*dist_DRB1 + 2.0*dist_DQB1 + 0.4*age_norm",
+    "TRM": "log h = log(1/2600) + 2.5*dist_DRB1 + 1.8*dist_A   + 1.0*dist_C + 0.6*age_norm",
+    "Relapse": "log h = log(1/1800) - 1.2*dist_B   + 2.0*disease_risk - 0.5*dist_DRB1",
+    "note": "Distances normalised by per-locus max pairwise L2; range [0,1]. No n_mm term."
+  },
+  "results": {
+    "Cox (binary mismatch)": {
+      "GvHD": {
+        "cindex": 0.709405167928782,
+        "ci_low": 0.6362501865864292,
+        "ci_hi": 0.7847401312434148
+      },
+      "Relapse": {
+        "cindex": 0.7313031678931162,
+        "ci_low": 0.6912173186348635,
+        "ci_hi": 0.7699214139981212
+      },
+      "TRM": {
+        "cindex": 0.6992416144958518,
+        "ci_low": 0.6345336303587045,
+        "ci_hi": 0.759621119852503
+      }
+    },
+    "Cox (ESM-2 distances)": {
+      "GvHD": {
+        "cindex": 0.7214289843343545,
+        "ci_low": 0.645574552642216,
+        "ci_hi": 0.7957708734046108
+      },
+      "Relapse": {
+        "cindex": 0.7287197954177757,
+        "ci_low": 0.6900179797403668,
+        "ci_hi": 0.7670544795278516
+      },
+      "TRM": {
+        "cindex": 0.7122715936275258,
+        "ci_low": 0.6462448652097884,
+        "ci_hi": 0.776821796996465
+      }
+    }
+  }
+}
