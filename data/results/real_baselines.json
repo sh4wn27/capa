@@ -203,6 +203,50 @@
         }
       }
     },
+    "RSF": {
+      "GvHD": {
+        "cindex": {
+          "value": NaN,
+          "ci_lower": NaN,
+          "ci_upper": NaN,
+          "ci_level": 0.95
+        },
+        "ibs": {
+          "value": 6.606710821174061e-05,
+          "ci_lower": 1.8116145958400877e-05,
+          "ci_upper": 0.00013883560738162044,
+          "ci_level": 0.95
+        }
+      },
+      "Relapse": {
+        "cindex": {
+          "value": 0.4782608695652174,
+          "ci_lower": 0.1875,
+          "ci_upper": 0.8,
+          "ci_level": 0.95
+        },
+        "ibs": {
+          "value": 0.1292972124761786,
+          "ci_lower": 0.015744380174844138,
+          "ci_upper": 0.2620407464910871,
+          "ci_level": 0.95
+        }
+      },
+      "TRM": {
+        "cindex": {
+          "value": 0.646551724137931,
+          "ci_lower": 0.43747667910447763,
+          "ci_upper": 0.8676342775682883,
+          "ci_level": 0.95
+        },
+        "ibs": {
+          "value": 0.20653706484272388,
+          "ci_lower": 0.12917037127608244,
+          "ci_upper": 0.2928241058806016,
+          "ci_level": 0.95
+        }
+      }
+    },
     "DeepHit (flat)": {
       "GvHD": {
         "cindex": {
@@ -212,39 +256,177 @@
           "ci_level": 0.95
         },
         "ibs": {
-          "value": 0.00015495222818913204,
-          "ci_lower": 1.3171067772769476e-06,
-          "ci_upper": 0.0005243439597330735,
+          "value": 6.9995756200697e-05,
+          "ci_lower": 4.206641215071013e-06,
+          "ci_upper": 0.00020552548632759386,
           "ci_level": 0.95
         }
       },
       "Relapse": {
         "cindex": {
-          "value": 0.463768115942029,
-          "ci_lower": 0.08640383198231397,
-          "ci_upper": 0.8125,
+          "value": 0.6521739130434783,
+          "ci_lower": 0.3668330308529947,
+          "ci_upper": 0.9428571428571428,
           "ci_level": 0.95
         },
         "ibs": {
-          "value": 0.1148494763533994,
-          "ci_lower": 0.0056099480795374305,
-          "ci_upper": 0.24932462222755833,
+          "value": 0.11665628216723772,
+          "ci_lower": 0.006346816539649418,
+          "ci_upper": 0.25386147854525876,
           "ci_level": 0.95
         }
       },
       "TRM": {
         "cindex": {
-          "value": 0.4698275862068966,
-          "ci_lower": 0.2730562827225131,
-          "ci_upper": 0.6786584249084249,
+          "value": 0.5646551724137931,
+          "ci_lower": 0.3696547282038233,
+          "ci_upper": 0.7521485867074101,
           "ci_level": 0.95
         },
         "ibs": {
-          "value": 0.2817460991879664,
-          "ci_lower": 0.19479641571108194,
-          "ci_upper": 0.37113403944422685,
+          "value": 0.26889198297583683,
+          "ci_lower": 0.19148747041352943,
+          "ci_upper": 0.34489871845781905,
           "ci_level": 0.95
         }
+      }
+    }
+  },
+  "ablations": {
+    "Cox (Clinical-only)": {
+      "GvHD": {
+        "cindex": {
+          "value": NaN,
+          "ci_lower": NaN,
+          "ci_upper": NaN,
+          "ci_level": 0.95
+        },
+        "ibs": {
+          "value": 6.518940320250927e-05,
+          "ci_lower": 1.575782727086463e-05,
+          "ci_upper": 0.00013105943865828837,
+          "ci_level": 0.95
+        }
+      },
+      "Relapse": {
+        "cindex": {
+          "value": 0.782608695652174,
+          "ci_lower": 0.5845380263984916,
+          "ci_upper": 1.0,
+          "ci_level": 0.95
+        },
+        "ibs": {
+          "value": 0.1117032855512647,
+          "ci_lower": 0.011290535403658312,
+          "ci_upper": 0.24201267427784082,
+          "ci_level": 0.95
+        }
+      },
+      "TRM": {
+        "cindex": {
+          "value": 0.6551724137931034,
+          "ci_lower": 0.49020329275183655,
+          "ci_upper": 0.8481077505706578,
+          "ci_level": 0.95
+        },
+        "ibs": {
+          "value": 0.20753191566062112,
+          "ci_lower": 0.13372794018640036,
+          "ci_upper": 0.2905069670585563,
+          "ci_level": 0.95
+        }
+      }
+    },
+    "Cox (HLA-only)": {
+      "GvHD": {
+        "cindex": {
+          "value": NaN,
+          "ci_lower": NaN,
+          "ci_upper": NaN,
+          "ci_level": 0.95
+        },
+        "ibs": {
+          "value": 4.3627749689201974e-05,
+          "ci_lower": 4.0482241066584165e-05,
+          "ci_upper": 4.7328707132724695e-05,
+          "ci_level": 0.95
+        }
+      },
+      "Relapse": {
+        "cindex": {
+          "value": 0.4855072463768116,
+          "ci_lower": 0.25,
+          "ci_upper": 0.8,
+          "ci_level": 0.95
+        },
+        "ibs": {
+          "value": 0.1329730656715742,
+          "ci_lower": 0.016791256484093093,
+          "ci_upper": 0.2672207500706756,
+          "ci_level": 0.95
+        }
+      },
+      "TRM": {
+        "cindex": {
+          "value": 0.49137931034482757,
+          "ci_lower": 0.3047321428571429,
+          "ci_upper": 0.6738843460896821,
+          "ci_level": 0.95
+        },
+        "ibs": {
+          "value": 0.22982386889666984,
+          "ci_lower": 0.15459981939539205,
+          "ci_upper": 0.30973273039667804,
+          "ci_level": 0.95
+        }
+      }
+    }
+  },
+  "cv_5x5": {
+    "Cox PH": {
+      "GvHD": {
+        "cindex_mean": 0.5,
+        "cindex_std": 0.0,
+        "cindex_min": 0.5,
+        "cindex_max": 0.5,
+        "n_folds": 10
+      },
+      "Relapse": {
+        "cindex_mean": 0.5992,
+        "cindex_std": 0.1356,
+        "cindex_min": 0.28,
+        "cindex_max": 1.0,
+        "n_folds": 25
+      },
+      "TRM": {
+        "cindex_mean": 0.5641,
+        "cindex_std": 0.0644,
+        "cindex_min": 0.4352,
+        "cindex_max": 0.7167,
+        "n_folds": 25
+      }
+    },
+    "Fine-Gray": {
+      "GvHD": {
+        "cindex_mean": 0.5,
+        "cindex_std": 0.0,
+        "cindex_min": 0.5,
+        "cindex_max": 0.5,
+        "n_folds": 10
+      },
+      "Relapse": {
+        "cindex_mean": 0.6273,
+        "cindex_std": 0.1527,
+        "cindex_min": 0.18,
+        "cindex_max": 1.0,
+        "n_folds": 25
+      },
+      "TRM": {
+        "cindex_mean": 0.5653,
+        "cindex_std": 0.0634,
+        "cindex_min": 0.4352,
+        "cindex_max": 0.6969,
+        "n_folds": 25
       }
     }
   }

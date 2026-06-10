@@ -61,6 +61,9 @@ EVAL_TIMES = np.array([182.5, 365.0, 547.5])  # 6 mo, 1 yr, 18 mo
 N_BOOTSTRAP = 1000
 RANDOM_SEED = 42
 
+# HLA aggregate columns (all 4 present in UCI BMT)
+HLA_COLS = ["hla_match_score", "hla_mismatched", "n_antigen_mm", "n_allele_mm"]
+
 
 # ---------------------------------------------------------------------------
 # Event encoding
@@ -202,23 +205,37 @@ def _deephit_loss(
     alpha: float = 0.5,
     sigma: float = 0.1,
 ) -> torch.Tensor:
-    """Combined NLL + pairwise ranking loss (DeepHit, Lee et al. 2018)."""
+    """Combined NLL + pairwise ranking loss (DeepHit, Lee et al. 2018).
+
+    NLL includes a survival term for censored subjects:
+      uncensored i: -log p(T=t_i, K=k_i)
+      censored i:   -log S(t_i) = -log[1 - sum_k CIF_k(t_i)]
+    """
     B, K, T = joint.shape
     eps = 1e-8
+    cif = torch.cumsum(joint, dim=2)  # (B, K, T)
 
-    # ── NLL ──────────────────────────────────────────────────────────────────
-    nll_terms: list[torch.Tensor] = []
+    # ── NLL (per-subject, then mean) ─────────────────────────────────────────
+    nll_per = torch.zeros(B, device=joint.device, dtype=joint.dtype)
+
     for k in range(1, K + 1):
-        mask = types == k                           # (B,)
+        mask = types == k
         if mask.sum() == 0:
             continue
-        t_k = times[mask]                          # (n_k,)
-        p_kt = joint[mask, k - 1, :]              # (n_k, T)
-        idx = t_k.clamp(0, T - 1).long()
-        p_at_t = p_kt.gather(1, idx.unsqueeze(1)).squeeze(1).clamp(min=eps)
-        nll_terms.append(-p_at_t.log().mean())
+        t_k = times[mask].clamp(0, T - 1).long()
+        p_kt = joint[mask, k - 1, :]
+        p_at_t = p_kt.gather(1, t_k.unsqueeze(1)).squeeze(1).clamp(min=eps)
+        nll_per[mask] = -p_at_t.log()
 
-    nll = torch.stack(nll_terms).sum() if nll_terms else joint.sum() * 0.0
+    censored = types == 0
+    if censored.sum() > 0:
+        t_c = times[censored].clamp(0, T - 1).long()
+        total_cif = cif[censored].sum(dim=1)      # (n_cens, T)
+        arange_c = torch.arange(censored.sum(), device=joint.device)
+        survival = (1.0 - total_cif[arange_c, t_c]).clamp(min=eps)
+        nll_per[censored] = -survival.log()
+
+    nll = nll_per.mean()
 
     # ── Pairwise ranking ─────────────────────────────────────────────────────
     cif = torch.cumsum(joint, dim=2)              # (B, K, T)
@@ -410,6 +427,96 @@ def evaluate_model(
 
 
 # ---------------------------------------------------------------------------
+# Stratified k-fold CV for classical baselines (Cox / Fine-Gray / RSF)
+# ---------------------------------------------------------------------------
+
+def run_kfold_cv(
+    X_all_df: pd.DataFrame,
+    etype_all: np.ndarray,
+    etime_all: np.ndarray,
+    n_folds: int = 5,
+    n_repeats: int = 5,
+    feature_label: str = "full",
+) -> dict[str, dict]:
+    """Run repeated stratified k-fold CV for Cox and Fine-Gray baselines.
+
+    Returns dict: model_name → event_name → {"cindex_mean", "cindex_std", "folds"}.
+    """
+    from sklearn.model_selection import StratifiedKFold
+
+    fold_cindices: dict[str, dict[str, list[float]]] = {
+        "Cox PH": {e: [] for e in EVENT_NAMES},
+        "Fine-Gray": {e: [] for e in EVENT_NAMES},
+    }
+
+    feature_names = list(X_all_df.columns)
+    X_np = X_all_df.values.astype(np.float64)
+
+    for repeat in range(n_repeats):
+        skf = StratifiedKFold(n_splits=n_folds, shuffle=True,
+                              random_state=RANDOM_SEED + repeat * 1000)
+        for fold_i, (train_idx, test_idx) in enumerate(skf.split(X_np, etype_all)):
+            X_tr_raw = X_np[train_idx].copy()
+            X_te_raw = X_np[test_idx].copy()
+            etype_tr = etype_all[train_idx]
+            etime_tr = etime_all[train_idx]
+            etype_te = etype_all[test_idx]
+            etime_te = etime_all[test_idx]
+
+            col_means = np.nanmean(X_tr_raw, axis=0)
+            for arr in [X_tr_raw, X_te_raw]:
+                nan_mask = np.isnan(arr)
+                arr[nan_mask] = np.take(col_means, np.where(nan_mask)[1])
+
+            scaler = StandardScaler()
+            X_tr = scaler.fit_transform(X_tr_raw)
+            X_te = scaler.transform(X_te_raw)
+            X_tr_df_fold = pd.DataFrame(X_tr, columns=feature_names)
+            X_te_df_fold = pd.DataFrame(X_te, columns=feature_names)
+
+            for model_name, Cls, kwargs in [
+                ("Cox PH", CoxPHBaseline, {"num_events": NUM_EVENTS, "penalizer": 0.1}),
+                ("Fine-Gray", FineGrayBaseline, {"num_events": NUM_EVENTS, "penalizer": 0.1}),
+            ]:
+                m = Cls(**kwargs)
+                try:
+                    m.fit(X_tr_df_fold, etime_tr, etype_tr)
+                    cif = m.predict_cif(X_te_df_fold, TIME_BINS)
+                    t365 = int(np.searchsorted(TIME_BINS, 365.0))
+                    for k, name in enumerate(EVENT_NAMES):
+                        obs = (etype_te == k + 1).astype(bool)
+                        if obs.sum() < 2:
+                            continue
+                        risks = cif[:, k, t365].astype(np.float64)
+                        c = concordance_index(etime_te.astype(np.float64), risks, obs)
+                        if not np.isnan(c):
+                            fold_cindices[model_name][name].append(c)
+                except Exception as exc:
+                    logger.warning("CV fold %d/%d %s failed: %s", repeat, fold_i, model_name, exc)
+
+    summary: dict[str, dict] = {}
+    for model_name, events in fold_cindices.items():
+        summary[model_name] = {}
+        for event, vals in events.items():
+            if vals:
+                arr = np.array(vals)
+                summary[model_name][event] = {
+                    "cindex_mean": round(float(arr.mean()), 4),
+                    "cindex_std":  round(float(arr.std()),  4),
+                    "cindex_min":  round(float(arr.min()),  4),
+                    "cindex_max":  round(float(arr.max()),  4),
+                    "n_folds":     len(vals),
+                }
+            else:
+                summary[model_name][event] = {"cindex_mean": None, "n_folds": 0}
+
+    logger.info(
+        "CV (%dx%d folds, %s features) complete", n_repeats, n_folds, feature_label
+    )
+    return summary
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -535,9 +642,42 @@ def main() -> None:
     cif_dh = predict_deephit_cif(model_dh_final, X_te)
     all_results["DeepHit (flat)"] = evaluate_model(cif_dh, etime_te, etype_te, "DeepHit (flat)")
 
-    # ── 9. Print results table ────────────────────────────────────────────────
+    # ── 9. Feature ablations (clinical-only vs HLA-only vs full) ─────────────
+    logger.info("=== Feature ablations ===")
+    ablation_results: dict[str, dict] = {}
+
+    # Clinical-only: drop all HLA aggregate columns
+    clinical_cols = [c for c in feature_names if c not in HLA_COLS]
+    hla_only_cols  = [c for c in feature_names if c in HLA_COLS]
+
+    for label, cols in [("Clinical-only", clinical_cols), ("HLA-only", hla_only_cols)]:
+        if not cols:
+            continue
+        col_idx = [feature_names.index(c) for c in cols]
+        X_tr_ab = X_tr[:, col_idx]
+        X_te_ab = X_te[:, col_idx]
+        X_tr_ab_df = pd.DataFrame(X_tr_ab, columns=cols)
+        X_te_ab_df = pd.DataFrame(X_te_ab, columns=cols)
+
+        logger.info("  Ablation: %s (%d features)", label, len(cols))
+        cox_ab = CoxPHBaseline(num_events=NUM_EVENTS, penalizer=0.1)
+        cox_ab.fit(X_tr_ab_df, etime_tr, etype_tr)
+        cif_ab = cox_ab.predict_cif(X_te_ab_df, TIME_BINS)
+        ablation_results[f"Cox ({label})"] = evaluate_model(
+            cif_ab, etime_te, etype_te, f"Cox ({label})"
+        )
+
+    # ── 10. 5×5 Repeated stratified CV for Cox and Fine-Gray ─────────────────
+    logger.info("=== 5×5 CV for Cox PH and Fine-Gray ===")
+    cv_results = run_kfold_cv(
+        pd.DataFrame(X_np, columns=feature_names),
+        etype_all, etime_all,
+        n_folds=5, n_repeats=5, feature_label="full",
+    )
+
+    # ── 11. Print results ─────────────────────────────────────────────────────
     print("\n" + "=" * 80)
-    print("RESULTS — Test set (n={}) — C-index and IBS (95 % CI, {} bootstrap)".format(
+    print("RESULTS — Test set (n={}) — C-index (95% CI, {} bootstrap)".format(
         len(X_te), N_BOOTSTRAP))
     print("=" * 80)
     header = f"{'Model':<28} {'GvHD C-index':>16} {'Rel C-index':>16} {'TRM C-index':>16}"
@@ -561,7 +701,33 @@ def main() -> None:
             row += f"  {ibs.value:.3f} ({ibs.ci_lower:.3f}–{ibs.ci_upper:.3f})"
         print(row)
 
-    # ── 10. Print LaTeX table snippet ─────────────────────────────────────────
+    # ── 12. Feature ablation table ────────────────────────────────────────────
+    if ablation_results:
+        print("\n" + "=" * 80)
+        print("ABLATION — Cox PH with feature subsets (test set, n={})".format(len(X_te)))
+        print("=" * 80)
+        for model_name, res in ablation_results.items():
+            row = f"{model_name:<36}"
+            for event in EVENT_NAMES:
+                ci = res[event]["cindex"]
+                row += f"  {ci.value:.3f} ({ci.ci_lower:.3f}–{ci.ci_upper:.3f})"
+            print(row)
+
+    # ── 13. 5×5 CV table ──────────────────────────────────────────────────────
+    print("\n" + "=" * 80)
+    print("5×5 REPEATED CV — Mean C-index ± std (n=187 full cohort)")
+    print("=" * 80)
+    for model_name, events in cv_results.items():
+        row = f"{model_name:<28}"
+        for event in EVENT_NAMES:
+            ev = events.get(event, {})
+            if ev.get("cindex_mean") is not None:
+                row += f"  {ev['cindex_mean']:.3f} ± {ev['cindex_std']:.3f}"
+            else:
+                row += "          ---"
+        print(row)
+
+    # ── 14. Print LaTeX table snippet ─────────────────────────────────────────
     print("\n" + "=" * 80)
     print("LATEX TABLE SNIPPET (main.tex Table 1 replacement)")
     print("=" * 80)
@@ -609,6 +775,8 @@ def main() -> None:
                 "eval_times": EVAL_TIMES.tolist(),
                 "event_names": EVENT_NAMES,
                 "results": all_results,
+                "ablations": ablation_results,
+                "cv_5x5": cv_results,
             },
             fh,
             indent=2,

@@ -92,6 +92,7 @@ EVENT_COLORS = {
 MODEL_COLORS = {
     "Cox (cause-specific)": WONG["sky"],
     "Fine-Gray":            WONG["green"],
+    "RSF":                  WONG["orange"],
     "DeepHit (tabular)":    WONG["pink"],
 }
 LOCUS_COLORS = {
@@ -208,6 +209,7 @@ def _make_synthetic(rng: np.random.Generator) -> FigureData:  # noqa: PLR0914
     # --- Model comparison C-indices ---
     # Actual held-out test-set results (n=29); see Table 1 in main paper.
     # GvHD excluded: only 2 test-set events, insufficient for a reliable C-index.
+    # DeepHit numbers reflect corrected NLL (censored survival term included).
     model_results: dict = {
         "Cox (cause-specific)": {
             "Relapse": (0.754, 0.527, 1.000),
@@ -217,9 +219,13 @@ def _make_synthetic(rng: np.random.Generator) -> FigureData:  # noqa: PLR0914
             "Relapse": (0.841, 0.691, 1.000),
             "TRM":     (0.655, 0.478, 0.858),
         },
+        "RSF": {
+            "Relapse": (0.478, 0.188, 0.800),
+            "TRM":     (0.647, 0.437, 0.868),
+        },
         "DeepHit (tabular)": {
-            "Relapse": (0.464, 0.086, 0.812),
-            "TRM":     (0.470, 0.273, 0.679),
+            "Relapse": (0.652, 0.367, 0.943),
+            "TRM":     (0.565, 0.370, 0.752),
         },
     }
 

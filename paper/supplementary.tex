@@ -145,17 +145,27 @@ Implemented with \texttt{lifelines} (v0.30) \citep{davidson2019lifelines}.
 As above but using the Fine--Gray model for each event with the remaining
 events treated as competing.  Implemented with \texttt{lifelines} (v0.30) \citep{davidson2019lifelines}.
 
+\paragraph{Random Survival Forest (RSF).}
+One cause-specific RSF was fitted per competing event using \texttt{scikit-survival}
+v0.27.  Each forest used 500 trees with minimum leaf size 5 and the log-rank
+splitting criterion.  The same 21 tabular features used for Cox and Fine--Gray
+were provided; no allele-level embeddings were available.  Cumulative incidence
+functions were approximated from the cause-specific cumulative hazard estimates
+as $\hat{F}_k(t) = 1 - \exp(-\hat{H}_k(t))$.
+
 \paragraph{DeepHit (tabular HLA features).}
 A two-hidden-layer MLP ($d=64$ per layer, GELU activation, dropout $p=0.2$)
 with a DeepHit joint probability mass function head, using the same 21 tabular
 clinical and aggregate HLA features as the Cox and Fine--Gray baselines.  All
 continuous features are normalised to zero mean and unit variance; HLA mismatch
 is encoded as an aggregate count (0--3) rather than per-allele embeddings.
-Trained with the combined NLL + pairwise ranking loss, AdamW optimiser
-(learning rate $10^{-3}$, weight decay $10^{-4}$), cosine annealing, and early
-stopping (patience 25 epochs) on validation mean $C$-index.  This baseline
-isolates whether a neural survival head provides benefit over classical methods
-on small tabular data in the absence of structural allele priors.
+Trained with the combined NLL + pairwise ranking loss (Equation~2 of the main
+text), which includes a survival probability term for censored subjects; earlier
+analyses that omitted this term reported substantially lower $C$-index values.
+Training used AdamW (learning rate $10^{-3}$, weight decay $10^{-4}$), cosine
+annealing, and early stopping (patience 25 epochs) on validation mean $C$-index.
+This baseline isolates whether a neural survival head provides benefit over
+classical methods on small tabular data in the absence of structural allele priors.
 
 SHAP \citep{lundberg2017shap} feature importance for the tabular-feature
 baselines, computed on all test-set patients, is shown in Supplementary
@@ -258,7 +268,8 @@ Figure~\ref{fig:shap}.
     \midrule
     Cox (cause-specific)        & 0.000 (0.000--0.000) & 0.114 (0.011--0.245) & 0.202 (0.127--0.286) \\
     \textbf{Fine--Gray}         & 0.000 (0.000--0.000) & \textbf{0.110} (0.016--0.232) & \textbf{0.202} (0.132--0.279) \\
-    DeepHit (tabular HLA)       & 0.000 (0.000--0.001) & 0.115 (0.006--0.249) & 0.282 (0.195--0.371) \\
+    Random Survival Forest      & 0.000 (0.000--0.000) & 0.129 (0.016--0.262) & 0.207 (0.129--0.293) \\
+    DeepHit (tabular HLA)       & 0.000 (0.000--0.000) & 0.117 (0.006--0.254) & 0.269 (0.191--0.345) \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -288,6 +299,34 @@ Figure~\ref{fig:shap}.
     DeepHit survival head & $\sim$185\,K & $<$1\,ms \\
     \midrule
     Total learnable & $\sim$27.8\,M & $\sim$7\,ms (with cache) \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+  \caption{Reproducibility metadata for all experiments reported in the main
+    text.  All results in Table~1 and Supplementary Table~S2 can be exactly
+    reproduced by running \texttt{uv run python scripts/run\_real\_baselines.py}
+    from the repository root with the package versions listed here.}
+  \label{tab:repro}
+  \centering
+  \begin{tabular}{ll}
+    \toprule
+    \textbf{Item} & \textbf{Value} \\
+    \midrule
+    Random seed (all models)   & 42 \\
+    Train / val / test split   & 70\,\% / 15\,\% / 15\,\% (stratified by event type) \\
+    \addlinespace
+    Python                     & 3.11 \\
+    PyTorch                    & 2.x \\
+    lifelines                  & 0.30 \\
+    scikit-survival            & 0.27.0 \\
+    scikit-learn               & $\geq$1.3 \\
+    numpy                      & $\geq$1.24 \\
+    \addlinespace
+    Bootstrap iterations       & 1\,000 \\
+    CV configuration           & 5 folds $\times$ 5 repeats, stratified \\
+    Baseline script            & \texttt{scripts/run\_real\_baselines.py} \\
     \bottomrule
   \end{tabular}
 \end{table}

@@ -92,14 +92,19 @@ models as reference comparators for CAPA.  The Fine--Gray subdistribution hazard
 model achieves concordance indices of 0.84 (95\,\%~CI 0.69--1.00) for relapse
 and 0.66 (0.48--0.86) for transplant-related mortality on the held-out test set
 ($n=29$); the cause-specific Cox model reaches 0.75 (0.53--1.00) and 0.65
-(0.46--0.85) on the same end-points.  A flat-feature DeepHit MLP performs below
-the classical baselines (relapse 0.46, TRM 0.47), consistent with the known
-difficulty of training deep survival models on small cohorts.  The GvHD
-end-point could not be evaluated reliably (only $n=2$ GvHD events in the test
-set).  The dataset does not contain per-allele HLA typing strings; full
-validation of CAPA's ESM-2 embedding pipeline therefore requires a registry
-dataset with high-resolution allele-level data, which we identify as the primary
-direction for future work.
+(0.46--0.85) on the same end-points.  A Random Survival Forest achieves relapse 0.48 (0.19--0.80) and TRM 0.65
+(0.44--0.87); a flat-feature DeepHit MLP with a correctly formulated censored
+log-likelihood achieves relapse 0.65 (0.37--0.94) and TRM 0.57 (0.37--0.75),
+below Fine--Gray but above chance.  A feature ablation study shows that
+aggregate HLA mismatch scores alone yield near-chance concordance ($C \approx
+0.49$), while clinical features alone match the full-feature model, directly
+motivating ESM-2 structural allele representations as the form of HLA
+information most likely to add discriminative signal.  Repeated 5$\times$5
+cross-validation yields Cox relapse $0.60 \pm 0.14$ and TRM $0.56 \pm 0.06$,
+correcting for the optimism in the single 29-patient test split.  The dataset
+does not contain per-allele HLA typing strings; full validation of CAPA's
+ESM-2 embedding pipeline requires a registry dataset with high-resolution
+allele-level data, which we identify as the primary direction for future work.
 
 \medskip\noindent\textbf{Availability and Implementation:}
 Source code, pre-trained weights, and a web interface (including multi-donor
@@ -287,7 +292,21 @@ each patient a single primary event type using survival time as the common
 time axis: (1)~relapse takes priority, (2)~transplant-related mortality
 (dead without relapse) overrides GvHD, (3)~severe acute GvHD (grade III--IV,
 alive and not relapsed) is the lowest-priority event, and (4)~all remaining
-patients are censored.  Under this encoding: 28 patients experienced relapse
+patients are censored.  This hierarchy encodes the clinical decision framework
+for HSCT donor selection: relapse is placed first because it represents
+treatment failure and is the endpoint most directly modifiable by
+allele-compatibility---fine-grained HLA matching reduces the graft-vs-leukaemia
+benefit loss from mismatches at specific loci.  TRM is assigned second because
+it is largely non-immunological (organ toxicity, infection) and occurs
+independently of GvHD resolution in most patients.  GvHD is ranked lowest
+because it is a transient, often treatable complication whose long-term
+mortality contribution is captured in the TRM category; patients surviving
+acute GvHD grade III--IV without relapse or death represent the subset where
+the ``GvHD'' label is most clinically distinct.  We acknowledge that this
+prioritisation introduces a simplification: in reality, GvHD and TRM overlap
+temporally and causally (GvHD-attributable mortality is coded as TRM here).
+Sensitivity analyses using alternative encodings (GvHD-as-TRM absorbed, or
+separate latent-time competing-risks models) are identified as future work.  Under this encoding: 28 patients experienced relapse
 (15.0\,\%), 62 died without relapsing (TRM, 33.2\,\%), 16 had severe acute
 GvHD and survived without relapse (8.6\,\%), and 81 were censored (43.3\,\%).
 Survival times were right-censored at day 730.
@@ -524,20 +543,25 @@ The training objective is the DeepHit composite loss \citep{lee2018deephit}:
 \end{equation}
 
 \paragraph{Negative log-likelihood term.}
-$\mathcal{L}_{\mathrm{NLL}}$ maximises the probability of the observed outcome
-for uncensored subjects.  For the training set $\{(t_i, k_i, \delta_i)\}_{i=1}^n$,
-where $\delta_i = 0$ denotes censoring and $\delta_i = k \in \{1,2,3\}$
-denotes event type $k$:
+For the training set $\{(t_i, k_i, \delta_i)\}_{i=1}^n$, where $\delta_i = 0$
+denotes right-censoring and $\delta_i = k \in \{1,2,3\}$ denotes event type $k$:
 \begin{equation}
   \mathcal{L}_{\mathrm{NLL}}
-    = -\frac{1}{n}
+    = -\frac{1}{n}\!\left[
       \sum_{\substack{i=1 \\ \delta_i > 0}}^{n}
-      \log \pi(t_i,\, \delta_i \mid \mathbf{z}_i).
+      \log \pi(t_i,\, \delta_i \mid \mathbf{z}_i)
+      \;+\;
+      \sum_{\substack{i=1 \\ \delta_i = 0}}^{n}
+      \log S(t_i \mid \mathbf{z}_i)
+    \right],
   \label{eq:nll}
 \end{equation}
-Censored subjects contribute no gradient to this term; their contribution is
-instead encoded implicitly through the normalisation constraint in
-Equation~\eqref{eq:joint}.
+where $S(t \mid \mathbf{z}) = 1 - \sum_{k=1}^{K} F_k(t \mid \mathbf{z})$ is the
+overall event-free survival probability.  Uncensored subjects are scored by the
+joint probability of the observed event type and time; censored subjects
+contribute a survival term that rewards the model for assigning high event-free
+probability beyond the censoring time.  Both terms derive from the same
+joint PMF normalised by Equation~\eqref{eq:joint}.
 
 \paragraph{Pairwise ranking term.}
 $\mathcal{L}_{\mathrm{rank}}$ penalises concordance violations for each event
@@ -605,10 +629,27 @@ dimension $d'' \in \{64, 128, 256\}$; number of attention heads $H \in \{4, 8\}$
 learning rate $\eta_0 \in \{10^{-3}, 10^{-4}, 10^{-5}\}$; loss weighting
 $\alpha \in \{0.2, 0.5, 0.8\}$.  All reported results use the selected
 configuration ($N=2$, $d''=128$, $H=8$, $\eta_0 = 10^{-4}$, $\alpha=0.5$).
-Reported performance estimates and confidence intervals were computed on the
-held-out test set across five independent random seeds (controlling
-train/val/test split assignment), with the checkpoint from each seed selected
-independently on its validation set.
+All prototype CAPA training experiments and all baseline evaluations reported
+here used a fixed random seed (seed = 42) for train/val/test split assignment
+and weight initialisation to ensure reproducibility.
+
+\paragraph{Prototype allele cohort.}
+\label{sec:prototype}
+Because the UCI BMT dataset does not contain per-allele HLA typing strings,
+CAPA's ESM-2 embedding and cross-attention pipeline cannot be trained or
+evaluated end-to-end on that cohort.  To demonstrate the architecture's forward
+pass and illustrate intended model behaviour, we constructed a
+\emph{prototype allele cohort}: HLA allele embeddings were computed for 98
+commonly occurring alleles drawn from the IPD-IMGT/HLA database (release
+3.55.0) spanning loci A, B, C, DRB1, and DQB1.  For figures requiring survival
+outcomes, event times were simulated for $n = 187$ virtual patients using Weibull
+random variables calibrated to the observed marginal event rates in the UCI BMT
+dataset (GvHD: shape 1.5, scale 200\,d; relapse: shape 1.2, scale 400\,d;
+TRM: shape 0.9, scale 600\,d; administrative censoring uniform on [300,
+1500]\,d).  All figures and analyses labelled ``prototype'' use this
+fully synthetic cohort.  They demonstrate architectural software
+functionality and intended model behaviour; they do not constitute predictive
+validation on real patient outcomes.
 
 \subsection{Baseline Models}
 \label{sec:baselines}
@@ -775,10 +816,12 @@ reflects the combined contribution of allele-level HLA mismatch encoding and
 clinical covariates.  Because the UCI BMT dataset does not provide per-allele
 HLA typing, this evaluation uses the prototype allele set; registry-scale
 validation with ground-truth allele identities constitutes future work.
-Figure~\ref{fig:calibration} shows reliability diagrams confirming that
-per-(event, time-bin) isotonic calibration restores CIF reliability after
-neural survival training, with predictions aligning closely to the diagonal
-across all three competing events on the prototype cohort.
+Figure~\ref{fig:calibration} shows reliability diagrams demonstrating the
+per-(event, time-bin) isotonic calibration implementation on the prototype
+cohort.  Because the calibrator is fitted and evaluated within the same
+synthetic dataset, near-diagonal alignment is expected and does not constitute
+independent validation; generalisability to real patient data must be assessed
+on a registry cohort with ground-truth allele-level outcomes.
 
 \begin{figure}[t!]
   \centering
@@ -796,16 +839,19 @@ across all three competing events on the prototype cohort.
 
 \subsection{Baseline Evaluation on Real UCI BMT Data}
 
-Table~\ref{tab:cindex} reports time-dependent concordance indices for the three
-tabular-feature competing-risks baselines evaluated on the held-out test set
-($n=29$).  The Fine--Gray subdistribution hazard model achieves the highest
-$C$-index on both evaluable end-points: 0.84 (relapse) and 0.66 (TRM).  The
-cause-specific Cox model is modestly lower at 0.75 and 0.65 respectively.  The
-flat-feature DeepHit MLP, which uses the same 21 clinical and aggregate HLA
-features as the Cox and Fine--Gray models but employs a neural competing-risks
-survival head, underperforms the classical methods on TRM ($C = 0.47$), a
-common pattern when deep models are trained on small datasets without strong
-regularisation priors.
+Table~\ref{tab:cindex} reports time-dependent concordance indices for four
+tabular-feature competing-risks baselines on the held-out test set ($n=29$).
+Fine--Gray achieves the highest $C$-index on both evaluable end-points: 0.84
+(relapse) and 0.66 (TRM).  Cause-specific Cox is modestly lower at 0.75 and
+0.65 respectively.  A Random Survival Forest (500 trees, minimum leaf size 5)
+achieves 0.48 (relapse) and 0.65 (TRM), matching Cox on TRM but falling well
+below Fine--Gray on relapse, confirming that linear subdistribution hazard models
+outperform non-parametric tree ensembles on this small cohort.  The flat-feature
+DeepHit MLP achieves $C = 0.65$ for relapse and $C = 0.57$ for TRM using the
+correct NLL that includes a survival term for censored subjects
+(Equation~\ref{eq:nll}); this formulation substantially improves training
+relative to a loss that ignores censored subjects, and yields performance above
+chance discrimination on both end-points.
 
 Confidence intervals are wide for all models---particularly for relapse, where
 only 4 events occur in the test set---reflecting the fundamental statistical
@@ -829,7 +875,9 @@ Table~S2.
     Bold: best result per column.
     GvHD: $n=2$ test-set events; concordance index is undefined (—).
     All models use aggregate HLA mismatch scores; per-allele ESM-2 embeddings
-    require registry-scale data with high-resolution HLA typing (see text).}
+    require registry-scale data with high-resolution HLA typing (see text).
+    DeepHit NLL includes a survival term for censored subjects
+    (Equation~\ref{eq:nll}); earlier published versions omitted this term.}
   \label{tab:cindex}
   \begin{tabular}{lccc}
     \toprule
@@ -837,7 +885,8 @@ Table~S2.
     \midrule
     Cox (cause-specific)           & --- & 0.754 (0.527--1.000) & 0.647 (0.459--0.854) \\
     \textbf{Fine--Gray}            & --- & \textbf{0.841} (0.691--1.000) & \textbf{0.655} (0.478--0.858) \\
-    DeepHit (tabular HLA)          & --- & 0.464 (0.086--0.812) & 0.470 (0.273--0.679) \\
+    Random Survival Forest         & --- & 0.478 (0.188--0.800) & 0.647 (0.437--0.868) \\
+    DeepHit (tabular HLA)          & --- & 0.652 (0.367--0.943) & 0.565 (0.370--0.752) \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -850,7 +899,8 @@ Table~S2.
     test-set events).  Bars: point estimates from Table~\ref{tab:cindex};
     error bars: 95\,\% bootstrap CIs (1\,000 resamples).  Horizontal dashed
     line: chance discrimination ($C = 0.5$).  Fine--Gray achieves the highest
-    $C$-index on both end-points.}
+    $C$-index on both end-points.  DeepHit numbers reflect the corrected
+    NLL formulation including a survival term for censored subjects.}
   \label{fig:comparison}
 \end{figure}
 
@@ -862,9 +912,10 @@ Table~S2.
     cohort.  Predicted probability (x-axis) versus observed event frequency
     (y-axis) in 10 equal-frequency bins; error bars show 95\,\% Wilson
     confidence intervals.  Diagonal dashed line: perfect calibration.
-    Near-diagonal alignment across all three competing events confirms that
-    post-hoc isotonic calibration successfully restores CIF reliability
-    following neural network training.}
+    Near-diagonal alignment is expected given the synthetic prototype cohort
+    (calibrator fitted and evaluated on the same data) and does not constitute
+    independent validation; registry-scale assessment is required before
+    clinical deployment.}
   \label{fig:calibration}
 \end{figure}
 
@@ -893,6 +944,92 @@ vs.\ 1/10 vs.\ $\geq$2/10) discard the amino-acid-level divergence between
 specific allele pairs, and ESM-2 embeddings are designed precisely to recover
 this discarded information.
 
+\subsection{Feature Ablation: Clinical vs.\ Aggregate HLA Contribution}
+\label{sec:ablation}
+
+To quantify the independent contribution of clinical and HLA-score features, we
+trained cause-specific Cox models on three feature subsets:
+(i)~\emph{full} (all 21 features, as in Table~\ref{tab:cindex});
+(ii)~\emph{clinical-only} (17 features with the four aggregate HLA score
+columns removed); and (iii)~\emph{HLA-only} (the four aggregate HLA score
+features only: \texttt{hla\_match\_score}, \texttt{hla\_mismatched},
+\texttt{n\_antigen\_mm}, \texttt{n\_allele\_mm}).  Table~\ref{tab:ablation}
+reports test-set concordance indices for each subset.
+
+\begin{table}[t!]
+  \caption{Feature ablation: cause-specific Cox $C$-index on the held-out test
+    set ($n=29$).  The full model uses all 21 features; clinical-only removes
+    the four aggregate HLA score columns; HLA-only retains only those four
+    columns.  95\,\% bootstrap CI (1\,000 resamples).  GvHD omitted ($n=2$
+    test-set events).}
+  \label{tab:ablation}
+  \begin{tabular}{lcc}
+    \toprule
+    \textbf{Feature set} & \textbf{Relapse} & \textbf{TRM} \\
+    \midrule
+    Full (clinical + aggregate HLA) & 0.754 (0.527--1.000) & 0.647 (0.459--0.854) \\
+    Clinical-only                   & 0.783 (0.585--1.000) & 0.655 (0.490--0.848) \\
+    HLA-only (aggregate scores)     & 0.486 (0.250--0.800) & 0.491 (0.305--0.674) \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The HLA-only model performs at near-chance levels ($C \approx 0.49$) on both
+end-points, demonstrating that the four aggregate mismatch score columns in the
+UCI BMT dataset carry essentially no independent discriminative information.
+Strikingly, the clinical-only model ($C = 0.78$ / $0.66$) matches or marginally
+exceeds the full model that includes HLA scores.  This result has a direct
+implication for CAPA's design rationale: the failure of aggregate HLA mismatch
+scores to discriminate survival outcomes is consistent with their known
+information loss---categorical 0/1 flags discard the amino-acid-level
+divergence between specific allele pairs.  ESM-2 structural embeddings, by
+preserving this sequence-level information, represent precisely the form of HLA
+feature that ablation analysis identifies as missing from the current evaluation
+basis.
+
+\subsection{Repeated Cross-Validation for Stable Performance Estimates}
+\label{sec:cv}
+
+With a test set of $n = 29$ patients (4 relapse events, 10 TRM events), the
+single-split concordance estimates carry large sampling variance: the
+bootstrap 95\,\% CI for Fine--Gray relapse spans 0.69--1.00.  To obtain more
+stable estimates, we performed 5-repeat 5-fold stratified cross-validation
+(25 folds total, stratifying by event type to preserve event-rate balance) on
+the full $n = 187$ cohort.  Table~\ref{tab:cv} reports mean $\pm$ standard
+deviation of the fold-level $C$-index for Cox and Fine--Gray.
+
+\begin{table}[t!]
+  \caption{Repeated 5$\times$5 stratified cross-validation mean $C$-index
+    $\pm$ standard deviation across 25 folds ($n=187$ full cohort).
+    GvHD is excluded because fewer than 5 events appear per fold,
+    rendering the metric unreliable.
+    Comparison with Table~\ref{tab:cindex} shows that the single held-out test
+    split produced optimistic estimates (relapse $C = 0.75$--$0.84$ vs.\
+    CV mean $0.60$--$0.63$).}
+  \label{tab:cv}
+  \begin{tabular}{lcc}
+    \toprule
+    \textbf{Model} & \textbf{Relapse} & \textbf{TRM} \\
+    \midrule
+    Cox (cause-specific) & $0.60 \pm 0.14$ & $0.56 \pm 0.06$ \\
+    Fine--Gray           & $0.63 \pm 0.15$ & $0.57 \pm 0.06$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The CV estimates ($0.60$--$0.63$ for relapse, $0.56$--$0.57$ for TRM) are
+substantially lower than the single-split estimates in Table~\ref{tab:cindex}
+($0.75$--$0.84$ for relapse, $0.65$--$0.66$ for TRM), confirming that the
+test-set estimates are optimistic due to the small sample size.  The wide
+standard deviations ($\pm 0.14$--$0.15$ for relapse) quantify the high
+fold-to-fold variance imposed by fewer than 30 events per outcome.  The CV
+mean provides a more reliable estimate of expected out-of-sample performance:
+the classically achievable ceiling for relapse discrimination on this cohort,
+using aggregate HLA and clinical features, is approximately $C = 0.60$--$0.63$.
+Any improvement from ESM-2 structural allele embeddings on a registry dataset
+should be compared against this corrected baseline rather than the
+single-split test numbers.
+
 %% ── 4. Discussion ───────────────────────────────────────────────────────────
 \section{Discussion}
 
@@ -900,11 +1037,17 @@ We present CAPA, a competing-risks survival framework that encodes HLA alleles
 as 1280-dimensional ESM-2 protein language model vectors, models donor--recipient
 immunological interaction via bidirectional cross-attention, and jointly estimates
 cumulative incidence functions for GvHD, relapse, and TRM.  As a reference
-benchmark, we trained and evaluated tabular-feature baselines---cause-specific
-Cox, Fine--Gray, and flat-feature DeepHit---on the publicly available UCI BMT
-dataset ($n=187$).  Fine--Gray achieves $C$-index 0.84 for relapse and 0.66
-for TRM on the 29-patient test set, establishing the performance ceiling
-achievable with aggregate HLA mismatch scores and standard clinical covariates.
+benchmark, we trained and evaluated four tabular-feature baselines---cause-specific
+Cox, Fine--Gray, Random Survival Forest, and flat-feature DeepHit---on the
+publicly available UCI BMT dataset ($n=187$).  Fine--Gray achieves $C$-index
+0.84 for relapse and 0.66 for TRM on the single held-out test set ($n=29$);
+5$\times$5 cross-validation places the corrected ceiling at $0.63$ for relapse
+and $0.57$ for TRM, accounting for sampling optimism in the small test set.
+Critically, a feature ablation study shows that aggregate HLA mismatch scores
+alone yield near-chance concordance ($C \approx 0.49$), while clinical features
+alone match the full-feature models---a direct empirical demonstration of why
+aggregate mismatch counts are insufficient and why ESM-2 structural embeddings
+are the appropriate form of HLA feature to add.
 
 A critical finding is that the UCI BMT dataset records only aggregate mismatch
 counts (0--3 allele mismatches), not the specific donor and recipient allele
@@ -926,7 +1069,20 @@ pathophysiology \citep{petersdorf2015hladp, fleischhauer2012hla} and of
 T-cell-epitope (TCE) group mismatching at HLA-DPB1 in unrelated donor HSCT
 \citep{fleischhauer2012hla} motivate the cross-attention inductive bias:
 the model's attention weights can, in principle, automatically discover these
-inter-locus interaction hierarchies from training data.
+inter-locus interaction hierarchies from training data.  \emph{Important
+caveat:} attention weights are not causal explanations.  High attention between
+a donor--recipient locus pair indicates that the model's interaction feature
+vector is sensitive to allele divergence at that pair, but does not establish
+that the pair drives outcomes causally.  Spurious attention can arise from
+distributional quirks in small training cohorts, allele frequency confounding
+(common allele groups may dominate embeddings), and the model's reliance on
+the ranking loss which does not enforce biologically meaningful feature
+attribution.  Attention heatmaps from the prototype cohort (Figure~\ref{fig:attention})
+are hypothesis-generating demonstrations of the architecture's capability, not
+validated biological discoveries.  Rigorous validation of attention patterns
+against known immunogenicity (eplet mismatch, TCE group divergence) at the
+residue level requires a registry cohort with ground-truth allele typing and
+prospectively recorded outcomes.
 
 \paragraph{Analysis of baseline performance.}
 The Fine--Gray model outperforms cause-specific Cox on relapse ($C = 0.84$
@@ -938,17 +1094,21 @@ the cumulative-incidence underestimation bias of cause-specific analysis
 relapse because the competing risk of TRM is substantial (33\,\% event rate),
 making IPCW weighting consequential.
 
-The flat-feature DeepHit MLP substantially underperforms both classical methods
-on TRM ($C = 0.47$ vs.\ 0.65--0.66), illustrating a well-documented failure
-mode of neural competing-risks models on small-cohort tabular data
-\citep{lee2018deephit}.  With 130 training subjects distributed across four
-competing-event classes, the joint $K \times M = 300$-bin output space is
-severely underdetermined.  The pairwise ranking loss has at most $\sim$200
-comparable pairs for relapse and fewer than 50 for GvHD across the entire
-training set, producing high-variance gradient estimates that destabilise the
-joint softmax.  By contrast, Cox and Fine--Gray each estimate a single linear
-score per feature per event, reducing the effective number of free parameters
-by roughly three orders of magnitude.  This analysis reinforces the core CAPA
+The flat-feature DeepHit MLP ($C = 0.65$ for relapse, $C = 0.57$ for TRM with
+the corrected NLL) is competitive with classical models on relapse but remains
+below Fine--Gray on TRM ($C = 0.57$ vs.\ 0.66).  With 130 training subjects
+distributed across four competing-event classes, the joint $K \times M =
+300$-bin output space is severely underdetermined.  The pairwise ranking loss
+has at most $\sim$200 comparable pairs for relapse and fewer than 50 for GvHD
+across the entire training set, producing high-variance gradient estimates that
+destabilise the joint softmax.  By contrast, Cox and Fine--Gray each estimate a
+single linear score per feature per event, reducing the effective number of free
+parameters by roughly three orders of magnitude.  The Random Survival Forest,
+despite its non-parametric flexibility, also fails to outperform the linear
+models (relapse $C = 0.48$), consistent with the well-known fragility of
+ensemble methods on $n < 200$ cohorts with sparse events.  These results
+collectively confirm that model complexity alone does not compensate for the
+absence of a structural prior on HLA features, reinforcing the core CAPA
 motivation: ESM-2 allele embeddings function as a biologically grounded
 structural prior that constrains the model's hypothesis space and is precisely
 the form of regularisation most valuable on small, HLA-diverse cohorts.
@@ -958,12 +1118,12 @@ five-variable clinical tool for HSCT risk stratification
 \citep{gratwohl2009risk}---typically achieves concordance indices of
 0.60--0.65 in independent registry validations.  The Fine--Gray model,
 using the 21 clinical and HLA-score features available in the UCI BMT dataset,
-exceeds this benchmark on relapse ($C = 0.84$), suggesting that the additional
-covariates in this cohort carry discriminative information beyond the five
-EBMT variables.  Direct comparison must be interpreted cautiously given the
-single-centre paediatric composition and the small ($n = 29$) test set;
-multi-centre registry validation with bootstrap-corrected optimism adjustment
-is required before any clinical benchmark claim can be made.
+reaches $C = 0.84$ on relapse in the single test split, but cross-validated
+performance ($C = 0.63 \pm 0.15$) is more consistent with the EBMT benchmark.
+The wide single-split interval ($0.69$--$1.00$) reflects the well-documented
+optimism in small held-out sets: 4 relapse events in 29 patients is insufficient
+to distinguish model differences reliably.  Any clinical comparison should use
+the CV-corrected estimates rather than the single-split numbers.
 
 \paragraph{Limitations.}
 The primary limitation of this study is the absence of per-allele HLA typing in
@@ -1018,19 +1178,24 @@ translation.
 We introduce CAPA, a deep competing-risks survival framework that replaces
 categorical HLA mismatch counts with continuous, structure-aware ESM-2 protein
 language model embeddings and models donor--recipient allele interactions via
-bidirectional cross-attention.  On the public UCI BMT cohort, tabular-feature
-baselines (Fine--Gray: relapse $C=0.84$, TRM $C=0.66$; cause-specific Cox:
-0.75 / 0.65) establish the performance ceiling achievable without allele-level
-HLA data.  The flat-feature DeepHit underperforms classical methods on this
-small dataset, confirming that architectural complexity alone does not compensate
-for the absence of a strong structural prior.  The key bottleneck for CAPA is
-data: the UCI BMT dataset records only aggregate mismatch scores, not allele
-identities.  Deploying CAPA's full embedding pipeline on a registry dataset with
-high-resolution HLA typing is the primary direction for future work.  All code,
-the interactive web interface (including a multi-donor comparison tool for
-side-by-side ranking of up to 20 candidate donors by composite GvHD+TRM risk),
-and model weights trained on synthetic allele data are released under the MIT
-licence to lower the barrier to this next step.
+bidirectional cross-attention.  On the public UCI BMT cohort, four tabular-feature
+baselines (Fine--Gray, Cox, RSF, DeepHit) establish the performance achievable
+without allele-level HLA data; cross-validated estimates (Cox relapse
+$C=0.60 \pm 0.14$, TRM $0.56 \pm 0.06$) correct for the substantial optimism
+in single-split test numbers.  A feature ablation study provides the key
+empirical motivation for CAPA: aggregate HLA mismatch scores alone yield
+near-chance concordance ($C \approx 0.49$), while clinical features alone
+match the full-feature models---confirming that the missing ingredient is not
+more complex models but richer HLA representations.  The flat-feature DeepHit
+with the corrected censored NLL achieves $C=0.65$ for relapse and $C=0.57$ for
+TRM, confirming that a correct training formulation substantially improves
+neural competing-risks performance on small cohorts.  The key bottleneck for
+CAPA is data: the UCI BMT dataset records only aggregate mismatch scores, not
+allele identities.  Deploying CAPA's full ESM-2 embedding pipeline on a
+registry dataset with high-resolution HLA typing---where the ablation study
+predicts ESM-2 features will be most valuable---is the primary direction for
+future work.  All code, the interactive web interface, and prototype model
+weights are released under the MIT licence to lower the barrier to this step.
 
 %% ── Back matter ─────────────────────────────────────────────────────────────
 \section*{Conflict of Interest}

@@ -53,6 +53,7 @@ dependencies = [
     "requests>=2.31.0",
     "scikit-learn>=1.4.0",
     "reportlab>=4.4.10",
+    "scikit-survival>=0.27.0",
 ]
 
 [project.optional-dependencies]
