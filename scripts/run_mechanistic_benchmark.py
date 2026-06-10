@@ -674,9 +674,9 @@ def main() -> None:
         "epochs": args.epochs if not args.no_capa else 0,
         "seed": SEED,
         "outcome_model": {
-            "GvHD":    "log h = log(1/2800) + 3.5*dist_DRB1 + 2.0*dist_DQB1 + 0.4*age_norm",
-            "TRM":     "log h = log(1/2600) + 2.5*dist_DRB1 + 1.8*dist_A   + 1.0*dist_C + 0.6*age_norm",
-            "Relapse": "log h = log(1/1800) - 1.2*dist_B   + 2.0*disease_risk - 0.5*dist_DRB1",
+            "GvHD":    "log h = log(1/7000) + 4.0*dist_DRB1 + 1.5*dist_DQB1 + 0.15*age_norm",
+            "TRM":     "log h = log(1/8000) + 3.0*dist_DRB1 + 2.0*dist_A   + 1.0*dist_C + 0.8*age_norm",
+            "Relapse": "log h = log(1/2500) - 1.0*dist_B   + 2.0*disease_risk - 0.5*dist_DRB1",
             "note":    "Distances normalised by per-locus max pairwise L2; range [0,1]. No n_mm term.",
         },
         "results": {k: v for k, v in all_results.items()},

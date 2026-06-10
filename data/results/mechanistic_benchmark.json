@@ -1,12 +1,12 @@
 {
   "n": 2000,
   "mode": "controlled",
-  "epochs": 300,
+  "epochs": 0,
   "seed": 42,
   "outcome_model": {
-    "GvHD": "log h = log(1/2800) + 3.5*dist_DRB1 + 2.0*dist_DQB1 + 0.4*age_norm",
-    "TRM": "log h = log(1/2600) + 2.5*dist_DRB1 + 1.8*dist_A   + 1.0*dist_C + 0.6*age_norm",
-    "Relapse": "log h = log(1/1800) - 1.2*dist_B   + 2.0*disease_risk - 0.5*dist_DRB1",
+    "GvHD": "log h = log(1/7000) + 4.0*dist_DRB1 + 1.5*dist_DQB1 + 0.15*age_norm",
+    "TRM": "log h = log(1/8000) + 3.0*dist_DRB1 + 2.0*dist_A   + 1.0*dist_C + 0.8*age_norm",
+    "Relapse": "log h = log(1/2500) - 1.0*dist_B   + 2.0*disease_risk - 0.5*dist_DRB1",
     "note": "Distances normalised by per-locus max pairwise L2; range [0,1]. No n_mm term."
   },
   "results": {
@@ -42,23 +42,6 @@
         "cindex": 0.7045621780721119,
         "ci_low": 0.6469961278192604,
         "ci_hi": 0.7628013327366431
-      }
-    },
-    "CAPA (ESM-2 cross-attn)": {
-      "GvHD": {
-        "cindex": 0.4922432711954191,
-        "ci_low": 0.44517226612693594,
-        "ci_hi": 0.5383387478192893
-      },
-      "Relapse": {
-        "cindex": 0.7133895933932036,
-        "ci_low": 0.6640689728595375,
-        "ci_hi": 0.760909300416924
-      },
-      "TRM": {
-        "cindex": 0.6471670345842532,
-        "ci_low": 0.5815355206234654,
-        "ci_hi": 0.7128149308403705
       }
     }
   }
