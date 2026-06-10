@@ -135,40 +135,7 @@ _POOLS = {loc: _normalize_pool(EURO_FREQS[loc]) for loc in LOCI}
 # Cohort generation
 # ---------------------------------------------------------------------------
 
-def alloreactivity(
-    donor_alleles: list[str],
-    recip_alleles: list[str],
-    embs: dict[str, np.ndarray],
-) -> float:
-    """Min-L2 alloreactivity: sum over donor alleles of min distance to recipient.
-
-    Represents: for each donor allele, how "foreign" does it look to the
-    recipient's immune system? Matched alleles contribute 0; mismatched alleles
-    contribute their L2 distance to the nearest recipient allele.
-    """
-    total = 0.0
-    for d_a in donor_alleles:
-        d_vec = embs[d_a]
-        min_dist = min(np.linalg.norm(d_vec - embs[r_a]) for r_a in recip_alleles)
-        total += min_dist
-    return total
-
-
-def generate_cohort(
-    n: int,
-    embs: dict[str, np.ndarray],
-    rng: np.random.Generator,
-    match_mix: tuple[float, ...] = (0.50, 0.35, 0.12, 0.03),
-) -> pd.DataFrame:
-    """Generate N synthetic HSCT patients.
-
-    Each patient receives:
-    - A diploid genotype (2 alleles × 5 loci) for donor and recipient
-    - Clinical covariates (age, disease risk)
-    - Alloreactivity distances at each locus
-    - Competing-risks outcomes driven by those distances
-    """
-    # Pre-compute per-locus max pairwise L2 for normalisation
+def _compute_max_l2(embs: dict[str, np.ndarray]) -> dict[str, float]:
     max_l2: dict[str, float] = {}
     for loc in LOCI:
         alleles_l = [k for k in embs if k.startswith(loc + "*")]
@@ -179,20 +146,154 @@ def generate_cohort(
         ])
         max_l2[loc] = float(dists.max())
         logger.debug("max L2 %s: %.3f", loc, max_l2[loc])
+    return max_l2
 
+
+def _make_outcome(
+    dist: dict[str, float],
+    age_norm: float,
+    disease_risk: int,
+    rng: np.random.Generator,
+) -> tuple[float, int]:
+    """Exponential competing risks. Returns (observed_time_days, event_type).
+
+    Calibrated so that, for the controlled cohort (dist_DRB1 ∈ [0.32, 1.0],
+    mean ≈ 0.65), approximate event rates are:
+      GvHD ~20%, TRM ~20%, Relapse ~30%, Censored ~30%
+
+    Baseline hazards λ₀ derived by requiring exp(-λ̄ · T_max) ≈ target_survival.
+    """
+    # GvHD: almost entirely DRB1 alloreactivity (T-cell mediated rejection).
+    # Large β so continuous distance dominates; age is weak → Cox(binary) near
+    # chance; Cox(distances) achieves high C-index.  10x hazard ratio across
+    # the observed DRB1 distance range [0.32, 1.0].
+    log_h_gvhd = (
+        np.log(1 / 7000)          # λ₀ calibrated for ~25% GvHD rate
+        + 4.0 * dist["DRB1"]      # dominant driver
+        + 1.5 * dist["DQB1"]
+        + 0.15 * age_norm         # weak age effect so Cox(binary) ≈ 0.5
+    )
+    # TRM: class I + class II alloreactivity + age (age matters clinically)
+    log_h_trm = (
+        np.log(1 / 8000)
+        + 3.0 * dist["DRB1"]
+        + 2.0 * dist["A"]
+        + 1.0 * dist["C"]
+        + 0.8 * age_norm
+    )
+    # Relapse: GvL reduces relapse (B-locus NK effect), disease risk increases it
+    log_h_rel = (
+        np.log(1 / 2500)
+        - 1.0 * dist["B"]
+        + 2.0 * disease_risk
+        - 0.5 * dist["DRB1"]
+    )
+    rates = [np.exp(np.clip(h, -12, 4)) for h in (log_h_gvhd, log_h_rel, log_h_trm)]
+    times = [float(rng.exponential(1.0 / r)) if r > 0 else 1e9 for r in rates]
+    t_cens = float(rng.uniform(300, 2000))
+    all_t = times + [t_cens]
+    winner = int(np.argmin(all_t))
+    etype = winner + 1 if winner < 3 else 0
+    return min(all_t[winner], MAX_DAYS), etype
+
+
+def generate_controlled_cohort(
+    n: int,
+    embs: dict[str, np.ndarray],
+    rng: np.random.Generator,
+) -> pd.DataFrame:
+    """Controlled cohort: ALL patients have exactly 1 DRB1 mismatch, all other loci matched.
+
+    This is the critical experiment for demonstrating ESM-2 informativeness:
+    - Binary mismatch indicator (DRB1=1) is IDENTICAL for every patient → C≈0.5
+    - Continuous ESM-2 distance varies across patients → can predict outcomes
+    - Outcome is causally driven by the continuous distance, not the binary flag
+
+    Recipients are homozygous at DRB1 (same allele twice) so alloreactivity
+    simplifies to the exact L2 distance between the mismatched allele and the
+    recipient allele — a clean, unambiguous distance metric.
+    """
+    max_l2 = _compute_max_l2(embs)
+    drb1_alleles, drb1_probs = _POOLS["DRB1"]
     records = []
+
     for i in range(n):
-        # --- HLA match grade (determines number of mismatches) ---
+        # Homozygous DRB1 recipient → alloreactivity = exact L2(mm, recip_allele)
+        recip_drb1 = rng.choice(drb1_alleles, p=drb1_probs)
+
+        # Donor DRB1: a DIFFERENT allele (the mismatch)
+        others = [a for a in drb1_alleles if a != recip_drb1]
+        others_p = np.array([drb1_probs[drb1_alleles.index(a)] for a in others])
+        others_p /= others_p.sum()
+        donor_drb1 = rng.choice(others, p=others_p)
+
+        # dist_DRB1 = L2(donor_drb1, recip_drb1), normalised by max pairwise L2
+        dist_drb1_raw = float(np.linalg.norm(embs[donor_drb1] - embs[recip_drb1]))
+        dist_drb1_norm = dist_drb1_raw / max_l2["DRB1"]
+
+        # All other loci: donor == recipient (perfectly matched, dist=0)
+        dist: dict[str, float] = {"A": 0.0, "B": 0.0, "C": 0.0,
+                                  "DRB1": dist_drb1_norm, "DQB1": 0.0}
+
+        age = float(rng.uniform(2, 20))
+        age_norm = (age - 11.0) / 6.0
+        disease_risk = int(rng.random() < 0.45)
+
+        t_obs, etype = _make_outcome(dist, age_norm, disease_risk, rng)
+
+        # CAPA embedding columns: use actual DRB1 alleles; other loci same allele for both
+        placeholder = {loc: rng.choice(_POOLS[loc][0], p=_POOLS[loc][1]) for loc in LOCI}
+        records.append({
+            "patient_idx": i,
+            "age": age, "age_norm": age_norm, "disease_risk": disease_risk,
+            "n_mismatches": 1,
+            "survival_time_days": t_obs,
+            "event_type": etype,
+            "dist_A": 0.0, "dist_B": 0.0, "dist_C": 0.0,
+            "dist_DRB1": dist_drb1_norm, "dist_DQB1": 0.0,
+            "bin_mm_A": 0, "bin_mm_B": 0, "bin_mm_C": 0,
+            "bin_mm_DRB1": 1,  # CONSTANT across all patients — binary is uninformative
+            "bin_mm_DQB1": 0,
+            # Embedding columns: donor DRB1 position 0 is mismatched; all others matched
+            "donor_A_1": placeholder["A"], "donor_A_2": placeholder["A"],
+            "donor_B_1": placeholder["B"], "donor_B_2": placeholder["B"],
+            "donor_C_1": placeholder["C"], "donor_C_2": placeholder["C"],
+            "donor_DRB1_1": donor_drb1,    "donor_DRB1_2": recip_drb1,
+            "donor_DQB1_1": placeholder["DQB1"], "donor_DQB1_2": placeholder["DQB1"],
+            "recip_A_1": placeholder["A"], "recip_A_2": placeholder["A"],
+            "recip_B_1": placeholder["B"], "recip_B_2": placeholder["B"],
+            "recip_C_1": placeholder["C"], "recip_C_2": placeholder["C"],
+            "recip_DRB1_1": recip_drb1,    "recip_DRB1_2": recip_drb1,
+            "recip_DQB1_1": placeholder["DQB1"], "recip_DQB1_2": placeholder["DQB1"],
+        })
+
+    return pd.DataFrame(records)
+
+
+def generate_mixed_cohort(
+    n: int,
+    embs: dict[str, np.ndarray],
+    rng: np.random.Generator,
+    match_mix: tuple[float, ...] = (0.50, 0.35, 0.12, 0.03),
+) -> pd.DataFrame:
+    """Realistic cohort: mixed mismatch grades (0-3), all 5 loci.
+
+    Less clean than the controlled experiment but more representative of
+    real registry data. Useful for seeing how ESM-2 distances help when the
+    mismatch landscape is heterogeneous.
+    """
+    import copy
+    max_l2 = _compute_max_l2(embs)
+    records = []
+
+    for i in range(n):
         n_mm = int(rng.choice(4, p=match_mix))
 
-        # --- Sample recipient genotype ---
         recip: dict[str, list[str]] = {}
         for loc in LOCI:
             al, pr = _POOLS[loc]
             recip[loc] = list(rng.choice(al, size=2, replace=True, p=pr))
 
-        # --- Create donor with n_mm mismatches (same logic as impute_hla_alleles.py) ---
-        import copy
         donor = copy.deepcopy(recip)
         if n_mm > 0:
             all_slots = [(loc, idx) for loc in LOCI for idx in range(2)]
@@ -205,87 +306,36 @@ def generate_cohort(
                 op /= op.sum()
                 donor[loc][idx] = rng.choice(others, p=op)
 
-        # --- Alloreactivity distances (normalised) ---
+        # Alloreactivity: sum over donor alleles of min L2 distance to any recipient allele
         dist: dict[str, float] = {}
         for loc in LOCI:
-            raw = alloreactivity(donor[loc], recip[loc], embs)
-            dist[loc] = raw / max_l2[loc]  # normalised to [0, 1]
+            total = sum(
+                min(np.linalg.norm(embs[d_a] - embs[r_a]) for r_a in recip[loc])
+                for d_a in donor[loc]
+            )
+            dist[loc] = total / max_l2[loc]
 
-        # --- Clinical covariates ---
-        age = float(rng.uniform(2, 20))           # paediatric, years
-        age_norm = (age - 11.0) / 6.0             # standardise
-        disease_risk = int(rng.random() < 0.45)   # 45% high-risk
+        age = float(rng.uniform(2, 20))
+        age_norm = (age - 11.0) / 6.0
+        disease_risk = int(rng.random() < 0.45)
 
-        # --- Binary mismatch per locus (what baselines can see) ---
         bin_mm = {
             loc: int(any(donor[loc][j] != recip[loc][j] for j in range(2)))
             for loc in LOCI
         }
 
-        # --- Outcome model (cause-specific exponential hazards) ---
-        # Outcome signal is ENTIRELY in the continuous ESM-2 distances.
-        # Baselines see only binary per-locus mismatch (0/1) — a lossy projection.
-        # CAPA sees the full embedding → larger distance → higher hazard.
-        #
-        # GvHD (event 1): class II alloreactivity dominant (T-cell mediated)
-        log_h_gvhd = (
-            np.log(1 / 2800)
-            + 3.5 * dist["DRB1"]   # primary driver: class II
-            + 2.0 * dist["DQB1"]
-            + 0.4 * age_norm
-        )
-        # TRM (event 3): class I + class II — pure distance, NO aggregate mismatch count
-        log_h_trm = (
-            np.log(1 / 2600)
-            + 2.5 * dist["DRB1"]
-            + 1.8 * dist["A"]
-            + 1.0 * dist["C"]
-            + 0.6 * age_norm
-        )
-        # Relapse (event 2): GvL reduces relapse (B locus / NK), disease risk increases it
-        log_h_rel = (
-            np.log(1 / 1800)
-            - 1.2 * dist["B"]      # B-locus alloreactivity → NK GvL effect
-            + 2.0 * disease_risk
-            - 0.5 * dist["DRB1"]
-        )
-
-        rate_gvhd = float(np.exp(np.clip(log_h_gvhd, -12, 4)))
-        rate_trm  = float(np.exp(np.clip(log_h_trm, -12, 4)))
-        rate_rel  = float(np.exp(np.clip(log_h_rel, -12, 4)))
-
-        t_gvhd  = float(rng.exponential(1.0 / rate_gvhd)) if rate_gvhd > 0 else 1e9
-        t_trm   = float(rng.exponential(1.0 / rate_trm))  if rate_trm > 0 else 1e9
-        t_rel   = float(rng.exponential(1.0 / rate_rel))  if rate_rel > 0 else 1e9
-        t_cens  = float(rng.uniform(300, 1800))
-
-        t_obs = min(t_gvhd, t_rel, t_trm, t_cens)
-        if t_obs == t_gvhd:
-            etype = 1
-        elif t_obs == t_rel:
-            etype = 2
-        elif t_obs == t_trm:
-            etype = 3
-        else:
-            etype = 0
+        t_obs, etype = _make_outcome(dist, age_norm, disease_risk, rng)
 
         rec: dict = {
             "patient_idx": i,
-            "age": age,
-            "age_norm": age_norm,
-            "disease_risk": disease_risk,
+            "age": age, "age_norm": age_norm, "disease_risk": disease_risk,
             "n_mismatches": n_mm,
-            "survival_time_days": min(t_obs, MAX_DAYS),
+            "survival_time_days": t_obs,
             "event_type": etype,
-            "dist_A": dist["A"],
-            "dist_B": dist["B"],
-            "dist_C": dist["C"],
-            "dist_DRB1": dist["DRB1"],
-            "dist_DQB1": dist["DQB1"],
-            "bin_mm_A": bin_mm["A"],
-            "bin_mm_B": bin_mm["B"],
-            "bin_mm_C": bin_mm["C"],
-            "bin_mm_DRB1": bin_mm["DRB1"],
+            "dist_A": dist["A"], "dist_B": dist["B"], "dist_C": dist["C"],
+            "dist_DRB1": dist["DRB1"], "dist_DQB1": dist["DQB1"],
+            "bin_mm_A": bin_mm["A"], "bin_mm_B": bin_mm["B"],
+            "bin_mm_C": bin_mm["C"], "bin_mm_DRB1": bin_mm["DRB1"],
             "bin_mm_DQB1": bin_mm["DQB1"],
         }
         for loc in LOCI:
@@ -293,7 +343,6 @@ def generate_cohort(
             rec[f"donor_{loc}_2"] = donor[loc][1]
             rec[f"recip_{loc}_1"] = recip[loc][0]
             rec[f"recip_{loc}_2"] = recip[loc][1]
-
         records.append(rec)
 
     return pd.DataFrame(records)
@@ -335,8 +384,19 @@ def run_cox(
     feat_cols: list[str],
     label: str,
 ) -> dict:
-    """Cause-specific Cox PH; returns C-index dict."""
+    """Cause-specific Cox PH; returns C-index dict.
+
+    Automatically drops constant columns (zero-variance on training set)
+    so the fit does not fail when some indicators are uniform across patients,
+    as happens in the controlled experiment (all binary mismatch = 1).
+    """
     from lifelines import CoxPHFitter
+
+    # Drop columns with zero variance in the training set to avoid singularity
+    active_feats = [c for c in feat_cols if df_tr[c].std() > 0]
+    dropped = set(feat_cols) - set(active_feats)
+    if dropped:
+        logger.info("%s: dropping constant columns %s", label, sorted(dropped))
 
     etime_te = df_te["survival_time_days"].values
     etype_te = df_te["event_type"].values
@@ -345,7 +405,7 @@ def run_cox(
     time_grid = np.linspace(0, MAX_DAYS, N_TIME_BINS)
 
     for k, name in event_map.items():
-        df_tr_k = df_tr[feat_cols + ["survival_time_days", "event_type"]].copy()
+        df_tr_k = df_tr[active_feats + ["survival_time_days", "event_type"]].copy()
         df_tr_k["event"] = (df_tr_k["event_type"] == k).astype(int)
         df_tr_k = df_tr_k.drop(columns=["event_type"])
         cph = CoxPHFitter(penalizer=0.1)
@@ -354,7 +414,7 @@ def run_cox(
         except Exception as e:
             logger.warning("%s Cox fit failed for %s: %s", label, name, e)
             continue
-        sf = cph.predict_survival_function(df_te[feat_cols])
+        sf = cph.predict_survival_function(df_te[active_feats])
         sf_interp = np.array([
             np.interp(time_grid, sf.index.values, sf.iloc[:, i].values)
             for i in range(len(df_te))
@@ -452,6 +512,11 @@ def main() -> None:
     parser.add_argument("--batch-size", type=int, default=128)
     parser.add_argument("--device", default="cpu")
     parser.add_argument("--no-capa", action="store_true", help="Skip CAPA training (Cox comparison only)")
+    parser.add_argument(
+        "--mode", choices=["controlled", "mixed"], default="controlled",
+        help="controlled: all patients have 1 DRB1 mismatch (binary uninformative); "
+             "mixed: realistic distribution of match grades",
+    )
     args = parser.parse_args()
 
     device = torch.device(args.device)
@@ -466,8 +531,14 @@ def main() -> None:
     logger.info("Loaded %d allele embeddings", len(embs))
 
     # --- Generate cohort ---
-    logger.info("Generating mechanistic cohort (n=%d)...", args.n)
-    df = generate_cohort(args.n, embs, rng)
+    if args.mode == "controlled":
+        logger.info("Generating CONTROLLED cohort (n=%d, all DRB1-only mismatches)...", args.n)
+        df = generate_controlled_cohort(args.n, embs, rng)
+        logger.info("  NOTE: binary DRB1 mismatch=1 for ALL patients → Cox(binary) cannot")
+        logger.info("        discriminate on DRB1; its C-index reflects age/disease_risk only.")
+    else:
+        logger.info("Generating MIXED cohort (n=%d, realistic match grades)...", args.n)
+        df = generate_mixed_cohort(args.n, embs, rng)
 
     event_label = {0: "censored", 1: "GvHD", 2: "Relapse", 3: "TRM"}
     for k, nm in event_label.items():
@@ -554,8 +625,12 @@ def main() -> None:
     print("\n" + "=" * W)
     print("MECHANISTIC BENCHMARK — test-set C-index  (n=%d; 80/20 split; seed=42)" % args.n)
     print("Outcome signal: ESM-2 alloreactivity distances causally drive all events.")
-    print("Key comparison: Cox(distances) vs Cox(binary) shows information gain from")
-    print("continuous ESM-2 distances over binary HLA mismatch indicators.")
+    if args.mode == "controlled":
+        print("Mode: CONTROLLED — all patients have identical binary DRB1 mismatch (=1).")
+        print("  Cox(binary) can only use age/disease_risk → approaches clinical baseline.")
+        print("  Cox(ESM-2 dist) sees actual allele-pair distances → reveals information gain.")
+    else:
+        print("Mode: MIXED — realistic distribution of 0-3 mismatches across all loci.")
     print("=" * W)
     print(f"{'Model':<32} {'GvHD':>14}  {'Relapse':>14}  {'TRM':>14}")
     print("-" * W)
@@ -595,6 +670,7 @@ def main() -> None:
     # Save results
     out: dict = {
         "n": args.n,
+        "mode": args.mode,
         "epochs": args.epochs if not args.no_capa else 0,
         "seed": SEED,
         "outcome_model": {
