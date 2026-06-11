@@ -2,7 +2,7 @@
   "n": 10000,
   "mode": "directional",
   "seed": 42,
-  "epochs": 0,
+  "epochs": 500,
   "outcome_model": {
     "GvHD": "log h = log(1/60000) + 2.5*relu(z_DRB1) + 1.5*relu(z_DQB1) + 0.3*age; z_l = standardised(w_l . (e_recip - e_donor))  [DIRECTIONAL]",
     "TRM": "log h = log(1/150000) + 2.0*d_DRB1 + 2.0*d_A + 1.0*d_C + 0.5*age",
@@ -59,6 +59,23 @@
         "cindex": 0.6810876048786715,
         "ci_low": 0.6325266801000985,
         "ci_hi": 0.7286995960991399
+      }
+    },
+    "CAPA (signed diff)": {
+      "GvHD": {
+        "cindex": 0.8512415422966104,
+        "ci_low": 0.8186511706404851,
+        "ci_hi": 0.8844999920006438
+      },
+      "Relapse": {
+        "cindex": 0.7629279699176844,
+        "ci_low": 0.7342431546176198,
+        "ci_hi": 0.7890186497902416
+      },
+      "TRM": {
+        "cindex": 0.5258265541771594,
+        "ci_low": 0.471196012472361,
+        "ci_hi": 0.578163053104097
       }
     }
   }

@@ -80,6 +80,7 @@ def generate_directional_cohort(
     n: int,
     embs: dict[str, np.ndarray],
     rng: np.random.Generator,
+    seed: int = SEED,
 ) -> tuple[pd.DataFrame, dict[str, np.ndarray]]:
     """All-loci-mismatched cohort; GvHD driven by directional projection.
 
@@ -91,7 +92,7 @@ def generate_directional_cohort(
 
     # Fixed immunodominant direction per locus (unit vector). Seeded so the
     # simulation is reproducible; never revealed to any model.
-    w_rng = np.random.default_rng(SEED + 7)
+    w_rng = np.random.default_rng(seed + 7)
     w: dict[str, np.ndarray] = {}
     for loc in LOCI:
         v = w_rng.standard_normal(emb_dim).astype(np.float64)
@@ -182,11 +183,20 @@ def main() -> None:
     parser.add_argument("--no-capa", action="store_true")
     parser.add_argument("--patience", type=int, default=120)
     parser.add_argument("--proj-dim", type=int, default=128)
+    parser.add_argument("--seed", type=int, default=SEED,
+                        help="Master seed for cohort, w-directions, split, init, "
+                             "and minibatch shuffling (patches train_capa's SEED).")
     args = parser.parse_args()
 
+    seed = args.seed
+    # Propagate to run_haplo_simulation's module global so train_capa() and
+    # bootstrap_ci pick up the same seed (they reference the imported constant).
+    import scripts.run_haplo_simulation as _haplo
+    _haplo.SEED = seed
+
     device = torch.device(args.device)
-    torch.manual_seed(SEED)
-    rng = np.random.default_rng(SEED)
+    torch.manual_seed(seed)
+    rng = np.random.default_rng(seed)
 
     embs: dict[str, np.ndarray] = {}
     with h5py.File(EMB_PATH, "r") as f:
@@ -194,17 +204,17 @@ def main() -> None:
             embs[k] = f[k][:]
     logger.info("Loaded %d allele embeddings", len(embs))
 
-    logger.info("Generating directional cohort (n=%d)...", args.n)
-    df, _w = generate_directional_cohort(args.n, embs, rng)
+    logger.info("Generating directional cohort (n=%d, seed=%d)...", args.n, seed)
+    df, _w = generate_directional_cohort(args.n, embs, rng, seed=seed)
     for k, nm in {0: "censored", 1: "GvHD", 2: "Relapse", 3: "TRM"}.items():
         logger.info("  %-10s: %d (%.1f%%)", nm, (df["event_type"] == k).sum(),
                     100 * (df["event_type"] == k).mean())
 
     idx_trainval, idx_te = train_test_split(
-        np.arange(len(df)), test_size=0.10, random_state=SEED,
+        np.arange(len(df)), test_size=0.10, random_state=seed,
         stratify=df["event_type"].values)
     idx_tr, idx_va = train_test_split(
-        idx_trainval, test_size=0.111, random_state=SEED,
+        idx_trainval, test_size=0.111, random_state=seed,
         stratify=df.iloc[idx_trainval]["event_type"].values)
     df_tr = df.iloc[idx_tr].reset_index(drop=True)
     df_te = df.iloc[idx_te].reset_index(drop=True)
@@ -281,7 +291,7 @@ def main() -> None:
     # --- report ---
     W = 84
     print("\n" + "=" * W)
-    print("DIRECTIONAL SIMULATION — test-set C-index (n=%d; 80/10/10; seed=42)" % args.n)
+    print("DIRECTIONAL SIMULATION — test-set C-index (n=%d; 80/10/10; seed=%d)" % (args.n, seed))
     print("GvHD driven by relu(signed projection) — scalar distance is direction-blind.")
     print("=" * W)
     print(f"{'Model':<30} {'GvHD':>15}  {'Relapse':>15}  {'TRM':>15}")
@@ -305,7 +315,7 @@ def main() -> None:
               f"the direction-blind gap)")
 
     out = {
-        "n": args.n, "mode": "directional", "seed": SEED,
+        "n": args.n, "mode": "directional", "seed": seed,
         "epochs": args.epochs if not args.no_capa else 0,
         "outcome_model": {
             "GvHD": "log h = log(1/60000) + 2.5*relu(z_DRB1) + 1.5*relu(z_DQB1) + 0.3*age; "
@@ -317,7 +327,8 @@ def main() -> None:
         },
         "results": all_results,
     }
-    out_path = PROJECT_ROOT / "data/results/directional_simulation.json"
+    suffix = "" if seed == SEED else f"_seed{seed}"
+    out_path = PROJECT_ROOT / f"data/results/directional_simulation{suffix}.json"
     with open(out_path, "w") as fh:
         json.dump(out, fh, indent=2)
     logger.info("Results saved to %s", out_path)
