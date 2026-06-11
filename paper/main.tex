@@ -794,8 +794,8 @@ the known sequence divergence between HLA classes.
 \begin{figure}[t!]
   \centering
   \includegraphics[width=\columnwidth]{figures/fig2_umap}
-  \caption{ESM-2 embeddings of 98 HLA alleles from the CAPA prototype allele
-    set spanning five primary loci (A, B, C, DRB1, DQB1).
+  \caption{ESM-2 embeddings of 100 synthetic prototype HLA alleles
+    (20 per locus) spanning five primary loci (A, B, C, DRB1, DQB1).
     \textbf{(a)}~UMAP projection coloured by locus.
     \textbf{(b)}~UMAP coloured by antigen group within HLA-A and HLA-B.
     \textbf{(c)}~Within-locus pairwise cosine similarity matrices for each locus.
@@ -1207,11 +1207,11 @@ GvHD hazard when the actual embedding distance is taken into account
 raw HLA typing strings---exactly what CAPA is designed to do---requires the
 continuous structural representation provided by ESM-2.
 
-The mixed-cohort experiment (Section~S2 of the Supplementary Material) shows
-that in a heterogeneous population with realistic mismatch grade distribution
-(0--3 mismatches; 50\,\% matched patients), the aggregate $\Delta C$ shrinks to
-near zero: because matched patients (distance\,=\,0) are correctly handled by
-both models, the gain from continuous distances is diluted.  This explains why
+In a heterogeneous population with realistic mismatch grade distribution
+(0--3 mismatches; 50\,\% matched patients), the aggregate $\Delta C$ is
+expected to shrink toward zero: because matched patients (distance\,=\,0) are
+correctly handled by both models, the gain from continuous distances is diluted
+across the cohort.  This explains why
 aggregate-mismatch studies show modest or inconsistent associations between
 fine-grained HLA distance metrics and outcomes: the signal is concentrated in
 the mismatched subgroup and is obscured when matched patients dominate the
@@ -1219,12 +1219,19 @@ concordant pairs.  A registry-scale CAPA analysis can stratify within this
 subgroup and exploit the full distributional signal.
 
 CAPA's cross-attention architecture is designed to learn \emph{multi-locus}
-combinations of these distances from data; training it end-to-end on the
-$n = 1{,}600$ simulation cohort did not converge above Cox(binary) because the
-${\sim}14$M cross-attention parameters exceed the information content of the
-available sample size.  The haploidentical scale-up simulation
-(Section~\ref{sec:haplo}) addresses this directly by scaling to $N = 10{,}000$
-and testing whether cross-attention can recover cross-locus interaction effects.
+combinations of these distances from data.  In the $N=2{,}000$ mechanistic
+cohort (1{,}600 training patients), the full cross-attention model
+(${\sim}27$M parameters) did not converge above Cox(binary).  The haploidentical
+scale-up simulation (Section~\ref{sec:haplo}) scales to $N=10{,}000$ and
+uses a compact variant ($d_{\mathrm{proj}}=64$, 469K parameters) that self-attends
+over per-locus alloreactivity embeddings: CAPA achieves $C_{\mathrm{GvHD}}=0.732$,
+statistically indistinguishable from Cox (ESM-2 distances) at 0.759 (CIs overlap),
+confirming that the attention mechanism recovers the main-effect alloreactivity
+signal from raw embeddings without explicit distance features.  The cross-locus
+interaction advantage is expected to emerge at registry scale ($N \gg 10{,}000$),
+where the signal-to-noise ratio for the multiplicative interaction terms
+($d_{\mathrm{DRB1}}\!\cdot\!d_{\mathrm{DQB1}}$, coefficient 2.5) reaches
+sufficient power.
 
 %% ── Haploidentical Scale-Up Simulation ──────────────────────────────────────
 \subsection{Scale-Up Simulation: Haploidentical Setting at $N=10{,}000$}
