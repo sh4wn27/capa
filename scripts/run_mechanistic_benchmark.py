@@ -27,10 +27,10 @@ EXPERIMENTAL DESIGN
      that binary indicators lose. CAPA(C) should match Cox(B) or better.
 
 OUTCOME MODEL (all signal is in continuous distances, not binary mismatch):
-  log h_GvHD  = log(1/2800) + 3.5·dist_DRB1 + 2.0·dist_DQB1 + 0.4·age_norm
-  log h_TRM   = log(1/2600) + 2.5·dist_DRB1 + 1.8·dist_A   + 1.0·dist_C + 0.6·age_norm
-  log h_Rel   = log(1/1800) - 1.2·dist_B    + 2.0·disease_risk - 0.5·dist_DRB1
-  (distances normalised to [0,1] by per-locus max pairwise L2)
+  log h_GvHD  = log(1/25000) + 4.0·dist_DRB1 + 1.5·dist_DQB1 + 0.15·age_norm
+  log h_TRM   = log(1/8000)  + 3.0·dist_DRB1 + 2.0·dist_A    + 1.0·dist_C   + 0.8·age_norm
+  log h_Rel   = log(1/2500)  - 1.0·dist_B    + 2.0·disease_risk - 0.5·dist_DRB1
+  (distances normalised to [0,1] by per-locus max pairwise L2 within EURO_FREQS simulation pool)
 
 Usage
 -----
@@ -136,16 +136,21 @@ _POOLS = {loc: _normalize_pool(EURO_FREQS[loc]) for loc in LOCI}
 # ---------------------------------------------------------------------------
 
 def _compute_max_l2(embs: dict[str, np.ndarray]) -> dict[str, float]:
+    # Use only the simulation pool alleles (EURO_FREQS) — not all alleles in the
+    # embedding cache. The cache contains rare/outlier alleles whose cross-group
+    # L2 distances are 5-10x larger than distances among common European alleles,
+    # which would compress the normalised distances of actually-simulated pairs
+    # into [0.03, 0.14] instead of the intended [0.20, 1.00].
     max_l2: dict[str, float] = {}
     for loc in LOCI:
-        alleles_l = [k for k in embs if k.startswith(loc + "*")]
-        vecs = np.stack([embs[a] for a in alleles_l])
+        pool_alleles = [a for a in _POOLS[loc][0] if a in embs]
+        vecs = np.stack([embs[a] for a in pool_alleles])
         dists = np.array([
             np.linalg.norm(vecs[i] - vecs[j])
             for i in range(len(vecs)) for j in range(i + 1, len(vecs))
         ])
         max_l2[loc] = float(dists.max())
-        logger.debug("max L2 %s: %.3f", loc, max_l2[loc])
+        logger.debug("max L2 %s (pool): %.3f", loc, max_l2[loc])
     return max_l2
 
 
@@ -168,7 +173,7 @@ def _make_outcome(
     # chance; Cox(distances) achieves high C-index.  10x hazard ratio across
     # the observed DRB1 distance range [0.32, 1.0].
     log_h_gvhd = (
-        np.log(1 / 7000)          # λ₀ calibrated for ~25% GvHD rate
+        np.log(1 / 25000)         # λ₀ calibrated for ~25% GvHD rate with pool-normalised distances
         + 4.0 * dist["DRB1"]      # dominant driver
         + 1.5 * dist["DQB1"]
         + 0.15 * age_norm         # weak age effect so Cox(binary) ≈ 0.5
@@ -674,10 +679,10 @@ def main() -> None:
         "epochs": args.epochs if not args.no_capa else 0,
         "seed": SEED,
         "outcome_model": {
-            "GvHD":    "log h = log(1/7000) + 4.0*dist_DRB1 + 1.5*dist_DQB1 + 0.15*age_norm",
-            "TRM":     "log h = log(1/8000) + 3.0*dist_DRB1 + 2.0*dist_A   + 1.0*dist_C + 0.8*age_norm",
-            "Relapse": "log h = log(1/2500) - 1.0*dist_B   + 2.0*disease_risk - 0.5*dist_DRB1",
-            "note":    "Distances normalised by per-locus max pairwise L2; range [0,1]. No n_mm term.",
+            "GvHD":    "log h = log(1/25000) + 4.0*dist_DRB1 + 1.5*dist_DQB1 + 0.15*age_norm",
+            "TRM":     "log h = log(1/8000)  + 3.0*dist_DRB1 + 2.0*dist_A   + 1.0*dist_C + 0.8*age_norm",
+            "Relapse": "log h = log(1/2500)  - 1.0*dist_B   + 2.0*disease_risk - 0.5*dist_DRB1",
+            "note":    "Distances normalised by per-locus max pairwise L2 within EURO_FREQS pool; range [0,1].",
         },
         "results": {k: v for k, v in all_results.items()},
     }

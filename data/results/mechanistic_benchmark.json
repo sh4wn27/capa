@@ -4,44 +4,44 @@
   "epochs": 0,
   "seed": 42,
   "outcome_model": {
-    "GvHD": "log h = log(1/7000) + 4.0*dist_DRB1 + 1.5*dist_DQB1 + 0.15*age_norm",
-    "TRM": "log h = log(1/8000) + 3.0*dist_DRB1 + 2.0*dist_A   + 1.0*dist_C + 0.8*age_norm",
-    "Relapse": "log h = log(1/2500) - 1.0*dist_B   + 2.0*disease_risk - 0.5*dist_DRB1",
-    "note": "Distances normalised by per-locus max pairwise L2; range [0,1]. No n_mm term."
+    "GvHD": "log h = log(1/25000) + 4.0*dist_DRB1 + 1.5*dist_DQB1 + 0.15*age_norm",
+    "TRM": "log h = log(1/8000)  + 3.0*dist_DRB1 + 2.0*dist_A   + 1.0*dist_C + 0.8*age_norm",
+    "Relapse": "log h = log(1/2500)  - 1.0*dist_B   + 2.0*disease_risk - 0.5*dist_DRB1",
+    "note": "Distances normalised by per-locus max pairwise L2 within EURO_FREQS pool; range [0,1]."
   },
   "results": {
     "Cox (binary mismatch)": {
       "GvHD": {
-        "cindex": 0.4856595111368968,
-        "ci_low": 0.43816864946521,
-        "ci_hi": 0.5316849143821716
+        "cindex": 0.5007230965546576,
+        "ci_low": 0.4368095977541182,
+        "ci_hi": 0.5683927977505522
       },
       "Relapse": {
-        "cindex": 0.7035064759240038,
-        "ci_low": 0.650634131850899,
-        "ci_hi": 0.7559836821419551
+        "cindex": 0.6735580006907781,
+        "ci_low": 0.607174303427031,
+        "ci_hi": 0.7330122907022658
       },
       "TRM": {
-        "cindex": 0.6520726024037282,
-        "ci_low": 0.5922206519749044,
-        "ci_hi": 0.7175002284435206
+        "cindex": 0.6580479137307763,
+        "ci_low": 0.6053599269760868,
+        "ci_hi": 0.7043876071044128
       }
     },
     "Cox (ESM-2 distances)": {
       "GvHD": {
-        "cindex": 0.6779759352218551,
-        "ci_low": 0.6340684937820449,
-        "ci_hi": 0.7221000069932195
+        "cindex": 0.6946405784772437,
+        "ci_low": 0.6430281213439158,
+        "ci_hi": 0.7476839915943153
       },
       "Relapse": {
-        "cindex": 0.7208809061780767,
-        "ci_low": 0.6751177300266313,
-        "ci_hi": 0.7696415548782197
+        "cindex": 0.6908274534958306,
+        "ci_low": 0.6250382037938574,
+        "ci_hi": 0.7497481366851744
       },
       "TRM": {
-        "cindex": 0.7045621780721119,
-        "ci_low": 0.6469961278192604,
-        "ci_hi": 0.7628013327366431
+        "cindex": 0.6843637032044605,
+        "ci_low": 0.6343518283090686,
+        "ci_hi": 0.728806724925359
       }
     }
   }

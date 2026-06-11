@@ -104,8 +104,8 @@ cross-validation yields Cox relapse $0.60 \pm 0.14$ and TRM $0.56 \pm 0.06$,
 correcting for the optimism in the single 29-patient test split.  A controlled mechanistic simulation demonstrates the core hypothesis directly:
 in a cohort where all patients share an identical binary DRB1 mismatch
 profile, a Cox model restricted to binary mismatch achieves GvHD
-$C = 0.486$ (chance), whereas a Cox model given the continuous ESM-2
-alloreactivity distances achieves $C = 0.678$ ($\Delta C = +0.192$),
+$C = 0.501$ (chance), whereas a Cox model given the continuous ESM-2
+alloreactivity distances achieves $C = 0.695$ ($\Delta C = +0.194$),
 validating that embedding distances encode immunologically relevant
 allele-pair divergence that binary indicators cannot represent.  Real-world
 validation on the publicly available IHWG HCT dataset ($n=1{,}347$,
@@ -337,7 +337,7 @@ implemented a controlled imputation procedure.  For each patient a
 donor--recipient genotype was generated at five HSCT loci (HLA-A, -B, -C,
 -DRB1, -DQB1) by: (i)~sampling two alleles per locus from a European
 population frequency distribution (approximate values from published NMDP/EFI
-registry data), restricted to the 98 alleles present in our ESM-2 embedding
+registry data), restricted to the 270 alleles present in our ESM-2 embedding
 cache; and (ii)~introducing exactly $k$ allele-position mismatches, where $k$
 equals the patient's recorded HLAmatch score (0 for 10/10, 1 for 9/10, etc.).
 Mismatch positions were sampled uniformly at random from the ten allele slots
@@ -404,7 +404,7 @@ task-specific adaptation of deep contextual representations when sufficient
 labelled data are available.  Embeddings are computed once per unique allele
 and cached in an HDF5 file, requiring approximately 4\,h of GPU time and
 600\,MB of storage for a typical registry-scale allele vocabulary.  A prototype
-cache of 98 alleles spanning the five primary loci (and DPB1 when supplied) is
+cache of 270 alleles spanning the five primary loci (and DPB1 when supplied) is
 distributed with the open-source release to support architecture testing.
 
 \subsection{Donor--Recipient Interaction Network}
@@ -1067,7 +1067,7 @@ designed a controlled validation experiment to demonstrate the full CAPA
 pipeline on real clinical outcomes.  For each patient we sampled a plausible
 donor--recipient HLA genotype by (i) drawing two alleles per locus from a
 European population allele frequency table (NMDP/EFI reference data) restricted
-to the 98 alleles present in our ESM-2 embedding cache, and (ii) introducing
+to the 270 alleles present in our ESM-2 embedding cache, and (ii) introducing
 exactly the number of allele-position mismatches recorded in each patient's
 HLAmatch score.  Mismatch positions were selected uniformly at random from the
 ten positions (two alleles $\times$ five loci).  All 187 imputed mismatch
@@ -1113,7 +1113,7 @@ mismatch flags.  To test this hypothesis we designed a controlled mechanistic
 simulation using real ESM-2 embeddings.
 
 \paragraph{Design.}
-We generated a cohort of $N = 2{,}000$ synthetic HSCT patients from the 98
+We generated a cohort of $N = 2{,}000$ synthetic HSCT patients from the 270
 alleles in our embedding cache.  Each patient was assigned exactly one DRB1
 mismatch with all other loci perfectly matched, using homozygous recipients so
 that the alloreactivity distance reduces to the exact Euclidean (L2) distance
@@ -1130,9 +1130,9 @@ driven \emph{entirely} by the continuous alloreactivity distances:
 \log h_{\mathrm{rel}}  &= \log \lambda_0^{\mathrm{R}} - 1.0\,d_{\mathrm{B}} + 2.0\,\mathbb{1}_{\mathrm{high\text{-}risk}} - 0.5\,d_{\mathrm{DRB1}},
 \end{align}
 where $d_{\ell}$ denotes the per-locus alloreactivity distance normalised by the
-maximum pairwise L2 in the embedding cache ($d_{\ell} \in [0,1]$), and
+maximum pairwise L2 within the simulation allele pool ($d_{\ell} \in [0,1]$), and
 $\lambda_0$ values are calibrated for realistic event rates
-($\approx$30\,\% GvHD, 20\,\% TRM, 25\,\% relapse, 15\,\% censored).
+($\approx$28\,\% GvHD, 38\,\% TRM, 24\,\% relapse, 10\,\% censored for an all-DRB1-mismatched cohort).
 The age term in Equation~\eqref{eq:hGvHD} is intentionally weak ($\beta = 0.15$)
 so that Cox models restricted to clinical covariates cannot exploit it
 meaningfully.  All signal not explained by alloreactivity derives from this
@@ -1156,13 +1156,13 @@ We compared two cause-specific Cox PH models on an 80/20 train/test split
 Table~\ref{tab:mechanistic} reports test-set concordance indices with 1{,}000-sample
 bootstrap 95\,\% confidence intervals.  For GvHD---the outcome driven almost
 entirely by DRB1 alloreactivity in the simulation---the Cox model with binary
-mismatch achieves $C = 0.486$ (95\,\%~CI 0.44--0.53), statistically
+mismatch achieves $C = 0.501$ (95\,\%~CI 0.44--0.57), statistically
 indistinguishable from chance ($C = 0.5$), confirming that binary indicators
 carry no discriminative information in this stratum.  Adding the continuous
-ESM-2 alloreactivity distance raises the GvHD concordance index to $C = 0.678$
-(95\,\%~CI 0.63--0.72), a gain of $\Delta C = +0.192$ ($p < 0.001$ by
+ESM-2 alloreactivity distance raises the GvHD concordance index to $C = 0.695$
+(95\,\%~CI 0.64--0.75), a gain of $\Delta C = +0.194$ ($p < 0.001$ by
 bootstrap permutation test).  For TRM, which also includes a DRB1 distance
-term, the gain is smaller but consistent ($\Delta C = +0.052$).  Relapse is
+term, the gain is smaller but consistent ($\Delta C = +0.026$).  Relapse is
 driven primarily by disease risk in this simulation (the protective GvL effect
 through $d_{\mathrm{B}}$ is zero because B-locus distances are all zero in the
 controlled cohort), so both models exploit disease risk equally and the gain is
@@ -1181,22 +1181,22 @@ $\Delta$ = Cox(ESM-2) $-$ Cox(binary).}
 \toprule
 Model & GvHD & Relapse & TRM \\
 \midrule
-Cox (binary mismatch) & 0.486 (0.44--0.53) & 0.704 (0.65--0.76) & 0.652 (0.59--0.72) \\
-Cox (ESM-2 distances) & 0.678 (0.63--0.72) & 0.721 (0.68--0.77) & 0.705 (0.65--0.76) \\
+Cox (binary mismatch) & 0.501 (0.44--0.57) & 0.674 (0.61--0.73) & 0.658 (0.61--0.70) \\
+Cox (ESM-2 distances) & 0.695 (0.64--0.75) & 0.691 (0.63--0.75) & 0.684 (0.63--0.73) \\
 \midrule
-$\Delta$ C-index      & $\mathbf{+0.192}$ & $+0.017$ & $+0.052$ \\
+$\Delta$ C-index      & $\mathbf{+0.194}$ & $+0.017$ & $+0.026$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \paragraph{Interpretation.}
-The $\Delta C = +0.192$ for GvHD directly validates CAPA's foundational
+The $\Delta C = +0.194$ for GvHD directly validates CAPA's foundational
 assumption: Euclidean distances in ESM-2 embedding space encode
 immunologically relevant allele-pair divergence that binary HLA match/mismatch
 flags cannot represent.  Two patients who are ``equally mismatched'' at DRB1
-under standard clinical coding can differ by a factor of $\approx$11 in their
+under standard clinical coding can differ by a factor of $\approx$25 in their
 GvHD hazard when the actual embedding distance is taken into account
-($e^{4.0 \times (1.0 - 0.32)} \approx 11$).  Predicting this difference from
+($e^{4.0 \times (1.0 - 0.19)} \approx 25$, spanning the observed distance range).  Predicting this difference from
 raw HLA typing strings---exactly what CAPA is designed to do---requires the
 continuous structural representation provided by ESM-2.
 
@@ -1477,9 +1477,9 @@ neural competing-risks performance on small cohorts.
 A controlled mechanistic simulation (Section~\ref{sec:mechanistic}) directly
 validates CAPA's foundational hypothesis: in a cohort where all patients share
 an identical binary DRB1 mismatch profile, a Cox model using only binary mismatch
-indicators achieves GvHD $C = 0.486$ (chance), while the same model augmented
-with continuous ESM-2 alloreactivity distances reaches $C = 0.678$
-($\Delta C = +0.192$).  This $19.2$-percentage-point gain demonstrates that
+indicators achieves GvHD $C = 0.501$ (chance), while the same model augmented
+with continuous ESM-2 alloreactivity distances reaches $C = 0.695$
+($\Delta C = +0.194$).  This $19.4$-percentage-point gain demonstrates that
 ESM-2 embedding distances encode immunologically relevant allele-pair divergence
 invisible to standard binary indicators---the information CAPA's cross-attention
 architecture is designed to exploit at registry scale.  A separate end-to-end
