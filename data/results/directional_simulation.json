@@ -1,0 +1,65 @@
+{
+  "n": 10000,
+  "mode": "directional",
+  "seed": 42,
+  "epochs": 0,
+  "outcome_model": {
+    "GvHD": "log h = log(1/60000) + 2.5*relu(z_DRB1) + 1.5*relu(z_DQB1) + 0.3*age; z_l = standardised(w_l . (e_recip - e_donor))  [DIRECTIONAL]",
+    "TRM": "log h = log(1/150000) + 2.0*d_DRB1 + 2.0*d_A + 1.0*d_C + 0.5*age",
+    "Relapse": "log h = log(1/4000) - 0.8*d_B + 2.5*disease_risk",
+    "note": "Scalar distances are symmetric/magnitude-only and cannot represent the signed projection direction. CAPA sees signed (e_D - e_R)."
+  },
+  "results": {
+    "Cox (binary mismatch)": {
+      "GvHD": {
+        "cindex": 0.5090701112585926,
+        "ci_low": 0.449331731831926,
+        "ci_hi": 0.5620171187006027
+      },
+      "Relapse": {
+        "cindex": 0.7689159938697803,
+        "ci_low": 0.7403208941318853,
+        "ci_hi": 0.7967356697871452
+      },
+      "TRM": {
+        "cindex": 0.5783384201181372,
+        "ci_low": 0.524365874229019,
+        "ci_hi": 0.6340712657306445
+      }
+    },
+    "Cox (scalar distances)": {
+      "GvHD": {
+        "cindex": 0.5290124855665986,
+        "ci_low": 0.4737416764582833,
+        "ci_hi": 0.581691185838023
+      },
+      "Relapse": {
+        "cindex": 0.7747302229314458,
+        "ci_low": 0.7459482347198042,
+        "ci_hi": 0.8022231002313674
+      },
+      "TRM": {
+        "cindex": 0.6753780274106138,
+        "ci_low": 0.6259173829766217,
+        "ci_hi": 0.7249553271270799
+      }
+    },
+    "Cox (oracle direction)": {
+      "GvHD": {
+        "cindex": 0.8741731144851997,
+        "ci_low": 0.8430367574361692,
+        "ci_hi": 0.9033488821129718
+      },
+      "Relapse": {
+        "cindex": 0.7724603563321905,
+        "ci_low": 0.743587137087051,
+        "ci_hi": 0.8000184403721996
+      },
+      "TRM": {
+        "cindex": 0.6810876048786715,
+        "ci_low": 0.6325266801000985,
+        "ci_hi": 0.7286995960991399
+      }
+    }
+  }
+}

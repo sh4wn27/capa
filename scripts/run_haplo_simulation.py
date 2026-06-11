@@ -346,6 +346,7 @@ def train_capa(
     epochs: int, lr: float, batch_size: int, patience: int,
     alpha: float = 0.0,
     diff_mode: bool = False,
+    signed_diff: bool = False,
 ) -> int:
     """Train CAPA with early stopping on validation C-index (GvHD).
 
@@ -375,9 +376,10 @@ def train_capa(
             d_e = donor_tr[bt].to(device)
             r_e = recip_tr[bt].to(device)
             if diff_mode:
-                # Per-locus |donor - recipient| absolute difference;
-                # self-attention on this directly encodes alloreactivity.
-                diff_e = (d_e - r_e).abs()
+                # Per-locus donor - recipient difference; self-attention on this
+                # directly encodes alloreactivity. signed_diff preserves the
+                # mismatch *direction* (GvH vs HvD), which |.| would destroy.
+                diff_e = (d_e - r_e) if signed_diff else (d_e - r_e).abs()
                 d_e = diff_e
                 r_e = diff_e
             ct = cont_tr[bt]
@@ -399,8 +401,13 @@ def train_capa(
         if ep % 10 == 0:
             model.eval()
             with torch.no_grad():
-                va_d = donor_va if not diff_mode else (donor_va - recip_va).abs()
-                va_r = recip_va if not diff_mode else va_d
+                if not diff_mode:
+                    va_d = donor_va
+                elif signed_diff:
+                    va_d = (donor_va - recip_va)
+                else:
+                    va_d = (donor_va - recip_va).abs()
+                va_r = donor_va if not diff_mode else va_d
                 clin_va = model.clinical_encoder(cont_va, cat_va)
                 cif_va = model.cif(va_d, va_r, clin_va).cpu().numpy()
             etype_va = types_va.cpu().numpy()
@@ -494,9 +501,39 @@ def main() -> None:
     dist_feats = ["age_norm", "disease_risk"] + [f"dist_{loc}" for loc in LOCI]
     cox_dist = run_cox(df_tr, df_te, dist_feats, "Cox-distances")
 
+    # --- Cox: distances + TRUE interaction terms (oracle ceiling) ---
+    # The DGP contains d_DRB1·d_DQB1 (GvHD) and d_DRB1·d_A (TRM).  A linear Cox
+    # given these exact product columns is the best a linear model can do — the
+    # ceiling that any architecture learning interactions from data should
+    # approach.  Validates that the interaction signal is real and recoverable.
+    logger.info("Running Cox (distances + true interactions, oracle ceiling)...")
+    for d in (df_tr, df_va, df_te, df):
+        d["int_DRB1_DQB1"] = d["dist_DRB1"] * d["dist_DQB1"]
+        d["int_DRB1_A"] = d["dist_DRB1"] * d["dist_A"]
+    oracle_feats = dist_feats + ["int_DRB1_DQB1", "int_DRB1_A"]
+    cox_oracle = run_cox(df_tr, df_te, oracle_feats, "Cox-oracle")
+
+    # --- Cox: distances + ALL pairwise interactions (realistic ceiling) ---
+    # What a statistician who *suspected* interactions but didn't know the true
+    # form would build: all 10 pairwise products.  Tests whether the gain
+    # survives without oracle knowledge of which interactions matter.
+    logger.info("Running Cox (distances + all pairwise interactions)...")
+    pair_cols: list[str] = []
+    for a_idx in range(len(LOCI)):
+        for b_idx in range(a_idx + 1, len(LOCI)):
+            la, lb = LOCI[a_idx], LOCI[b_idx]
+            col = f"pair_{la}_{lb}"
+            for d in (df_tr, df_va, df_te, df):
+                d[col] = d[f"dist_{la}"] * d[f"dist_{lb}"]
+            pair_cols.append(col)
+    allpair_feats = dist_feats + pair_cols
+    cox_allpair = run_cox(df_tr, df_te, allpair_feats, "Cox-allpairs")
+
     all_results: dict[str, dict] = {
         "Cox (binary mismatch)": cox_binary,
         "Cox (ESM-2 distances)": cox_dist,
+        "Cox (distances + true interactions)": cox_oracle,
+        "Cox (distances + all pairwise)": cox_allpair,
     }
 
     # --- CAPA ---
