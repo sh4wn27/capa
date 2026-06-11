@@ -1,0 +1,65 @@
+{
+  "n": 10000,
+  "mode": "haploidentical",
+  "epochs": 500,
+  "seed": 42,
+  "outcome_model": {
+    "GvHD": "log h = log(1/200000) + 3.5*d_DRB1 + 2.0*d_DQB1 + 2.5*d_DRB1*d_DQB1 + 0.3*age_norm",
+    "TRM": "log h = log(1/150000) + 2.0*d_DRB1 + 2.0*d_A   + 1.5*d_DRB1*d_A     + 1.0*d_C + 0.5*age_norm",
+    "Relapse": "log h = log(1/4000)   - 0.8*d_B   + 2.5*disease_risk - 0.3*d_DRB1",
+    "note": "Pool-normalised distances [0,1]. Interaction terms not in Cox(distances) features."
+  },
+  "results": {
+    "Cox (binary mismatch)": {
+      "GvHD": {
+        "cindex": 0.5378212552448813,
+        "ci_low": 0.5079090170303887,
+        "ci_hi": 0.5679630595509042
+      },
+      "Relapse": {
+        "cindex": 0.7714779692984755,
+        "ci_low": 0.7378780113968011,
+        "ci_hi": 0.8059027396539341
+      },
+      "TRM": {
+        "cindex": 0.6429209085134509,
+        "ci_low": 0.604335509398129,
+        "ci_hi": 0.6842862453807814
+      }
+    },
+    "Cox (ESM-2 distances)": {
+      "GvHD": {
+        "cindex": 0.7590179898929583,
+        "ci_low": 0.7352977828710966,
+        "ci_hi": 0.7820546002427287
+      },
+      "Relapse": {
+        "cindex": 0.7908628909729135,
+        "ci_low": 0.7539494961595239,
+        "ci_hi": 0.8228266784467896
+      },
+      "TRM": {
+        "cindex": 0.694252261841405,
+        "ci_low": 0.6550054522553117,
+        "ci_hi": 0.7345626025953038
+      }
+    },
+    "CAPA (diff self-attn)": {
+      "GvHD": {
+        "cindex": 0.7319069126233825,
+        "ci_low": 0.7072685446790047,
+        "ci_hi": 0.7562079256524671
+      },
+      "Relapse": {
+        "cindex": 0.7507727772829674,
+        "ci_low": 0.7086433467084591,
+        "ci_hi": 0.7910502898747146
+      },
+      "TRM": {
+        "cindex": 0.6261566722175488,
+        "ci_low": 0.5820911379918906,
+        "ci_hi": 0.6694294151762197
+      }
+    }
+  }
+}

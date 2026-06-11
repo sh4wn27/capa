@@ -298,6 +298,7 @@ class CAPAModel(nn.Module):
         dropout: float = 0.1,
         use_pos_embed: bool = False,
         cat_embed_dim: int = 8,
+        proj_dim: int | None = None,
         # Backward-compatibility alias
         n_loci: int | None = None,
     ) -> None:
@@ -332,6 +333,7 @@ class CAPAModel(nn.Module):
             num_layers=num_layers,
             dropout=dropout,
             use_pos_embed=use_pos_embed,
+            proj_dim=proj_dim,
         )
 
         self.clinical_encoder = ClinicalEncoder(

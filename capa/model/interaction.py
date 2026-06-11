@@ -190,37 +190,48 @@ class CrossAttentionInteraction(nn.Module):
         num_layers: int = 2,
         dropout: float = 0.1,
         use_pos_embed: bool = False,
+        proj_dim: int | None = None,
     ) -> None:
         super().__init__()
-        if embedding_dim % num_heads != 0:
+        # Effective dimension inside cross-attention blocks
+        attn_dim = proj_dim if proj_dim is not None else embedding_dim
+        if attn_dim % num_heads != 0:
             raise ValueError(
-                f"embedding_dim ({embedding_dim}) must be divisible by "
+                f"attn_dim ({attn_dim}) must be divisible by "
                 f"num_heads ({num_heads})"
             )
         self._embedding_dim = embedding_dim
         self._interaction_dim = interaction_dim
         self._use_pos_embed = use_pos_embed
 
+        # Optional linear projection: embedding_dim → proj_dim before MHA.
+        # Reduces parameters 1280²→proj_dim² inside attention blocks, which
+        # matters at small N (e.g. 10k samples would be overwhelmed by 27M params).
+        if proj_dim is not None:
+            self.input_proj: nn.Linear | None = nn.Linear(embedding_dim, proj_dim)
+        else:
+            self.input_proj = None
+
         self.blocks = nn.ModuleList(
             [
-                _CrossAttentionBlock(embedding_dim, num_heads, dropout)
+                _CrossAttentionBlock(attn_dim, num_heads, dropout)
                 for _ in range(num_layers)
             ]
         )
 
         # V2: optional learned per-locus positional embedding projected to
-        # embedding_dim so it can be added to the allele embeddings.
+        # attn_dim so it can be added to the allele embeddings.
         if use_pos_embed:
             _POS_DIM = 32
             self.pos_embed = nn.Embedding(self.MAX_LOCI, _POS_DIM)
-            self.pos_proj = nn.Linear(_POS_DIM, embedding_dim, bias=False)
+            self.pos_proj = nn.Linear(_POS_DIM, attn_dim, bias=False)
         else:
             self.pos_embed = None  # type: ignore[assignment]
             self.pos_proj = None   # type: ignore[assignment]
 
         # Project concatenated pooled vectors → interaction_dim
         self.projection = nn.Sequential(
-            nn.Linear(embedding_dim * 2, interaction_dim * 4),
+            nn.Linear(attn_dim * 2, interaction_dim * 4),
             nn.GELU(),
             nn.Dropout(dropout),
             nn.Linear(interaction_dim * 4, interaction_dim),
@@ -274,6 +285,11 @@ class CrossAttentionInteraction(nn.Module):
             Interaction feature vector, shape ``(batch, interaction_dim)``.
         """
         d, r = donor, recipient
+
+        # Apply optional input projection: (batch, n_loci, embedding_dim) → (batch, n_loci, proj_dim)
+        if self.input_proj is not None:
+            d = self.input_proj(d)
+            r = self.input_proj(r)
 
         # Add learned per-locus positional bias before the first block
         if self._use_pos_embed and self.pos_embed is not None and self.pos_proj is not None:
