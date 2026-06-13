@@ -1,0 +1,82 @@
+{
+  "n": 10000,
+  "mode": "directional",
+  "seed": 0,
+  "epochs": 500,
+  "outcome_model": {
+    "GvHD": "log h = log(1/60000) + 2.5*relu(z_DRB1) + 1.5*relu(z_DQB1) + 0.3*age; z_l = standardised(w_l . (e_recip - e_donor))  [DIRECTIONAL]",
+    "TRM": "log h = log(1/150000) + 2.0*d_DRB1 + 2.0*d_A + 1.0*d_C + 0.5*age",
+    "Relapse": "log h = log(1/4000) - 0.8*d_B + 2.5*disease_risk",
+    "note": "Scalar distances are symmetric/magnitude-only and cannot represent the signed projection direction. CAPA sees signed (e_D - e_R)."
+  },
+  "results": {
+    "Cox (binary mismatch)": {
+      "GvHD": {
+        "cindex": 0.5526086470785387,
+        "ci_low": 0.49782085842770646,
+        "ci_hi": 0.6037158586649103
+      },
+      "Relapse": {
+        "cindex": 0.770318561308821,
+        "ci_low": 0.7432139054889889,
+        "ci_hi": 0.7996721765501266
+      },
+      "TRM": {
+        "cindex": 0.5690129767990563,
+        "ci_low": 0.5169802653210928,
+        "ci_hi": 0.6223334290826396
+      }
+    },
+    "Cox (scalar distances)": {
+      "GvHD": {
+        "cindex": 0.6557703049938555,
+        "ci_low": 0.6123538263805117,
+        "ci_hi": 0.7020346904028764
+      },
+      "Relapse": {
+        "cindex": 0.7887660229381008,
+        "ci_low": 0.7613141539103775,
+        "ci_hi": 0.8153277495748138
+      },
+      "TRM": {
+        "cindex": 0.6741977382952609,
+        "ci_low": 0.6277859763076558,
+        "ci_hi": 0.7201122586013631
+      }
+    },
+    "Cox (oracle direction)": {
+      "GvHD": {
+        "cindex": 0.8921796447324322,
+        "ci_low": 0.865119139103232,
+        "ci_hi": 0.9148957452464723
+      },
+      "Relapse": {
+        "cindex": 0.7889715803676842,
+        "ci_low": 0.7622005293264648,
+        "ci_hi": 0.8157860015137927
+      },
+      "TRM": {
+        "cindex": 0.6695027347799664,
+        "ci_low": 0.6235392135261479,
+        "ci_hi": 0.7161310724527965
+      }
+    },
+    "CAPA (signed diff)": {
+      "GvHD": {
+        "cindex": 0.8719919562060106,
+        "ci_low": 0.8386000175926267,
+        "ci_hi": 0.8992914507347992
+      },
+      "Relapse": {
+        "cindex": 0.7775288834542081,
+        "ci_low": 0.7502823505729891,
+        "ci_hi": 0.8049572565713573
+      },
+      "TRM": {
+        "cindex": 0.5711102372525888,
+        "ci_low": 0.5147884053242597,
+        "ci_hi": 0.622954694520825
+      }
+    }
+  }
+}

@@ -114,7 +114,21 @@ $C_{\mathrm{GvHD}} = 0.759$ vs.\ $0.538$ for binary mismatch ($\Delta C = +0.221
 CAPA (locus attention, $d_{\mathrm{proj}}=64$) achieves $C_{\mathrm{GvHD}}=0.732$,
 statistically indistinguishable from Cox (ESM-2 distances) (95\,\% CIs overlap),
 demonstrating that alloreactivity self-attention recovers the main-effect
-signal from raw embeddings without explicit distance features.  Real-world
+signal from raw embeddings without explicit distance features.  Crucially, a
+scalar mismatch distance is symmetric and magnitude-only
+($\lVert\mathbf{e}^{\mathrm{D}}-\mathbf{e}^{\mathrm{R}}\rVert =
+\lVert\mathbf{e}^{\mathrm{R}}-\mathbf{e}^{\mathrm{D}}\rVert$) and is therefore
+\emph{blind to the direction} of donor--recipient mismatch, whereas
+graft-versus-host alloreactivity is intrinsically directional.  In a directional
+GvHD simulation (six seeds), the scalar-distance Cox model collapses to
+near-chance ($C_{\mathrm{GvHD}} = 0.575 \pm 0.059$) while CAPA---learning the
+immunodominant direction end-to-end from the \emph{signed} difference
+embeddings---reaches $C_{\mathrm{GvHD}} = 0.869 \pm 0.023$, a gain of
+$\Delta C = +0.294$ that recovers $93\,\%$ of the gap to a direction-aware oracle
+($0.892 \pm 0.015$), with non-overlapping confidence intervals on every seed.
+This identifies the learned representation's genuine architectural advantage:
+it captures directional alloreactivity that no scalar distance can encode.
+Real-world
 validation on the publicly available IHWG HCT dataset ($n=1{,}347$,
 allele-level HLA typing, OS endpoint) confirms that ESM-2 distances are
 \emph{comparable} to binary mismatch indicators overall ($C = 0.602$ vs
@@ -1334,6 +1348,125 @@ $\Delta_2$ (CAPA $-$ distances)  & $-0.027$\textsuperscript{ns} & $-0.040$ & $-0
 overlaps that of Cox (ESM-2 distances) (0.74--0.78).}
 \end{table}
 
+%% ── Directional Alloreactivity ──────────────────────────────────────────────
+\subsection{Directional Alloreactivity: Where the Learned Representation Beats Scalar Distances}
+\label{sec:directional}
+
+The haploidentical experiment (Section~\ref{sec:haplo}) shows that CAPA's
+self-attention \emph{recovers} the main-effect signal already available to a
+Cox model fed hand-computed ESM-2 distances, but does not exceed it.  This is
+expected: when the outcome is a monotone function of per-locus alloreactivity
+magnitude, a scalar distance $d_l = \lVert \mathbf{e}^{\mathrm{D}}_l -
+\mathbf{e}^{\mathrm{R}}_l \rVert$ is a near-sufficient statistic, and no
+representation can substantially out-rank it.  We now construct the regime where
+this sufficiency \emph{breaks}, and where an end-to-end learned representation
+holds a provable advantage over any scalar distance.
+
+\paragraph{Distances are direction-blind by construction.}
+A Euclidean distance is symmetric and magnitude-only:
+$\lVert \mathbf{e}^{\mathrm{D}}_l - \mathbf{e}^{\mathrm{R}}_l \rVert =
+\lVert \mathbf{e}^{\mathrm{R}}_l - \mathbf{e}^{\mathrm{D}}_l \rVert$.
+It therefore discards the \emph{direction} of the donor--recipient difference
+vector.  Yet alloreactivity is intrinsically directional: graft-versus-host
+disease is driven by antigens the \emph{recipient} carries that the
+\emph{donor} lacks (donor-derived T~cells recognise them as foreign), which is
+encoded by the signed difference $\mathbf{e}^{\mathrm{R}}_l -
+\mathbf{e}^{\mathrm{D}}_l$, not by its magnitude.  Two allele pairs with
+identical distance can carry opposite immunological meaning depending on which
+direction the mismatch points.  A model operating on the \emph{signed}
+difference embedding can in principle learn the immunodominant direction; a
+scalar distance provably cannot represent it.
+
+\paragraph{Design.}
+We generated $N=10{,}000$ all-loci-mismatched patients as in
+Section~\ref{sec:haplo}, but drove GvHD hazard by the rectified projection of
+the signed per-locus difference onto a fixed, hidden immunodominant direction
+$\mathbf{w}_l$ (a seeded unit vector, never revealed to any model):
+\begin{align}
+\log h_{\mathrm{GvHD}} &= \log\lambda_0^{\mathrm{G}}
+    + 2.5\,\mathrm{relu}(z_{\mathrm{DRB1}})
+    + 1.5\,\mathrm{relu}(z_{\mathrm{DQB1}})
+    + 0.3\,z_{\mathrm{age}}, \\
+z_l &= \mathrm{standardise}\big(\mathbf{w}_l \cdot
+       (\mathbf{e}^{\mathrm{R}}_l - \mathbf{e}^{\mathrm{D}}_l)\big).
+\end{align}
+The $\mathrm{relu}(\cdot)$ encodes directionality: only the graft-versus-host
+direction raises hazard, while the reverse (host-versus-graft) projection does
+not.  As a \emph{control}, TRM was driven by ordinary scalar distances
+($2.0\,d_{\mathrm{DRB1}} + 2.0\,d_{\mathrm{A}} + 1.0\,d_{\mathrm{C}}$), a regime
+where the distance representation \emph{is} sufficient, and relapse by
+$-0.8\,d_{\mathrm{B}}$ plus disease risk.
+
+\paragraph{Models compared.}
+We compare four models, all using the same 80/10/10 split:
+(i)~\textbf{Cox (binary mismatch)}---all loci mismatched, so GvHD reduces to
+age/disease-risk only;
+(ii)~\textbf{Cox (scalar distances)}---five per-locus magnitudes $d_l$, the best
+a hand-computed distance representation can do;
+(iii)~\textbf{Cox (oracle direction)}---additionally given the \emph{true}
+directional features $\mathrm{relu}(z_l)$, establishing the achievable ceiling;
+and (iv)~\textbf{CAPA (signed diff)}, which self-attends over the raw
+\emph{signed} difference embeddings $\mathbf{e}^{\mathrm{D}}_l -
+\mathbf{e}^{\mathrm{R}}_l$ (the same 469K-parameter architecture as
+Section~\ref{sec:haplo}, trained with $\mathtt{signed\_diff}{=}\mathtt{True}$ so
+the directional information is preserved rather than destroyed by an absolute
+value).  Results are reported as mean\,$\pm$\,SD over six independent seeds.
+
+\paragraph{Results.}
+Table~\ref{tab:directional} reports the outcome.  On GvHD, the scalar-distance
+Cox model collapses to near-chance ($C = 0.575 \pm 0.059$): the magnitude of the
+mismatch carries little information once the signal lives in its direction.  The
+oracle, handed the true directional features, reaches $C = 0.892 \pm 0.015$.
+\textbf{CAPA, learning the immunodominant direction end-to-end from the signed
+difference embeddings, achieves $C = 0.869 \pm 0.023$}---a gain of
+$\Delta C = +0.294$ over the scalar-distance baseline, recovering $93\,\%$ of
+the direction-blind gap, with non-overlapping $95\,\%$ confidence intervals on
+\emph{every one} of the six seeds.  This is the experiment the haploidentical
+setting could not provide: a regime where CAPA does not merely match the
+distance baseline but decisively exceeds it, because the learned representation
+captures information that is \emph{provably absent} from any scalar distance.
+
+The TRM control confirms the result is specific, not generic.  There the
+generating signal is pure scalar distance, the distance-based Cox model is
+near-optimal ($C = 0.667 \pm 0.015$, matching its own oracle $0.666$), and
+CAPA---tuned end-to-end for the directional GvHD signal---is \emph{weaker}
+($C = 0.530 \pm 0.029$).  CAPA wins precisely and only where direction matters;
+where magnitude suffices, an explicit distance is the better feature.  The
+relapse endpoint, driven by a single scalar distance, is essentially tied
+across all models ($C \approx 0.77$--$0.78$), as expected.
+
+\begin{table}[ht]
+\centering
+\caption{Directional simulation ($N=10{,}000$): test-set C-index
+(mean\,$\pm$\,SD over six seeds).  GvHD hazard is driven by the \emph{signed}
+projection $\mathbf{w}_l\!\cdot\!(\mathbf{e}^{\mathrm{R}}-\mathbf{e}^{\mathrm{D}})$,
+which a symmetric scalar distance cannot represent; TRM is a scalar-distance
+control.  Cox (oracle direction) is given the true directional features and
+sets the ceiling.  CAPA (signed diff) self-attends over raw signed difference
+embeddings.  $\Delta C$ = CAPA $-$ Cox (scalar distances) on GvHD.}
+\label{tab:directional}
+\smallskip
+\begin{tabular}{lccc}
+\toprule
+Model & GvHD & Relapse & TRM \\
+\midrule
+Cox (binary mismatch)   & $0.534 \pm 0.024$ & $0.771 \pm 0.006$ & $0.594 \pm 0.025$ \\
+Cox (scalar distances)  & $0.575 \pm 0.059$ & $0.782 \pm 0.014$ & $\mathbf{0.667 \pm 0.015}$ \\
+Cox (oracle direction)  & $0.892 \pm 0.015$ & $0.782 \pm 0.013$ & $0.666 \pm 0.013$ \\
+CAPA (signed diff)      & $\mathbf{0.869 \pm 0.023}$ & $0.769 \pm 0.006$ & $0.530 \pm 0.029$ \\
+\midrule
+$\Delta C$ (CAPA $-$ distances) & $\mathbf{+0.294}$\textsuperscript{$\ast$} & $-0.013$ & $-0.137$ \\
+\bottomrule
+\end{tabular}
+\smallskip\\
+\noindent{\small\textsuperscript{$\ast$} CAPA recovers $93\,\%$ of the
+distance-to-oracle gap; the $95\,\%$ bootstrap CIs of CAPA and Cox (scalar
+distances) are non-overlapping on all six seeds.  On the TRM control, where the
+signal is genuine scalar distance, the distance-based Cox model is near-optimal
+and CAPA (tuned for the directional GvHD signal) is weaker---confirming the
+advantage is specific to directional structure.}
+\end{table}
+
 %% ── IHWG Real-World Validation ──────────────────────────────────────────────
 \subsection{Real-World Validation: IHWG Hematopoietic Cell Transplantation Dataset}
 \label{sec:ihwg}
@@ -1610,8 +1743,26 @@ $C_{\mathrm{GvHD}}=0.732$ from raw embeddings alone---statistically
 indistinguishable from Cox (ESM-2 distances) 0.759 (CIs overlap), confirming
 that self-attention over alloreactivity representations recovers the main-effect
 discriminative signal without explicit per-locus distance features.
-Full cross-attention advantage (cross-locus interaction learning) is expected
-to emerge at registry scale ($N \gg 10{,}000$).
+
+The directional simulation (Section~\ref{sec:directional}) isolates the learned
+representation's genuine architectural advantage.  A scalar mismatch distance is
+symmetric and magnitude-only and is therefore structurally incapable of encoding
+the \emph{direction} of donor--recipient mismatch---yet graft-versus-host
+alloreactivity is directional, depending on antigens the recipient carries that
+the donor lacks.  In a cohort where GvHD hazard is driven by the signed
+projection of the difference embedding onto a hidden immunodominant direction,
+the scalar-distance Cox model collapses to near-chance ($C_{\mathrm{GvHD}} =
+0.575 \pm 0.059$ over six seeds), whereas CAPA---learning that direction
+end-to-end from the signed difference embeddings---reaches $0.869 \pm 0.023$,
+recovering $93\,\%$ of the gap to a direction-aware oracle with non-overlapping
+confidence intervals on every seed.  A TRM control driven by genuine scalar
+distance reverses the ordering (distance-based Cox near-optimal, CAPA weaker),
+confirming the advantage is specific to directional structure rather than a
+generic capacity effect.  This is the clearest statement of what CAPA adds over
+the established practice of scalar HLA mismatch scoring: where alloreactivity is
+directional, an end-to-end learned representation captures signal that no
+hand-computed distance can, while where magnitude alone suffices, an explicit
+distance remains the better feature.
 
 Real-world validation on the IHWG HCT dataset (Section~\ref{sec:ihwg};
 $n=1{,}347$, allele-level HLA, OS endpoint) demonstrates that ESM-2 distances
@@ -1649,6 +1800,7 @@ All code, pre-trained weights, the allele imputation script
 the end-to-end CAPA evaluation script (\texttt{scripts/run\_capa\_imputed.py}),
 the mechanistic simulation script (\texttt{scripts/run\_mechanistic\_benchmark.py}),
 the haploidentical scale-up simulation script (\texttt{scripts/run\_haplo\_simulation.py}),
+the directional alloreactivity simulation script (\texttt{scripts/run\_directional\_simulation.py}),
 and the IHWG validation script (\texttt{scripts/run\_ihwg\_validation.py})
 are available at \url{https://github.com/sh4wn27/capa}.  HLA
 allele sequences were downloaded from the IPD-IMGT/HLA database (release
