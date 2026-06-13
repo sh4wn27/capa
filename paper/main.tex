@@ -1235,20 +1235,29 @@ the mismatched subgroup and is obscured when matched patients dominate the
 concordant pairs.  A registry-scale CAPA analysis can stratify within this
 subgroup and exploit the full distributional signal.
 
-CAPA's cross-attention architecture is designed to learn \emph{multi-locus}
-combinations of these distances from data.  In the $N=2{,}000$ mechanistic
-cohort (1{,}600 training patients), the full cross-attention model
-(${\sim}27$M parameters) did not converge above Cox(binary).  The haploidentical
-scale-up simulation (Section~\ref{sec:haplo}) scales to $N=10{,}000$ and
-uses a compact variant ($d_{\mathrm{proj}}=64$, 469K parameters) that self-attends
-over per-locus alloreactivity embeddings: CAPA achieves $C_{\mathrm{GvHD}}=0.732$,
-statistically indistinguishable from Cox (ESM-2 distances) at 0.759 (CIs overlap),
-confirming that the attention mechanism recovers the main-effect alloreactivity
-signal from raw embeddings without explicit distance features.  The cross-locus
-interaction advantage is expected to emerge at registry scale ($N \gg 10{,}000$),
-where the signal-to-noise ratio for the multiplicative interaction terms
-($d_{\mathrm{DRB1}}\!\cdot\!d_{\mathrm{DQB1}}$, coefficient 2.5) reaches
-sufficient power.
+We evaluate CAPA end-to-end on two larger synthetic cohorts where allele-level
+information is available by construction.  A note on model capacity: in the
+$N=2{,}000$ mechanistic cohort (1{,}600 training patients), the full
+bidirectional cross-attention model (${\sim}27.8$M parameters, the default
+configuration of Section~\ref{sec:interaction}) did not converge above
+Cox(binary)---the optimisation problem of learning donor--recipient
+alloreactivity from random initialisation is under-determined at this scale.
+The simulations therefore use a compact variant ($d_{\mathrm{proj}}=64$,
+469K parameters) that projects the per-locus difference embeddings and
+self-attends over them; this is the same architecture trained at two scales,
+and we report it as ``CAPA'' throughout the simulation results.  The
+haploidentical scale-up (Section~\ref{sec:haplo}, $N=10{,}000$) shows this
+variant achieves $C_{\mathrm{GvHD}}=0.732$, statistically indistinguishable from
+Cox (ESM-2 distances) at 0.759 (CIs overlap), confirming that the attention
+mechanism recovers the main-effect alloreactivity signal from raw embeddings
+without explicit distance features.  We caution against the natural expectation
+that a \emph{cross-locus interaction} advantage will emerge at registry scale:
+the oracle analysis in Section~\ref{sec:haplo} shows that the true multiplicative
+interaction term improves concordance by only $+0.001$, because monotone
+interactions are rank-redundant for the C-index at any sample size.  The genuine
+end-to-end advantage instead appears when the signal is \emph{directional}
+(Section~\ref{sec:directional}), a representational property of the learned
+model rather than a question of statistical power.
 
 %% ── Haploidentical Scale-Up Simulation ──────────────────────────────────────
 \subsection{Scale-Up Simulation: Haploidentical Setting at $N=10{,}000$}
@@ -1318,31 +1327,49 @@ statistically indistinguishable from Cox (ESM-2 distances) ($0.759$, CI~0.74--0.
 CIs overlap), while using only raw ESM-2 embeddings without explicit distance
 features.  This demonstrates that CAPA's self-attention over alloreactivity
 embeddings recovers the main-effect discriminative signal from raw protein
-representations.  Isolation of the cross-locus interaction advantage
-($d_{\mathrm{DRB1}}\times d_{\mathrm{DQB1}}$, coefficient 2.5 vs main-effect
-coefficients 3.5 + 2.0) requires larger registry-scale data where the
-interaction's marginal contribution can be estimated with sufficient power.
+representations.
+
+A natural hypothesis is that a model able to capture the cross-locus
+interaction term $d_{\mathrm{DRB1}}\!\cdot\!d_{\mathrm{DQB1}}$ (coefficient 2.5)
+would exceed the main-effects-only Cox model.  We test this directly with an
+\emph{oracle} Cox model given the true interaction feature: it reaches
+$C_{\mathrm{GvHD}} = 0.760$, a gain of only $+0.001$ over Cox (ESM-2 distances)
+at $0.759$ (a model given \emph{all} pairwise products performs identically).
+The reason is structural, not a question of sample size: the C-index measures
+rank concordance, and a product of two positively-signed distances is nearly
+monotone in their sum, so it scarcely reorders patients.  Monotone interactions
+are therefore \emph{rank-redundant}, and this ceiling holds at any $N$.  This
+result reorients the motivation for the architecture away from interaction
+learning and towards the directional signal isolated in
+Section~\ref{sec:directional}.
 
 \begin{table}[ht]
 \centering
 \caption{Haploidentical simulation ($N=10{,}000$): C-index (95\,\%~CI) on
 $n_{\mathrm{test}}=1{,}000$ patients.  All patients share identical binary mismatch
 profiles (all loci = 1); Cox (binary) reduces to age\,+\,disease-risk only.
-Cox (ESM-2 distances) uses main-effect scalars; CAPA (locus attention) self-attends
+Cox (ESM-2 distances) uses main-effect scalars; Cox (dist $+$ true interaction)
+is an \emph{oracle} additionally given the true $d_{\mathrm{DRB1}}\!\cdot\!d_{\mathrm{DQB1}}$
+term; CAPA (locus attention) self-attends
 over per-locus alloreactivity embeddings $|\mathbf{e}^D - \mathbf{e}^R|$ ($d_{\mathrm{proj}}=64$,
-469K params), enabling cross-locus interaction discovery.
-$\Delta_1$ = Cox(distances) $-$ Cox(binary); $\Delta_2$ = CAPA $-$ Cox(distances).}
+469K params).  The oracle's $+0.001$ GvHD gain shows the cross-locus interaction
+is rank-redundant for the C-index.
+$\Delta_1$ = Cox(distances) $-$ Cox(binary);
+$\Delta_{\mathrm{int}}$ = oracle interaction $-$ Cox(distances);
+$\Delta_2$ = CAPA $-$ Cox(distances).}
 \label{tab:haplo}
 \smallskip
 \begin{tabular}{lccc}
 \toprule
 Model & GvHD & Relapse & TRM \\
 \midrule
-Cox (binary mismatch)   & 0.538 (0.51--0.57) & 0.771 (0.74--0.81) & 0.643 (0.60--0.68) \\
-Cox (ESM-2 distances)   & 0.759 (0.74--0.78) & 0.791 (0.75--0.82) & 0.694 (0.66--0.73) \\
-CAPA (locus attention)  & 0.732 (0.71--0.76) & 0.751 (0.71--0.79) & 0.626 (0.58--0.67) \\
+Cox (binary mismatch)              & 0.538 (0.51--0.57) & 0.771 (0.74--0.81) & 0.643 (0.60--0.68) \\
+Cox (ESM-2 distances)              & 0.759 (0.74--0.78) & 0.791 (0.75--0.82) & 0.694 (0.66--0.73) \\
+Cox (dist $+$ true interaction)    & 0.760 (0.74--0.78) & 0.790 (0.75--0.82) & 0.694 (0.66--0.73) \\
+CAPA (locus attention)             & 0.732 (0.71--0.76) & 0.751 (0.71--0.79) & 0.626 (0.58--0.67) \\
 \midrule
 $\Delta_1$ (dist $-$ binary)     & $\mathbf{+0.221}$ & $+0.019$ & $+0.051$ \\
+$\Delta_{\mathrm{int}}$ (oracle int.\ $-$ dist) & $+0.001$\textsuperscript{ns} & $-0.001$ & $0.000$ \\
 $\Delta_2$ (CAPA $-$ distances)  & $-0.027$\textsuperscript{ns} & $-0.040$ & $-0.068$ \\
 \bottomrule
 \end{tabular}
@@ -1592,14 +1619,30 @@ weaker predictor), and between two HLA-DRB1 mismatches that differ vastly in
 their biochemical similarity---distinctions that aggregate mismatch scores
 cannot encode.
 
-The cross-attention architecture further allows the model to learn
-donor--recipient locus-pair interactions that are invisible to single-locus
-hazard models.  The established primacy of class II mismatching in acute GvHD
+It is worth stating precisely \emph{which} property of the architecture
+delivers this advantage, because a natural alternative hypothesis---that
+attention helps by learning cross-locus interactions---is not supported by our
+own experiments.  The haploidentical simulation (Section~\ref{sec:haplo})
+includes an oracle Cox model given the \emph{true} cross-locus interaction term
+$d_{\mathrm{DRB1}}\!\cdot\!d_{\mathrm{DQB1}}$; it improves concordance by only
+$+0.001$ over a main-effects-only model.  This is expected: the C-index measures
+rank concordance, and a product of two positively-signed distances is nearly
+monotone in their sum, so it barely reorders patients.  Monotone interactions
+are therefore \emph{rank-redundant}, and no architecture can win by ``learning
+interactions'' in this regime.  The advantage CAPA does hold
+(Section~\ref{sec:directional}) is of a different kind: it learns the
+\emph{direction} of the donor--recipient difference, information that is absent
+from any symmetric scalar distance by construction rather than merely hard to
+estimate.  This is the distinction between a representational limitation (which
+the learned model overcomes) and a statistical-power limitation (which it does
+not).
+
+Beyond prediction, the attention mechanism offers a route to interpretability.
+The established primacy of class II mismatching in acute GvHD
 pathophysiology \citep{petersdorf2015hladp, fleischhauer2012hla} and of
 T-cell-epitope (TCE) group mismatching at HLA-DPB1 in unrelated donor HSCT
-\citep{fleischhauer2012hla} motivate the cross-attention inductive bias:
-the model's attention weights can, in principle, automatically discover these
-inter-locus interaction hierarchies from training data.  \emph{Important
+\citep{fleischhauer2012hla} provide known biology against which a model's
+attention weights can be compared.  \emph{Important
 caveat:} attention weights are not causal explanations.  High attention between
 a donor--recipient locus pair indicates that the model's interaction feature
 vector is sensitive to allele divergence at that pair, but does not establish
@@ -1664,10 +1707,25 @@ this cohort.  Full validation of the CAPA pipeline requires a registry-scale
 dataset with high-resolution (field-2 or higher) HLA typing at all relevant
 loci---the CIBMTR or NMDP/Be The Match registries, which collectively cover
 over one million HSCT recipients, are the natural targets.  The mechanistic
-simulation (Section~\ref{sec:mechanistic}) provides empirical evidence that
-ESM-2 distances carry the kind of allele-pair information CAPA would exploit,
-but it uses simulated outcomes and is therefore not a substitute for registry
-validation.  A second limitation is sample size: with 187 patients total and 29
+simulation (Section~\ref{sec:mechanistic}), the haploidentical scale-up
+(Section~\ref{sec:haplo}), and the directional simulation
+(Section~\ref{sec:directional}) provide empirical evidence that ESM-2 distances
+carry the allele-pair information CAPA would exploit and that the learned
+representation captures directional signal a scalar distance cannot, but all
+three use \emph{simulated} outcomes and are therefore not a substitute for
+registry validation.  The directional result in particular should be read as a
+\emph{proof of concept}: it establishes that an end-to-end learned
+representation can recover directional alloreactivity that is provably outside
+the span of scalar distances, but the magnitude of this advantage on real
+transplant outcomes---where the directional signal may be weaker, confounded,
+or partially captured by other covariates---is unknown.  The directional
+advantage also depends on a deliberate architectural choice (feeding the
+\emph{signed} rather than absolute difference embedding); and the same model is
+\emph{weaker} than an explicit scalar distance on the TRM control, where the
+generating signal is pure magnitude.  CAPA should therefore be understood as
+advantageous specifically where alloreactivity is directional, not as a
+uniform improvement over distance-based scoring.  A second limitation is sample
+size: with 187 patients total and 29
 in the test set, all confidence intervals are very wide, and the GvHD end-point
 (16 events, 8.6\,\% of the cohort) cannot be reliably evaluated.  The cohort
 is also restricted to paediatric patients from a single centre, limiting
