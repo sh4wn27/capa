@@ -245,11 +245,14 @@ Here we introduce \textbf{CAPA} (Computational Architecture for Predicting
 Alloimmunity), a deep learning framework that addresses both limitations
 simultaneously.  CAPA (i)~replaces categorical mismatch flags with
 1280-dimensional ESM-2 embeddings of HLA allele protein sequences;
-(ii)~learns locus-level donor--recipient interaction features via bidirectional
-cross-attention, enabling the model to discover which allele pairs and which
-loci drive each outcome; and (iii)~estimates all three competing risks jointly
-through a DeepHit survival head \citep{lee2018deephit} that produces calibrated
-cumulative incidence functions over a 730-day post-transplant horizon.
+(ii)~learns donor--recipient alloreactivity end-to-end via attention over the
+\emph{signed} difference embeddings, capturing the \emph{direction} of HLA
+mismatch---which antigens the recipient carries that the donor lacks---a
+property that the symmetric, magnitude-only scalar distances used in current
+practice are structurally incapable of representing; and (iii)~estimates all
+three competing risks jointly through a DeepHit survival head
+\citep{lee2018deephit} that produces calibrated cumulative incidence functions
+over a 730-day post-transplant horizon.
 We describe the CAPA architecture, implement and release the full pipeline, and
 benchmark tabular-feature competing-risks baselines (cause-specific Cox,
 Fine--Gray, DeepHit MLP) on the publicly available UCI Bone Marrow Transplant
@@ -1551,8 +1554,9 @@ discriminative power.
 \section{Discussion}
 
 We present CAPA, a competing-risks survival framework that encodes HLA alleles
-as 1280-dimensional ESM-2 protein language model vectors, models donor--recipient
-immunological interaction via bidirectional cross-attention, and jointly estimates
+as 1280-dimensional ESM-2 protein language model vectors, learns directional
+donor--recipient alloreactivity end-to-end via attention over the signed
+difference embeddings, and jointly estimates
 cumulative incidence functions for GvHD, relapse, and TRM.  As a reference
 benchmark, we trained and evaluated four tabular-feature baselines---cause-specific
 Cox, Fine--Gray, Random Survival Forest, and flat-feature DeepHit---on the
