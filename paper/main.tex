@@ -27,6 +27,7 @@
 \usepackage{array}
 \usepackage{xcolor}
 \usepackage{microtype}
+\emergencystretch=3em   % absorb overfull boxes from long \texttt{} tokens/URLs
 \usepackage{setspace}
 \usepackage{lineno}
 \usepackage{fancyhdr}
@@ -45,9 +46,9 @@
 \renewcommand{\headrulewidth}{0.4pt}
 
 %% ── Title block ─────────────────────────────────────────────
-\title{\textbf{CAPA: Structure-Aware HLA Mismatch Representations with Protein
-Language Models for Competing-Risks Survival Prediction in Haematopoietic
-Stem Cell Transplantation}\\[6pt]
+\title{\textbf{CAPA: Directional, Structure-Aware HLA Mismatch Representations
+from Protein Language Models for Competing-Risks Survival Analysis in
+Haematopoietic Stem Cell Transplantation}\\[6pt]
 \normalsize\textit{Original Paper} \quad $\cdot$ \quad \textit{Bioinformatics}}
 
 \author{Huanxuan Li$^{1,*}$\\[4pt]
@@ -68,7 +69,12 @@ distinct alleles as equivalent once they share a mismatch flag.  This
 representation discards the amino-acid-level structural divergence between
 allele pairs and ignores the competing nature of post-transplant events:
 graft-versus-host disease (GvHD), relapse, and transplant-related mortality
-(TRM) preclude one another and must be modelled jointly.
+(TRM) preclude one another and must be modelled jointly.  A subtler limitation
+affects even the continuous distance metrics proposed as replacements: a
+Euclidean mismatch distance is symmetric and therefore \emph{direction-blind},
+whereas graft-versus-host alloreactivity is intrinsically directional.  This
+work asks whether a representation learned end-to-end can capture directional
+mismatch information that no scalar distance can encode.
 
 \medskip\noindent\textbf{Methods:}
 We introduce CAPA (Computational Architecture for Predicting Alloimmunity), a
@@ -83,7 +89,15 @@ parameters) are trained by default; ESM-2 is frozen but can optionally be
 partially fine-tuned via a second AdamW parameter group.  Post-hoc isotonic
 calibration is applied per event and time bin to improve CIF reliability.
 A multi-donor comparison endpoint ranks up to 20 candidates by composite
-GvHD+TRM risk.
+GvHD+TRM risk.  Because the full cross-attention model is under-determined at
+the cohort sizes available here, the end-to-end experiments use a compact
+469K-parameter variant that self-attends over per-locus \emph{signed}
+difference embeddings $\mathbf{e}^{\mathrm{D}}-\mathbf{e}^{\mathrm{R}}$; we
+report this variant as CAPA throughout the simulation results.  We evaluate the
+framework on the public UCI BMT cohort, a real-world allele-level dataset
+(IHWG), and three controlled simulations designed to isolate \emph{what} the
+learned representation adds over scalar mismatch distances; we do not claim a
+clinically validated predictor.
 
 \medskip\noindent\textbf{Results:}
 On the public UCI Bone Marrow Transplant dataset ($n=187$ paediatric patients,
@@ -261,7 +275,13 @@ performance achievable without allele-level HLA data.  The UCI BMT dataset
 records aggregate mismatch scores rather than specific allele identities,
 precluding end-to-end evaluation of the ESM-2 embedding step; validation on a
 registry dataset with high-resolution HLA typing constitutes the primary
-direction for future work.
+direction for future work.  We position this paper accordingly as a
+\emph{representation-level proof of concept}: our central, fully supported claim
+is that a learned representation captures directional alloreactivity that scalar
+mismatch distances provably cannot (Section~\ref{sec:directional}); a
+clinically validated outcome predictor would require registry-scale data with
+allele-level typing and event-specific endpoints, which we identify but do not
+claim to deliver.
 
 %% ── 2. Methods ──────────────────────────────────────────────────────────────
 \section{Methods}
@@ -666,7 +686,7 @@ regression calibrator on the validation set:
   \hat{F}^{\mathrm{cal}}_k(t) = g_{k,t}(\hat{F}_k(t)),
 \end{equation}
 where each $g_{k,t}$ is a piecewise-constant isotonic regression
-\citep{barlow1972isotonic} fitted by \texttt{sklearn.isotonic.IsotonicRegression}
+\citep{barlow1972isotonic} fitted by \texttt{sklearn.isotonic.\allowbreak IsotonicRegression}
 with increasing constraint.  Monotonicity of the calibrated CIF over time is
 restored by applying a cumulative maximum across time bins after calibration.
 The calibrator is serialised alongside the model checkpoint and applied at
