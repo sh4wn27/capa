@@ -1788,8 +1788,8 @@ translation.
 
 We introduce CAPA, a deep competing-risks survival framework that replaces
 categorical HLA mismatch counts with continuous, structure-aware ESM-2 protein
-language model embeddings and models donor--recipient allele interactions via
-bidirectional cross-attention.  On the public UCI BMT cohort, four tabular-feature
+language model embeddings and learns directional donor--recipient
+alloreactivity end-to-end via attention over the signed difference embeddings.  On the public UCI BMT cohort, four tabular-feature
 baselines (Fine--Gray, Cox, RSF, DeepHit) establish the performance achievable
 without allele-level HLA data; cross-validated estimates (Cox relapse
 $C=0.60 \pm 0.14$, TRM $0.56 \pm 0.06$) correct for the substantial optimism
