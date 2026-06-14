@@ -102,26 +102,27 @@ clinically validated predictor.
 \medskip\noindent\textbf{Results:}
 On the public UCI Bone Marrow Transplant dataset ($n=187$ paediatric patients,
 train/val/test 70/15/15\,\%), we benchmark tabular-feature competing-risks
-models as reference comparators for CAPA.  The Fine--Gray subdistribution hazard
-model achieves concordance indices of 0.84 (95\,\%~CI 0.69--1.00) for relapse
-and 0.66 (0.48--0.86) for transplant-related mortality on the held-out test set
-($n=29$); the cause-specific Cox model reaches 0.75 (0.53--1.00) and 0.65
-(0.46--0.85) on the same end-points.  A Random Survival Forest achieves relapse 0.48 (0.19--0.80) and TRM 0.65
-(0.44--0.87); a flat-feature DeepHit MLP with a correctly formulated censored
-log-likelihood achieves relapse 0.65 (0.37--0.94) and TRM 0.57 (0.37--0.75),
-below Fine--Gray but above chance.  A feature ablation study shows that
-aggregate HLA mismatch scores alone yield near-chance concordance ($C \approx
-0.49$), while clinical features alone match the full-feature model, directly
-motivating ESM-2 structural allele representations as the form of HLA
-information most likely to add discriminative signal.  Repeated 5$\times$5
-cross-validation yields Cox relapse $0.60 \pm 0.14$ and TRM $0.56 \pm 0.06$,
-correcting for the optimism in the single 29-patient test split.  A controlled mechanistic simulation demonstrates the core hypothesis directly:
-in a cohort where all patients share an identical binary DRB1 mismatch
-profile, a Cox model restricted to binary mismatch achieves GvHD
-$C = 0.501$ (chance), whereas a Cox model given the continuous ESM-2
-alloreactivity distances achieves $C = 0.695$ ($\Delta C = +0.194$),
-validating that embedding distances encode immunologically relevant
-allele-pair divergence that binary indicators cannot represent.  A scale-up
+models as reference comparators for CAPA.  Because the held-out test set is
+small ($n=29$), we treat repeated 5$\times$5 cross-validation as the primary
+performance estimate: the cause-specific Cox model reaches relapse
+$C = 0.60 \pm 0.14$ and TRM $0.56 \pm 0.06$.  Single held-out-split numbers are
+markedly more optimistic (Fine--Gray relapse 0.84, TRM 0.66; Cox 0.75/0.65) but
+carry very wide intervals (e.g.\ relapse 95\,\%~CI 0.69--1.00 on four test
+events) and should not be over-interpreted; a Random Survival Forest (relapse
+0.48) and a flat-feature DeepHit MLP with a correctly formulated censored
+log-likelihood (relapse 0.65, TRM 0.57) complete the reference set.  A feature
+ablation study shows that aggregate HLA mismatch scores alone yield near-chance
+concordance ($C \approx 0.49$), while clinical features alone match the
+full-feature model, directly motivating ESM-2 structural allele representations
+as the form of HLA information most likely to add discriminative signal.  A
+controlled mechanistic simulation provides a capability check: in a cohort where
+all patients share an identical binary DRB1 mismatch profile, a Cox model
+restricted to binary mismatch achieves GvHD $C = 0.501$ (chance), whereas a Cox
+model given the continuous ESM-2 alloreactivity distances achieves $C = 0.695$
+($\Delta C = +0.194$)---confirming that a continuous representation recovers a
+planted signal invisible to binary indicators, though the signal is generated
+from the distances by construction and the experiment is therefore a sanity
+check rather than evidence of biological informativeness.  A scale-up
 simulation in the haploidentical setting ($N=10{,}000$; all five loci
 mismatched) extends this result: Cox (ESM-2 distances) achieves
 $C_{\mathrm{GvHD}} = 0.759$ vs.\ $0.538$ for binary mismatch ($\Delta C = +0.221$).
@@ -416,8 +417,8 @@ in Section~\ref{sec:data}.
 
 \paragraph{Sequence retrieval.}
 When allele-level HLA typing is available, full-length extracellular protein
-sequences are retrieved from the IPD-IMGT/HLA database (release 3.55.0,
-November 2023) \citep{barker2023ipdimgt}.  For class~I loci (A, B, C) we
+sequences are retrieved from the IPD-IMGT/HLA database (release 3.57.0)
+\citep{barker2023ipdimgt}.  For class~I loci (A, B, C) we
 use the mature $\alpha_1$--$\alpha_3$ extracellular domain (residues 25--309
 of the precursor sequence, 285 amino acids).  For class~II $\beta$-chains
 (DRB1, DQB1) we use the $\beta_1$--$\beta_2$ extracellular domains (residues
@@ -446,10 +447,13 @@ unfrozen and optimised jointly with the interaction network using a separate
 AdamW parameter group at one-hundredth of the base learning rate, allowing
 task-specific adaptation of deep contextual representations when sufficient
 labelled data are available.  Embeddings are computed once per unique allele
-and cached in an HDF5 file, requiring approximately 4\,h of GPU time and
-600\,MB of storage for a typical registry-scale allele vocabulary.  A prototype
-cache of 270 alleles spanning the five primary loci (and DPB1 when supplied) is
-distributed with the open-source release to support architecture testing.
+and cached in an HDF5 file.  Embedding is a one-time cost that scales with the
+size of the allele vocabulary: the 270-allele cache used in this work embeds in
+under two minutes on a consumer Apple M-series GPU, while a full registry-scale
+vocabulary requires on the order of 4\,h on a single NVIDIA T4 and $\sim$600\,MB
+of storage.  The 270-allele cache spanning the five primary loci (and DPB1 when
+supplied) is distributed with the open-source release to support architecture
+testing.
 
 \subsection{Donor--Recipient Interaction Network}
 \label{sec:interaction}
@@ -543,9 +547,9 @@ where $\mathbf{W}_1 \in \mathbb{R}^{2d \times 4d''}$ and
 $\mathbf{W}_2 \in \mathbb{R}^{4d'' \times d''}$ with $d'' = 128$.
 The total number of learnable parameters in the interaction network
 (four MultiheadAttention blocks at $d=1280$ across both streams and both
-layers, plus the post-projection MLP) is approximately 27.6\,M; this count
-is dominated by the cross-attention parameter matrices operating at full
-embedding dimensionality.
+layers, plus the post-projection MLP) is approximately 27.6\,M, or ${\sim}27.8$\,M
+including the DeepHit survival head; this count is dominated by the
+cross-attention parameter matrices operating at full embedding dimensionality.
 
 \subsection{Clinical Covariate Encoder}
 \label{sec:clinical}
@@ -711,9 +715,9 @@ Because the UCI BMT dataset does not contain per-allele HLA typing strings,
 CAPA's ESM-2 embedding and cross-attention pipeline cannot be trained or
 evaluated end-to-end on that cohort.  To demonstrate the architecture's forward
 pass and illustrate intended model behaviour, we constructed a
-\emph{prototype allele cohort}: HLA allele embeddings were computed for 98
+\emph{prototype allele cohort}: HLA allele embeddings were computed for 100
 commonly occurring alleles drawn from the IPD-IMGT/HLA database (release
-3.55.0) spanning loci A, B, C, DRB1, and DQB1.  For figures requiring survival
+3.57.0) spanning loci A, B, C, DRB1, and DQB1.  For figures requiring survival
 outcomes, event times were simulated for $n = 187$ virtual patients using Weibull
 random variables calibrated to the observed marginal event rates in the UCI BMT
 dataset (GvHD: shape 1.5, scale 200\,d; relapse: shape 1.2, scale 400\,d;
@@ -814,7 +818,7 @@ be interpreted as indicative rather than definitive.
 
 To illustrate the representational quality of the ESM-2 embedding pipeline, we
 applied UMAP dimensionality reduction \citep{mcinnes2018umap} to a prototype
-set of 98 HLA allele embeddings spanning the five primary loci (A, B, C,
+set of 100 HLA allele embeddings spanning the five primary loci (A, B, C,
 DRB1, DQB1; DPB1 is supported as an optional sixth locus),
 computed using the same embedding procedure described in Section~\ref{sec:esm2}
 (Figure~\ref{fig:umap}).
@@ -879,7 +883,7 @@ with high-resolution per-allele HLA typing.
 
 Figure~\ref{fig:cif} shows CAPA's competing-risks cumulative incidence
 functions (CIFs), stratified by predicted risk tertile, computed on a
-prototype allele cohort.  Each panel presents the Aalen--Johansen
+prototype allele cohort.  Each panel presents the observed Aalen--Johansen
 non-parametric estimate alongside the CAPA model prediction for a given
 event and risk stratum, demonstrating that the model's continuous risk
 score discriminates between patients with markedly different CIF trajectories.
@@ -900,12 +904,12 @@ on a registry cohort with ground-truth allele-level outcomes.
   \includegraphics[width=\columnwidth]{figures/fig4_cif}
   \caption{Competing-risks cumulative incidence functions (CIFs) from CAPA
     evaluated on the prototype allele cohort.
-    Solid lines: Aalen--Johansen non-parametric estimates
-    \citep{johansen1978product}.  Dashed lines: CAPA model predictions.
-    Rows: three competing events (GvHD, relapse, TRM).
-    Columns: predicted risk tertiles (low, intermediate, high) by
-    day-365 composite risk score.  Shaded bands: 95\,\% pointwise
-    confidence envelopes on the Aalen--Johansen estimates.}
+    One panel per competing event (columns: GvHD, relapse, TRM).
+    Within each panel, solid step lines are the observed Aalen--Johansen
+    cumulative-incidence estimates \citep{aalen1978empirical} and dashed lines
+    are CAPA's mean predicted CIF across patients; shaded bands show the
+    interquartile range (25th--75th percentile) of the per-patient predicted
+    CIFs.}
   \label{fig:cif}
 \end{figure}
 
@@ -1204,8 +1208,13 @@ mismatch achieves $C = 0.501$ (95\,\%~CI 0.44--0.57), statistically
 indistinguishable from chance ($C = 0.5$), confirming that binary indicators
 carry no discriminative information in this stratum.  Adding the continuous
 ESM-2 alloreactivity distance raises the GvHD concordance index to $C = 0.695$
-(95\,\%~CI 0.64--0.75), a gain of $\Delta C = +0.194$ ($p < 0.001$ by
-bootstrap permutation test).  For TRM, which also includes a DRB1 distance
+(95\,\%~CI 0.64--0.75), a gain of $\Delta C = +0.194$ with non-overlapping
+confidence intervals.  We emphasise that this simulation generates the GvHD
+signal \emph{from} the ESM-2 distances, so the result confirms that the
+pipeline recovers a planted continuous signal that a constant binary indicator
+cannot---a capability and sanity check---rather than establishing that ESM-2
+distances are biologically informative; the latter requires real-data
+validation (Section~\ref{sec:ihwg}).  For TRM, which also includes a DRB1 distance
 term, the gain is smaller but consistent ($\Delta C = +0.026$).  Relapse is
 driven primarily by disease risk in this simulation (the protective GvL effect
 through $d_{\mathrm{B}}$ is zero because B-locus distances are all zero in the
@@ -1586,9 +1595,14 @@ mismatch ($C = 0.584$ vs $0.560$; $\Delta C = +0.024$).  This subgroup
 corresponds most closely to the conditions of the controlled mechanistic
 simulation: binary mismatch features are near-constant (one locus $= 1$,
 all others $= 0$ for every patient), while ESM-2 distances vary continuously
-by the specific alleles involved.  The observed advantage---though limited in
-magnitude owing to the small subgroup size and composite OS endpoint---is
-directionally consistent with the mechanistic prediction.
+by the specific alleles involved.  The observed advantage is small and, given
+the subgroup size ($n = 112$) and the composite OS endpoint, is unlikely to be
+statistically distinguishable from zero; we report it as \emph{directionally
+consistent} with the mechanistic prediction rather than as independent
+confirmation.  Establishing significance would require a bootstrap confidence
+interval for this subgroup $\Delta C$ on an event-specific (GvHD) endpoint,
+which the composite-OS IHWG data cannot provide; the modest effect should be
+interpreted with corresponding caution.
 
 The IHWG analysis thus provides two complementary conclusions: (i)~on a
 real clinical cohort with allele-level HLA typing, ESM-2 distances capture
