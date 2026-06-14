@@ -455,6 +455,33 @@ of storage.  The 270-allele cache spanning the five primary loci (and DPB1 when
 supplied) is distributed with the open-source release to support architecture
 testing.
 
+\paragraph{Per-locus mismatch distance.}
+Each individual carries two alleles per locus (one per haplotype), and the
+phase pairing of donor to recipient alleles is unknown.  For locus $l$ with
+donor allele embeddings $\{\mathbf{e}^{\mathrm{D}}_{l,1},
+\mathbf{e}^{\mathrm{D}}_{l,2}\}$ and recipient embeddings
+$\{\mathbf{e}^{\mathrm{R}}_{l,1}, \mathbf{e}^{\mathrm{R}}_{l,2}\}$, we resolve
+this by optimal assignment, choosing the bijection $\pi$ between the two donor
+and two recipient alleles that minimises total Euclidean distance, and define
+the scalar per-locus mismatch distance as the mean of the two matched-pair
+distances:
+\begin{equation}
+  d_l = \frac{1}{2}\,
+        \min_{\pi \in \{\mathrm{id},\,\mathrm{swap}\}}
+        \sum_{m=1}^{2}
+        \bigl\lVert \mathbf{e}^{\mathrm{D}}_{l,m}
+                   - \mathbf{e}^{\mathrm{R}}_{l,\pi(m)} \bigr\rVert_2 .
+  \label{eq:locus_distance}
+\end{equation}
+The per-locus distances $\{d_l\}$ across the five primary loci constitute the
+continuous ESM-2 mismatch features supplied to the distance-based Cox baselines
+and to the mechanistic, haploidentical, and directional simulations
+(Sections~\ref{sec:mechanistic}--\ref{sec:directional}).  CAPA itself consumes
+the full per-allele embeddings (or, in the signed-difference variant, the raw
+differences $\mathbf{e}^{\mathrm{D}}_{l,m} - \mathbf{e}^{\mathrm{R}}_{l,m}$)
+rather than these scalar summaries, which is precisely what lets it represent
+directional information that $d_l$ discards.
+
 \subsection{Donor--Recipient Interaction Network}
 \label{sec:interaction}
 
@@ -769,9 +796,16 @@ registry-scale data with allele-level HLA typing constitutes future work.
 
 \paragraph{Concordance index.}
 We report the time-dependent cause-specific concordance index ($C$-index) for
-each event $k$, adapted for competing risks following
-\citet{antolini2005tdauc}.  For event $k$ with comparable pairs
-$\mathcal{P}_k = \{(i,j) : t_i < t_j,\; \delta_i = k\}$:
+each event $k$, using the competing-risks formulation of
+\citet{wolbers2009concordance} with the time-dependent cumulative-incidence
+ranking of \citet{antolini2005tdauc}.  A pair $(i,j)$ is \emph{comparable} for
+cause $k$ if subject $i$ experiences event $k$ at time $t_i$ and subject $j$ is
+still at risk at $t_i$---that is, $t_j > t_i$, irrespective of whether $j$
+eventually experiences cause $k$, a competing event, or is censored.  Subjects
+who experience a \emph{competing} event before $t_i$ are excluded from $i$'s
+comparable set, since their cause-$k$ cumulative incidence can no longer
+increase and they are not at risk of being out-ranked.  Formally, with
+$\mathcal{P}_k = \{(i,j) : \delta_i = k,\; t_i < t_j\}$,
 \begin{equation}
   C_k
     = \frac{
@@ -782,8 +816,8 @@ $\mathcal{P}_k = \{(i,j) : t_i < t_j,\; \delta_i = k\}$:
   \label{eq:cindex}
 \end{equation}
 where $F_k(t_i \mid \mathbf{z}_i)$ is the model's predicted cumulative
-incidence at the event time of subject $i$.  A value of 0.5 represents chance
-discrimination; 1.0 is perfect.
+incidence for cause $k$ evaluated at the event time of subject $i$.  A value of
+0.5 represents chance discrimination; 1.0 is perfect.
 
 \paragraph{Integrated Brier score.}
 We report the Integrated Brier Score (IBS) \citep{graf1999brier} at day 365
