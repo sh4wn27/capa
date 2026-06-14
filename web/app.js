@@ -64,6 +64,7 @@
     if (tgl && menu) tgl.addEventListener('click', () => menu.classList.toggle('open'));
 
     buildTweaksPanel();
+    initBetaNotice();
   });
 
   /* ---------- tweaks panel (vanilla, host-protocol aware) ---------- */
@@ -169,5 +170,43 @@
       else if (t === '__deactivate_edit_mode') panel.classList.remove('open');
     });
     window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+  }
+
+  /* ---------- beta notice ---------- */
+  function initBetaNotice() {
+    const KEY = 'capa.beta-notice.v1';
+    if (localStorage.getItem(KEY)) return;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'beta-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-labelledby', 'beta-title');
+    overlay.innerHTML = `
+      <div class="beta-modal">
+        <div class="beta-eyebrow">Beta &middot; Active Development</div>
+        <h3 id="beta-title" class="serif">CAPA is under active development</h3>
+        <p>This tool is in <strong>closed beta</strong> and may not perform as described. Features are incomplete and models are still being validated — treat all outputs as experimental.</p>
+        <p>By continuing, you acknowledge CAPA is a research prototype and <strong>not cleared for clinical use</strong>.</p>
+        <div class="beta-actions">
+          <button class="btn btn-primary" id="beta-ack">Understood — continue to beta</button>
+          <a href="about.html" class="btn btn-ghost">Learn more</a>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+
+    requestAnimationFrame(() => requestAnimationFrame(() => overlay.classList.add('visible')));
+
+    function dismiss() {
+      try { localStorage.setItem(KEY, '1'); } catch (e) {}
+      overlay.classList.remove('visible');
+      setTimeout(() => overlay.remove(), 300);
+    }
+
+    overlay.querySelector('#beta-ack').addEventListener('click', dismiss);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) dismiss(); });
+    document.addEventListener('keydown', function esc(e) {
+      if (e.key === 'Escape') { dismiss(); document.removeEventListener('keydown', esc); }
+    });
   }
 })();
