@@ -4,6 +4,8 @@ CAPA is an open-source computational framework that uses protein language models
 
 Instead of categorical HLA match/mismatch scores, CAPA learns **continuous, biologically meaningful embeddings** that capture the immunological distance between donor-recipient allele pairs, then models GvHD, relapse, and transplant-related mortality (TRM) as competing risks.
 
+
+**CAPA IS STILL UNDER ACTIVE DEVELOPMENT PROCESS, ONLY UP FOR BETA-TESTING**
 ---
 
 ## Why CAPA?
