@@ -125,7 +125,7 @@
       <p>Two tools dominate current clinical practice. <b>HLAMatchmaker</b> counts mismatched <i>eplets</i> — short amino-acid motifs on the HLA surface that trigger antibody responses. <b>PIRCHE-II</b> enumerates T-cell-presented peptides derived from mismatched residues. Both improve on simple allele counting by capturing finer-grained surface differences. But they share three critical limits: the rules are curated by hand rather than learned from outcomes; they produce a mismatch count, not a survival prediction; and they cannot output competing-risk trajectories or generalise to rare alleles absent from their reference tables.</p>
       <div class="callout">
         <div class="c-tag">How CAPA differs</div>
-        <p>CAPA learns a continuous embedding directly from protein sequence, not from curated rule tables. The cross-attention network is trained end-to-end on transplant survival outcomes, so the learned representation is adapted to predicting GvHD, relapse, and TRM jointly — not just counting surface mismatches. And because any allele with a sequence in IPD-IMGT/HLA can be embedded, the model generalises to rare alleles that eplet reference sets do not cover. The trade-off: CAPA is validated on n&nbsp;=&nbsp;187 patients, while HLAMatchmaker and PIRCHE-II are supported by thousands. Scaling to registry-level data is the necessary next step.</p>
+        <p>CAPA learns a continuous embedding directly from protein sequence, not from curated rule tables, and learns the <b>direction</b> of donor–recipient mismatch from the signed difference embedding — information a symmetric distance or a mismatch count provably cannot represent. Because any allele with a sequence in IPD-IMGT/HLA can be embedded, the approach generalises to rare alleles that eplet reference sets do not cover. The trade-off: the directional advantage is so far established in controlled simulation and against tabular baselines (n&nbsp;=&nbsp;187), while HLAMatchmaker and PIRCHE-II are supported by thousands of patients. Real registry validation with per-allele typing is the necessary next step.</p>
       </div>
     </section>
 
@@ -136,8 +136,8 @@
       <p>Donor and recipient alleles at five loci — A, B, C, DRB1, DQB1 — are resolved to full protein sequences via the IPD-IMGT/HLA database.</p>
       <h3>2 · ESM-2 embedding</h3>
       <p>Each sequence is passed through frozen <b>ESM-2 (650M parameters)</b> to produce a 1 280-dimensional vector. Freezing the language model keeps the representation general and the trainable model small.</p>
-      <h3>3 · Cross-attention & DeepHit</h3>
-      <p>A cross-attention network models the interaction between donor and recipient embeddings, and a <b>DeepHit</b> head jointly predicts the cumulative incidence of three competing risks. Competing-risks modelling matters because a patient who relapses cannot then experience transplant-related mortality — the events compete.</p>
+      <h3>3 · Directional attention & DeepHit</h3>
+      <p>CAPA attends over the <em>signed</em> donor–recipient difference embeddings, capturing the direction of mismatch — which antigens the recipient carries that the donor lacks — and a <b>DeepHit</b> head jointly predicts the cumulative incidence of three competing risks. Competing-risks modelling matters because a patient who relapses cannot then experience transplant-related mortality — the events compete. (A higher-capacity bidirectional cross-attention variant exists but is under-determined at these cohort sizes; the compact signed-difference model is the one evaluated.)</p>
       <dl style="margin-top:24px">
         <div class="defn"><dt>GvHD</dt><dd>Graft-versus-host disease — donor immune cells attack recipient tissue. <b>Note:</b> GvHD prediction is aspirational in the current version. The UCI BMT cohort has too few GvHD events to evaluate; a larger dataset is needed.</dd></div>
         <div class="defn"><dt>Relapse</dt><dd>Return of the underlying malignancy after transplant.</dd></div>
@@ -147,11 +147,12 @@
 
     <section id="data">
       <h2>Data & evaluation</h2>
-      <p>CAPA was developed and evaluated on the public <b>UCI Bone Marrow Transplant (children)</b> dataset — 187 paediatric HSCT patients. Performance was measured with the time-dependent concordance index and Brier score against Cox proportional-hazards and Fine–Gray baselines.</p>
-      <p>On a single held-out test split (n = 29), CAPA reaches a C-index of 0.81 for relapse and 0.63 for TRM. The best classical baseline — Fine–Gray — reaches 0.84 and 0.66 respectively. Confidence intervals on all metrics are wide enough to span most of [0, 1], so these point estimates should be read as <b>exploratory signals, not definitive comparisons</b>. GvHD was not evaluable: only 2 events fell in the test fold.</p>
+      <p>We benchmark tabular competing-risks baselines on the public <b>UCI Bone Marrow Transplant (children)</b> dataset — 187 paediatric HSCT patients — using the time-dependent concordance index and Brier score. CAPA's ESM-2 embedding step <b>cannot be run end-to-end here</b>: the cohort records aggregate mismatch counts, not per-allele HLA typing.</p>
+      <p>On a single held-out test split (n = 29), the best baseline (Fine–Gray) reaches a C-index of 0.84 for relapse and 0.66 for TRM (Cox 0.75 / 0.65; Random Survival Forest 0.48 / 0.65; DeepHit 0.65 / 0.57). These single-split numbers are optimistic; repeated 5×5 cross-validation corrects them to Cox relapse <b>0.60 ± 0.14</b> and TRM <b>0.56 ± 0.06</b>. GvHD was not evaluable: only 2 events fell in the test fold.</p>
+      <p>CAPA's own advantage is demonstrated in a controlled <b>directional simulation</b> (N = 10,000, 6 seeds): where GvHD hazard is driven by the <em>direction</em> of mismatch, a Cox model on symmetric scalar distances collapses to near-chance (C = 0.58), while CAPA — learning from signed difference embeddings — reaches <b>C = 0.87</b>, recovering 93% of the gap to a direction-aware oracle, with non-overlapping confidence intervals on every seed. On a scalar-distance TRM control CAPA is deliberately weaker, confirming the advantage is specific to directional structure.</p>
       <div class="callout">
         <div class="c-tag">Evaluation caveat</div>
-        <p>A single 29-patient test split is one draw from a noisy distribution. Repeated stratified k-fold cross-validation on the full cohort would give a much more honest picture. That analysis is on the roadmap; results here should be treated as a methodology demonstration, not a benchmark claim.</p>
+        <p>A single 29-patient test split is one draw from a noisy distribution. We therefore report repeated 5×5 stratified cross-validation as the primary estimate (Cox relapse 0.60 ± 0.14, TRM 0.56 ± 0.06), which corrects the optimism of the single split. Results should be treated as a methodology demonstration, not a benchmark claim.</p>
       </div>
       <div class="callout">
         <div class="c-tag">Reproducibility</div>
@@ -164,9 +165,10 @@
       <p>This is a proof-of-concept, and the constraints are real:</p>
       <ul>
         <li><b>Small cohort.</b> 187 patients is far too few to make clinical claims; confidence intervals are wide and some events are too rare to evaluate.</li>
-        <li><b>Single test split.</b> The test set contains 29 patients — one draw from a noisy distribution. Bootstrap CIs on every metric touch 1.0. Repeated stratified k-fold cross-validation is the right approach and is on the roadmap.</li>
+        <li><b>Single test split.</b> The test set contains 29 patients — one draw from a noisy distribution. Bootstrap CIs on every metric touch 1.0. We therefore report repeated 5×5 stratified cross-validation as the primary estimate.</li>
         <li><b>GvHD not evaluable.</b> Only 2 GvHD events in the test fold. The architecture outputs a GvHD curve, but no performance claim can be made until evaluated on a larger cohort with more events.</li>
         <li><b>Single dataset.</b> Results have not yet been replicated on an independent, larger transplant registry.</li>
+        <li><b>Directional result is simulation-based.</b> The headline directional advantage is established in a controlled simulation that plants a directional signal — it demonstrates the architecture <em>can</em> exploit direction when present (a capability), not that real GvHD signal lives in that direction at a useful magnitude. Confirming that requires registry data with per-allele typing and event-specific endpoints.</li>
         <li><b>Not for clinical use.</b> CAPA is a research artifact intended to demonstrate a representational idea, not a decision-support tool.</li>
       </ul>
       <p class="small">The right next step is external validation on a large multi-centre cohort. Contributions and replications are welcome via the repository.</p>

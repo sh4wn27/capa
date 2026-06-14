@@ -165,7 +165,7 @@
         <span class="pill">Proof-of-Concept</span>
       </div>
       <h1>Predicting <em>alloimmunity</em> with protein language models</h1>
-      <p class="hero-sub">CAPA replaces coarse HLA match / mismatch scores with continuous <b>ESM-2 embeddings</b>, then predicts GvHD, relapse, and transplant-related mortality as competing risks via cross-attention and DeepHit.</p>
+      <p class="hero-sub">CAPA replaces coarse HLA match / mismatch scores with continuous <b>ESM-2 embeddings</b> and learns <b>directional</b> donor–recipient alloreactivity from signed difference embeddings — capturing information that a symmetric mismatch distance provably cannot — then predicts GvHD, relapse, and TRM as competing risks via DeepHit.</p>
       <div class="hero-cta">
         <a class="btn btn-primary" href="predict.html">Open prediction tool <span class="arr">→</span></a>
         <a class="btn btn-ghost" href="paper.html">Read the paper</a>
@@ -186,7 +186,7 @@
       <div class="spec-flow"><span class="tk">ESM-2 · 650M</span><span class="line"></span><span class="tk">1 280-DIM</span></div>
       <div class="heat" id="heat" aria-hidden="true"></div>
       <div class="spec-row" style="margin-top:6px"><span class="spec-cap">Frozen embedding</span><span class="spec-cap">per allele</span></div>
-      <div class="spec-flow"><span class="tk">CROSS-ATTENTION</span><span class="line"></span><span class="tk">DEEPHIT · CIF</span></div>
+      <div class="spec-flow"><span class="tk">SIGNED-DIFF ATTENTION</span><span class="line"></span><span class="tk">DEEPHIT · CIF</span></div>
       <div class="mini-cifs">
         <div class="mini-cif"><div class="mc-lbl"><span class="dot" style="background:var(--risk-gvhd)"></span>GvHD <span style="font-family:var(--mono);font-size:9px;color:var(--ink-3);margin-left:4px">aspirational</span></div>
           <svg viewBox="0 0 100 38" width="100%" height="34"><path d="M0 36 C 20 36, 30 22, 50 16 S 80 8, 100 6" fill="none" class="s-gvhd" stroke-width="2"/></svg></div>
@@ -227,9 +227,9 @@
     </div>
     <div class="stage">
       <div class="st-num">03</div>
-      <span class="st-tx">interaction → CIF</span>
+      <span class="st-tx">signed difference → CIF</span>
       <h3>Risk Prediction</h3>
-      <p>A cross-attention network models donor–recipient allele interactions. DeepHit jointly outputs cumulative incidence curves for GvHD, relapse, and TRM.</p>
+      <p>Attention over the <em>signed</em> donor–recipient difference embeddings captures the direction of mismatch. DeepHit jointly outputs cumulative incidence curves for GvHD, relapse, and TRM.</p>
     </div>
   </div>
 
@@ -245,8 +245,8 @@
         <div class="fn-box"><span class="fn-v">1 280-dim</span><span class="fn-v" style="color:var(--ink-3)">embedding</span><span class="fn-v" style="color:var(--ink-3)">per allele</span></div>
       </div>
       <div class="fnode">
-        <span class="fn-k">Cross-Attention</span>
-        <div class="fn-box"><span class="fn-v">Donor × Recipient</span><span class="fn-v" style="color:var(--ink-3)">interaction</span><span class="fn-v" style="color:var(--ink-3)">128-dim</span></div>
+        <span class="fn-k">Signed-Diff Attention</span>
+        <div class="fn-box"><span class="fn-v">eᴰ − eᴿ</span><span class="fn-v" style="color:var(--ink-3)">directional</span><span class="fn-v" style="color:var(--ink-3)">128-dim</span></div>
       </div>
       <div class="fnode out">
         <span class="fn-k">DeepHit output</span>
@@ -264,24 +264,24 @@
     <span class="num">§ 02</span>
     <div>
       <p class="eyebrow" style="margin-bottom:14px">Key results</p>
-      <h2>Proof-of-concept on UCI BMT (n = 187)</h2>
+      <h2>What the learned representation adds</h2>
     </div>
   </div>
 
   <div class="results-grid">
     <div class="reveal">
       <div class="stats">
-        <div class="stat"><div class="s-num">0.81</div><div class="s-lbl">C-index, relapse — CAPA</div><div class="s-meta">Single test split · n = 29 · CI wide</div></div>
-        <div class="stat"><div class="s-num">0.84</div><div class="s-lbl">C-index, relapse — Fine–Gray</div><div class="s-meta">Best baseline · 95% CI 0.69–1.00</div></div>
-        <div class="stat"><div class="s-num">187</div><div class="s-lbl">Patients (UCI BMT)</div><div class="s-meta">Paediatric HSCT · single cohort</div></div>
-        <div class="stat"><div class="s-num">3</div><div class="s-lbl">Competing risks modelled</div><div class="s-meta">GvHD (aspirational) · Relapse · TRM</div></div>
+        <div class="stat"><div class="s-num">0.87</div><div class="s-lbl">C-index, GvHD — CAPA (signed diff)</div><div class="s-meta">Directional simulation · vs 0.58 scalar distance · 6 seeds</div></div>
+        <div class="stat"><div class="s-num">+0.29</div><div class="s-lbl">ΔC over direction-blind Cox</div><div class="s-meta">93% of oracle gap · non-overlapping CIs every seed</div></div>
+        <div class="stat"><div class="s-num">0.84</div><div class="s-lbl">C-index, relapse — Fine–Gray</div><div class="s-meta">Best UCI BMT baseline · single split · CI wide</div></div>
+        <div class="stat"><div class="s-num">187</div><div class="s-lbl">Patients (UCI BMT)</div><div class="s-meta">Baselines only · no per-allele typing</div></div>
       </div>
-      <p style="margin-top:28px;color:var(--ink-2);font-size:15px;line-height:1.66;max-width:42ch">Single held-out test split (n = 29). Confidence intervals on all metrics span most of [0, 1] — treat point estimates as exploratory, not definitive. GvHD had only 2 events in the test fold and is not evaluable.</p>
+      <p style="margin-top:28px;color:var(--ink-2);font-size:15px;line-height:1.66;max-width:44ch">CAPA's genuine advantage is <b>directional</b>: a symmetric scalar mismatch distance is blind to the <em>direction</em> of donor–recipient mismatch, while CAPA — learning from <b>signed difference embeddings</b> — recovers it. On UCI BMT we report tabular baselines as reference points; CAPA's ESM-2 step cannot run end-to-end there because the cohort records aggregate mismatch counts, not allele-level typing.</p>
     </div>
 
     <div class="reveal">
       <div class="figure">
-        <div class="fig-hd"><span class="fig-t">Cumulative incidence — held-out test set</span><span class="fig-n">FIG. 02</span></div>
+        <div class="fig-hd"><span class="fig-t">Cumulative incidence — illustrative</span><span class="fig-n">FIG. 02</span></div>
         <svg viewBox="0 0 420 220" width="100%" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Cumulative incidence curves">
           <!-- axes -->
           <line x1="42" y1="12" x2="42" y2="186" class="s-line" stroke-width="1"/>
@@ -314,15 +314,30 @@
   <!-- journal table -->
   <div class="reveal" style="margin-top:64px;max-width:760px">
     <table class="jtable">
-      <caption>Time-dependent C-index — UCI BMT · n = 29 test patients · single split. All CIs span most of [0, 1]; treat as exploratory. GvHD: 2 events in test fold — not evaluable.</caption>
+      <caption>Time-dependent C-index — UCI BMT · n = 29 test patients · single split. Tabular baselines only: CAPA's ESM-2 step requires registry-scale data with per-allele HLA typing, which UCI BMT lacks. All CIs span most of [0, 1]; treat as exploratory. GvHD: 2 events in test fold — not evaluable.</caption>
       <thead><tr><th>Model</th><th>GvHD</th><th>Relapse</th><th>TRM</th></tr></thead>
       <tbody>
         <tr><td>Cox-PH (cause-specific)</td><td>—</td><td>0.75</td><td>0.65</td></tr>
         <tr><td>Fine–Gray <span style="font-family:var(--sans);font-size:11px;color:var(--ink-3)">best baseline</span></td><td>—</td><td class="best">0.84</td><td class="best">0.66</td></tr>
-        <tr><td>DeepHit (tabular HLA)</td><td>—</td><td>0.67</td><td>0.41</td></tr>
-        <tr style="border-top:1.5px solid var(--line)"><td><b>CAPA</b> <span style="font-family:var(--sans);font-size:11px;color:var(--ink-3)">(ESM-2 + cross-attn)</span></td><td>—</td><td>0.81</td><td>0.63</td></tr>
+        <tr><td>Random Survival Forest</td><td>—</td><td>0.48</td><td>0.65</td></tr>
+        <tr><td>DeepHit (tabular HLA)</td><td>—</td><td>0.65</td><td>0.57</td></tr>
       </tbody>
     </table>
+  </div>
+
+  <!-- directional simulation table -->
+  <div class="reveal" style="margin-top:48px;max-width:760px">
+    <table class="jtable">
+      <caption>Directional GvHD simulation (N = 10,000; mean ± SD over 6 seeds). GvHD hazard is driven by the <em>signed</em> projection of the donor–recipient difference, which a symmetric scalar distance cannot represent; TRM is a scalar-distance control. The oracle is given the true directional features.</caption>
+      <thead><tr><th>Model</th><th>GvHD</th><th>Relapse</th><th>TRM</th></tr></thead>
+      <tbody>
+        <tr><td>Cox (binary mismatch)</td><td>0.53</td><td>0.77</td><td>0.59</td></tr>
+        <tr><td>Cox (scalar distances)</td><td>0.58</td><td>0.78</td><td class="best">0.67</td></tr>
+        <tr><td>Cox (oracle direction)</td><td>0.89</td><td>0.78</td><td>0.67</td></tr>
+        <tr style="border-top:1.5px solid var(--line)"><td><b>CAPA</b> <span style="font-family:var(--sans);font-size:11px;color:var(--ink-3)">(signed diff)</span></td><td class="best">0.87</td><td>0.77</td><td>0.53</td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:18px;color:var(--ink-2);font-size:14px;line-height:1.66;max-width:60ch">CAPA recovers 93% of the distance-to-oracle gap on GvHD, with non-overlapping confidence intervals on every seed. On the TRM control — where the signal is genuine scalar magnitude — the distance-based Cox model is near-optimal and CAPA is weaker: the advantage is specific to directional structure, not a generic capacity effect. The simulation establishes a <b>capability</b> (the architecture can exploit direction when present), not a clinical result.</p>
   </div>
 </section>
 
@@ -389,8 +404,8 @@
     </div>
     <div class="about-body reveal">
       <p>Haematopoietic stem cell transplantation outcome depends critically on HLA compatibility. The standard approach encodes this as a binary match / mismatch count — discarding most of the immunological information.</p>
-      <p>CAPA was built to change that. By encoding every allele with ESM-2, a protein language model trained on 250 M sequences, and learning donor–recipient interaction through cross-attention, we obtain embeddings that reflect structural and functional similarity rather than mere categorical identity.</p>
-      <p>This is an open-source proof-of-concept, validated on 187 paediatric HSCT patients. We acknowledge the small-cohort limitation and encourage replication on larger datasets.</p>
+      <p>CAPA was built to change that. By encoding every allele with ESM-2, a protein language model trained on 250 M sequences, we obtain representations that reflect structural and functional similarity rather than mere categorical identity — and by learning from the <em>signed</em> donor–recipient difference, CAPA captures the <b>direction</b> of mismatch that a symmetric distance discards.</p>
+      <p>This is an open-source proof-of-concept. Tabular baselines are reported on 187 paediatric HSCT patients (UCI BMT); the directional advantage is established in controlled simulation. We acknowledge the small-cohort limitation, that real registry validation with per-allele typing is still pending, and encourage replication.</p>
       <div class="about-actions">
         <a class="tlink" href="about.html">Full project story <span class="arr">→</span></a>
         <a class="tlink" href="paper.html">Read the paper <span class="arr">→</span></a>
@@ -406,7 +421,7 @@
     </div>
     <div class="feat">
       <svg class="f-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.5 6h7M6 8.5v7M18 8.5v7M8.5 18h7M7.8 7.8l8.4 8.4M16.2 7.8 7.8 16.2"/></svg>
-      <h4>Cross-Attention</h4><p>Interpretable donor × recipient interaction.</p>
+      <h4>Directional</h4><p>Signed-difference attention captures mismatch direction.</p>
     </div>
     <div class="feat">
       <svg class="f-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 20V4M3 20h18M3 16c4-1 6-7 9-7s5 4 9 3"/></svg>

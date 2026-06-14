@@ -96,7 +96,7 @@
     <span class="badge">Methods · Machine Learning</span>
     <span class="badge">Transplant Immunology</span>
   </div>
-  <h1>Structure-aware HLA mismatch representations for competing-risks prediction of transplant outcomes</h1>
+  <h1>CAPA: Directional, structure-aware HLA mismatch representations from protein language models for competing-risks survival analysis in HSCT</h1>
   <p class="authors">Huanxuan Li (Shawn)<sup style="font-family:var(--sans);font-size:0.65em;color:var(--accent-ink)">1</sup>
     <span class="aff"><sup>1</sup> Independent research · open source</span>
   </p>
@@ -106,6 +106,9 @@
     <div class="pm"><span class="pm-k">License</span><span class="pm-v">MIT</span></div>
     <div class="pm"><span class="pm-k">Cohort</span><span class="pm-v">UCI BMT · n = 187</span></div>
   </div>
+  <div style="margin-top:22px">
+    <a class="btn btn-primary" href="capa-paper.pdf" target="_blank" rel="noopener">Download full PDF <span class="arr">→</span></a>
+  </div>
 </section>
 
 <hr class="rule" />
@@ -114,21 +117,21 @@
   <div class="col">
     <div class="abstract">
       <div class="a-lbl">Abstract</div>
-      <p>Outcome of haematopoietic stem cell transplantation depends critically on HLA compatibility, conventionally encoded as a binary match/mismatch count that discards most immunological information. We propose CAPA, a framework that represents each HLA allele with a frozen protein language model (ESM-2, 650M) and learns donor–recipient interaction via cross-attention, feeding a DeepHit head that jointly predicts cumulative incidence of GvHD, relapse, and transplant-related mortality as competing risks. On the public UCI Bone Marrow Transplant cohort (n = 187), the structure-aware representation achieves comparable time-dependent concordance to Cox and Fine–Gray baselines for relapse and TRM (C-index 0.81 vs. Fine–Gray 0.84 on a single 29-patient test split), while producing calibrated, case-specific incidence curves. Confidence intervals are wide given the small test set; we present this as a methodology demonstration rather than a benchmark claim. We release all code and weights as an open, reproducible proof-of-concept and discuss the small-cohort limitations frankly.</p>
+      <p>Outcome of haematopoietic stem cell transplantation depends critically on HLA compatibility, conventionally encoded as a binary match/mismatch count that discards most immunological information. Even the continuous distance metrics proposed as replacements share a subtler flaw: a Euclidean mismatch distance is symmetric and therefore <em>direction-blind</em>, whereas graft-versus-host alloreactivity is intrinsically directional. We propose CAPA, which represents each HLA allele with a frozen protein language model (ESM-2, 650M) and learns donor–recipient alloreactivity end-to-end via attention over the <em>signed</em> difference embeddings, feeding a DeepHit head that jointly predicts cumulative incidence of GvHD, relapse, and TRM as competing risks. On the public UCI Bone Marrow Transplant cohort (n = 187) we report tabular competing-risks baselines (Fine–Gray relapse 0.84 / TRM 0.66 on a single split; 5×5 cross-validation corrects this to Cox 0.60 / 0.56); CAPA's ESM-2 step cannot be run end-to-end there for want of per-allele HLA typing. In a controlled directional simulation, a scalar-distance Cox model collapses to near-chance (C = 0.58) while CAPA reaches C = 0.87, recovering 93% of the gap to a direction-aware oracle with non-overlapping confidence intervals on every seed — capturing directional information no scalar distance can encode. We release all code and weights as an open, reproducible proof-of-concept and discuss the small-cohort and simulation-based limitations frankly.</p>
     </div>
 
     <section id="s1">
       <h2><span class="sn">1</span> Introduction</h2>
       <p>HLA matching is the strongest modifiable predictor of HSCT outcome. The standard representation — an integer count of matched alleles across loci — assumes all mismatches are equal and discards the protein-level differences that actually drive alloreactivity.<sup>[1]</sup> A single amino-acid substitution in the peptide-binding groove can change immunogenicity dramatically, while many substitutions are functionally silent.</p>
-      <p>We ask whether continuous, learned representations of HLA sequences can recover this lost signal and improve outcome prediction without hand-engineered mismatch features.</p>
+      <p>We ask whether a continuous, learned representation of HLA sequences can recover this lost signal — and in particular whether it can capture the <em>direction</em> of donor–recipient mismatch, which a symmetric distance cannot — without hand-engineered mismatch features.</p>
     </section>
 
     <section id="s2">
       <h2><span class="sn">2</span> Methods</h2>
       <h3>2.1 · Sequence embedding</h3>
       <p>For each allele we retrieve the full protein sequence from IPD-IMGT/HLA and embed it with frozen ESM-2 (<span class="mono" style="font-size:0.9em">esm2_t33_650M_UR50D</span>), mean-pooling the final layer to a 1 280-dim vector <span class="mono" style="font-size:0.9em">e ∈ ℝ¹²⁸⁰</span>.<sup>[2]</sup></p>
-      <h3>2.2 · Cross-attention interaction</h3>
-      <p>Donor and recipient embeddings across the five loci are projected and combined with multi-head cross-attention, yielding an interaction representation that the survival head consumes.</p>
+      <h3>2.2 · Directional interaction</h3>
+      <p>CAPA self-attends over the <em>signed</em> per-locus donor–recipient difference embeddings (e<sup>D</sup> − e<sup>R</sup>), preserving the direction of mismatch that a symmetric distance discards; the resulting interaction representation feeds the survival head. A higher-capacity bidirectional cross-attention variant is also implemented but is under-determined at the cohort sizes available, so the compact signed-difference model (469K parameters) is the one evaluated.</p>
       <div class="eq">CIF<sub>k</sub>(t | x) = P(T ≤ t, ε = k | x)<span class="eqn">(1)</span></div>
       <h3>2.3 · DeepHit competing-risks head</h3>
       <p>We model the three causes jointly with DeepHit, optimising a log-likelihood plus a ranking loss over event times.<sup>[3]</sup> Competing-risks formulation respects that the events are mutually exclusive over a patient's trajectory.</p>
@@ -144,8 +147,8 @@
             <text x="240" y="71" text-anchor="middle" class="t-ink">ESM-2 650M</text>
             <text x="240" y="86" text-anchor="middle" class="t-mut">1 280-dim</text>
             <rect x="352" y="48" width="120" height="54" rx="4" class="f-box"/>
-            <text x="412" y="71" text-anchor="middle" class="t-ink">Cross-attn</text>
-            <text x="412" y="86" text-anchor="middle" class="t-mut">donor × recip</text>
+            <text x="412" y="71" text-anchor="middle" class="t-ink">Signed-diff attn</text>
+            <text x="412" y="86" text-anchor="middle" class="t-mut">eᴰ − eᴿ</text>
             <rect x="524" y="30" width="108" height="30" rx="4" class="f-out"/>
             <text x="578" y="49" text-anchor="middle" class="t-ink">GvHD CIF</text>
             <rect x="524" y="63" width="108" height="30" rx="4" class="f-out"/>
@@ -162,22 +165,35 @@
           </g>
           <defs><marker id="ah" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 z" class="f-arrowhead"/></marker></defs>
         </svg>
-        <p class="pf-cap"><b>Fig. 1</b> End-to-end architecture. The protein language model is frozen; only the cross-attention interaction module and DeepHit head are trained.</p>
+        <p class="pf-cap"><b>Fig. 1</b> End-to-end architecture. The protein language model is frozen; only the signed-difference interaction module and DeepHit head are trained.</p>
       </div>
     </section>
 
     <section id="s3">
       <h2><span class="sn">3</span> Results</h2>
-      <p>On a single held-out test split (n = 29), CAPA reaches a time-dependent C-index of 0.81 for relapse and 0.63 for TRM. The best classical baseline — Fine–Gray — achieves 0.84 and 0.66 respectively. Confidence intervals on all metrics are wide (bootstrap CIs span most of [0, 1] given n = 29), so these estimates should be treated as exploratory. GvHD was not evaluable owing to only 2 events in the test fold.<sup>[4]</sup></p>
+      <p><b>3.1 · Tabular baselines on UCI BMT.</b> CAPA's ESM-2 step cannot be evaluated end-to-end on this cohort (it records aggregate mismatch counts, not per-allele typing), so we report tabular competing-risks baselines as reference points. On a single held-out test split (n = 29) the best baseline — Fine–Gray — reaches a time-dependent C-index of 0.84 for relapse and 0.66 for TRM. These single-split numbers are optimistic; repeated 5×5 cross-validation corrects them to Cox relapse 0.60 ± 0.14 and TRM 0.56 ± 0.06. GvHD was not evaluable owing to only 2 events in the test fold.<sup>[4]</sup></p>
 
       <table class="jtable" style="margin:24px 0">
-        <caption>Table 1 — Time-dependent C-index on the UCI BMT test set (n = 29). Higher is better; — denotes not evaluable.</caption>
+        <caption>Table 1 — Time-dependent C-index on the UCI BMT test set (n = 29), tabular baselines only. CAPA requires registry-scale data with per-allele HLA typing, absent here. Higher is better; — denotes not evaluable.</caption>
         <thead><tr><th>Model</th><th>Relapse</th><th>TRM</th><th>GvHD</th></tr></thead>
         <tbody>
           <tr><td>Cox-PH (cause-specific)</td><td>0.75</td><td>0.65</td><td>—</td></tr>
           <tr><td>Fine–Gray</td><td class="best">0.84</td><td class="best">0.66</td><td>—</td></tr>
-          <tr><td>DeepHit (tabular HLA)</td><td>0.67</td><td>0.41</td><td>—</td></tr>
-          <tr><td>CAPA (ESM-2 + cross-attn)</td><td>0.81</td><td>0.63</td><td>—</td></tr>
+          <tr><td>Random Survival Forest</td><td>0.48</td><td>0.65</td><td>—</td></tr>
+          <tr><td>DeepHit (tabular HLA)</td><td>0.65</td><td>0.57</td><td>—</td></tr>
+        </tbody>
+      </table>
+
+      <p><b>3.2 · Directional simulation — where CAPA wins.</b> In a controlled cohort (N = 10,000, 6 seeds) where GvHD hazard is driven by the <em>direction</em> of the donor–recipient difference, a Cox model on symmetric scalar distances collapses to near-chance, while CAPA — learning from signed difference embeddings — recovers most of the gap to a direction-aware oracle, with non-overlapping confidence intervals on every seed. On a scalar-distance TRM control CAPA is deliberately weaker, confirming the advantage is specific to directional structure rather than a generic capacity effect.</p>
+
+      <table class="jtable" style="margin:24px 0">
+        <caption>Table 2 — Directional GvHD simulation (N = 10,000; mean ± SD over 6 seeds). The oracle is given the true directional features; TRM is a scalar-distance control.</caption>
+        <thead><tr><th>Model</th><th>GvHD</th><th>Relapse</th><th>TRM</th></tr></thead>
+        <tbody>
+          <tr><td>Cox (binary mismatch)</td><td>0.53</td><td>0.77</td><td>0.59</td></tr>
+          <tr><td>Cox (scalar distances)</td><td>0.58</td><td>0.78</td><td class="best">0.67</td></tr>
+          <tr><td>Cox (oracle direction)</td><td>0.89</td><td>0.78</td><td>0.67</td></tr>
+          <tr><td>CAPA (signed diff)</td><td class="best">0.87</td><td>0.77</td><td>0.53</td></tr>
         </tbody>
       </table>
 
@@ -197,13 +213,13 @@
           <path d="M48 204 C 210 203, 300 193, 380 187 S 540 180, 624 177" fill="none" class="s-trm" stroke-width="2.4"/>
         </svg>
         <div class="legend"><span><i style="background:var(--risk-gvhd)"></i>GvHD</span><span><i style="background:var(--risk-relapse)"></i>Relapse</span><span><i style="background:var(--risk-trm)"></i>TRM</span></div>
-        <p class="pf-cap"><b>Fig. 2</b> Predicted cumulative incidence functions for a representative test patient across the three competing risks.</p>
+        <p class="pf-cap"><b>Fig. 2</b> Illustrative predicted cumulative incidence functions across the three competing risks.</p>
       </div>
     </section>
 
     <section id="s4">
       <h2><span class="sn">4</span> Discussion &amp; limitations</h2>
-      <p>The results support the central hypothesis: continuous protein-language representations of HLA carry outcome-relevant signal beyond match counts. However, the cohort is small (n = 187), drawn from a single source, and several event types are too rare to evaluate reliably. We make <b>no clinical claims</b>; CAPA is a methodological demonstration. External validation on large, multi-centre registries is the necessary next step.</p>
+      <p>The directional simulation supports the central claim: a learned representation on the signed difference embedding captures directional alloreactivity that a symmetric scalar distance provably cannot. This is established in a simulation that <em>plants</em> the directional signal (a capability demonstration) and against tabular baselines; the UCI BMT cohort is small (n = 187), single-source, and several event types are too rare to evaluate. The one real-data test (IHWG, composite OS endpoint) shows ESM-2 distances merely <em>comparable</em> to binary mismatch overall. We make <b>no clinical claims</b>; CAPA is a methodological proof-of-concept. External validation on large multi-centre registries with per-allele typing and event-specific endpoints is the necessary next step.</p>
     </section>
 
     <section id="s5">
@@ -230,7 +246,7 @@
     </div>
     <div class="aside-box">
       <h4>Cite this work</h4>
-      <div class="cite-box" id="cite">Li, H. (2026). CAPA: Structure-aware HLA mismatch representations for competing-risks transplant outcome prediction. github.com/sh4wn27/capa</div>
+      <div class="cite-box" id="cite">Li, H. (2026). CAPA: Directional, structure-aware HLA mismatch representations from protein language models for competing-risks survival analysis in HSCT. github.com/sh4wn27/capa</div>
       <button class="btn btn-ghost copy-btn" id="copyCite" style="justify-content:center">Copy citation</button>
     </div>
   </aside>
