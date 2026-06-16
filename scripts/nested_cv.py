@@ -8,14 +8,28 @@ Usage
 Quick smoke-test on synthetic data (no real data or checkpoint needed):
     uv run python scripts/nested_cv.py --synthetic
 
-Full CV on real preprocessed data:
-    uv run python scripts/nested_cv.py
+Full CV on real preprocessed data (frequency-imputed HLA alleles):
+    uv run python scripts/nested_cv.py --diff-mode none
+    uv run python scripts/nested_cv.py --diff-mode signed
 
 Custom folds / repeats:
     uv run python scripts/nested_cv.py --folds 5 --repeats 10
 
 Save results JSON:
     uv run python scripts/nested_cv.py --output-path runs/cv_results.json
+
+IMPORTANT CAVEAT — real-data mode
+----------------------------------
+The real UCI BMT cohort has no actual donor/recipient allele typing, only
+aggregate mismatch counts. ``data/processed/bmt_imputed_hla.csv`` assigns
+*frequency-imputed* alleles constrained to match each patient's recorded
+mismatch count (see ``scripts/impute_hla_alleles.py``). These alleles carry
+zero outcome-specific biological signal. Consequently ``--diff-mode`` here
+validates pipeline correctness and clinical-covariate performance under
+repeated CV — it CANNOT demonstrate the directional HLA-embedding mechanism,
+because the data contains no real allele-outcome relationship to detect.
+A Cox baseline on scalar mismatch distance is run alongside CAPA for honest
+comparison.
 
 Notes
 -----
@@ -41,7 +55,9 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
+import h5py
 import numpy as np
+import pandas as pd
 import torch
 
 _ROOT = Path(__file__).resolve().parent.parent
@@ -89,6 +105,13 @@ def _parse_args() -> argparse.Namespace:
         "--output-path", type=Path, default=None,
         help="Write results JSON to this path.",
     )
+    p.add_argument(
+        "--diff-mode", choices=["none", "signed"], default="none",
+        help="'none' = standard donor/recipient cross-attention; "
+             "'signed' = self-attention on the signed difference "
+             "(recipient - donor) embedding, matching the directional "
+             "simulation's CAPA variant.",
+    )
     return p.parse_args()
 
 
@@ -130,54 +153,91 @@ def _make_synthetic(
     }
 
 
+_REAL_LOCI = ["A", "B", "C", "DRB1", "DQB1"]
+_REAL_MAX_DAYS = 730.0
+_REAL_EMB_PATH = _ROOT / "data/processed/hla_embeddings.h5"
+_REAL_CSV_PATH = _ROOT / "data/processed/bmt_imputed_hla.csv"
+
+
 def _load_real_data() -> dict[str, Any]:
-    """Load preprocessed UCI BMT data and pre-computed embeddings."""
-    from capa.config import get_config
-    from capa.data.loader import load_bmt
-    from capa.data.splits import make_splits
-    from capa.embeddings.cache import EmbeddingCache
+    """Load the real UCI BMT cohort with frequency-imputed HLA alleles.
 
-    cfg = get_config()
-    df = load_bmt(cfg.data.processed_dir / "bone-marrow.csv")
-    splits = make_splits(df, seed=cfg.training.seed)
-    full_df = splits.full  # use full dataset; CV handles the splits
+    CAVEAT: alleles in bmt_imputed_hla.csv are frequency-imputed (see
+    scripts/impute_hla_alleles.py), not real typing — they carry no
+    outcome-specific biological signal. This loader provides real survival
+    outcomes and real clinical covariates; the HLA embeddings only let us
+    test pipeline mechanics, not the directional mechanism itself.
+    """
+    from capa.model.capa_model import DISEASE_CATEGORIES
 
-    cache = EmbeddingCache(cfg.embedding.cache_path, mode="r")
-    loci = list(cfg.model.hla_loci)
-    embed_dim = cfg.embedding.embedding_dim
+    if not _REAL_CSV_PATH.exists():
+        raise FileNotFoundError(
+            f"{_REAL_CSV_PATH} not found — run scripts/impute_hla_alleles.py first."
+        )
 
-    n = len(full_df)
-    n_loci = len(loci)
+    df = pd.read_csv(_REAL_CSV_PATH)
+    n = len(df)
+
+    embs: dict[str, np.ndarray] = {}
+    with h5py.File(_REAL_EMB_PATH, "r") as f:
+        for key in f.keys():
+            embs[key] = f[key][:]
+    embed_dim = next(iter(embs.values())).shape[0]
+    n_loci = len(_REAL_LOCI)
 
     donor_emb     = np.zeros((n, n_loci, embed_dim), dtype=np.float32)
     recipient_emb = np.zeros((n, n_loci, embed_dim), dtype=np.float32)
+    dist          = np.zeros((n, n_loci), dtype=np.float32)
 
-    for i, row in full_df.iterrows():
-        for j, locus in enumerate(loci):
-            da = row.get(f"donor_{locus}", "")
-            ra = row.get(f"recipient_{locus}", "")
-            if da and cache.contains(da):
-                donor_emb[i, j] = cache.get(da)
-            if ra and cache.contains(ra):
-                recipient_emb[i, j] = cache.get(ra)
+    for i, row in enumerate(df.itertuples(index=False)):
+        row = row._asdict()
+        for j, locus in enumerate(_REAL_LOCI):
+            d1 = embs.get(row[f"donor_{locus}_1"], np.zeros(embed_dim))
+            d2 = embs.get(row[f"donor_{locus}_2"], np.zeros(embed_dim))
+            r1 = embs.get(row[f"recipient_{locus}_1"], np.zeros(embed_dim))
+            r2 = embs.get(row[f"recipient_{locus}_2"], np.zeros(embed_dim))
+            d_mean = (d1 + d2) / 2.0
+            r_mean = (r1 + r2) / 2.0
+            donor_emb[i, j] = d_mean
+            recipient_emb[i, j] = r_mean
+            dist[i, j] = np.linalg.norm(d_mean - r_mean)
 
-    # Clinical features (continuous + binary)
-    cont_cols = ["age_recipient", "age_donor", "cd34_dose", "sex_mismatch"]
-    clinical = full_df[cont_cols].fillna(0).to_numpy(dtype=np.float32)
+    disease_map = {v: k for k, v in enumerate(DISEASE_CATEGORIES)}
+    disease_alias = {"chronic": "CML", "lymphoma": "NHL", "nonmalignant": "other"}
+    disease_idx = df["disease"].astype(str).str.strip().map(
+        lambda s: disease_map.get(disease_alias.get(s, s), 0)
+    ).to_numpy(dtype=np.int64)
 
-    event_type = full_df["event_type"].to_numpy(dtype=np.int64)
-    event_time = full_df["survival_time"].to_numpy(dtype=np.float32)
+    clinical = np.stack([
+        df["recipient_age"].fillna(0).to_numpy(dtype=np.float32) / 100.0,
+        df["donor_age"].fillna(0).to_numpy(dtype=np.float32) / 100.0,
+        df["cd34_dose"].fillna(0).to_numpy(dtype=np.float32) / 10.0,
+        df["sex_mismatch_f2m"].fillna(0).to_numpy(dtype=np.float32),
+    ], axis=1)
+
+    relapse = df["relapse"].fillna(0).astype(int).to_numpy()
+    dead    = df["dead"].fillna(0).astype(int).to_numpy()
+    gvhd    = df["acute_gvhd_iii_iv"].fillna(0).astype(int).to_numpy()
+    event_time = np.clip(df["survival_time_days"].astype(float).to_numpy(), 0.0, _REAL_MAX_DAYS).astype(np.float32)
+
+    event_type = np.zeros(n, dtype=np.int64)
+    event_type[(gvhd == 1) & (relapse == 0) & (dead == 0)] = 1
+    event_type[(dead == 1) & (relapse == 0)] = 3
+    event_type[relapse == 1] = 2
 
     return {
         "donor":      donor_emb,
         "recipient":  recipient_emb,
+        "dist":       dist,
+        "disease_idx": disease_idx,
         "clinical":   clinical,
         "event_type": event_type,
         "event_time": event_time,
         "n_loci":     n_loci,
         "embed_dim":  embed_dim,
-        "n_events":   cfg.model.num_events,
-        "time_bins":  cfg.model.time_bins,
+        "n_events":   3,
+        "time_bins":  100,
+        "max_days":   _REAL_MAX_DAYS,
     }
 
 
@@ -239,12 +299,36 @@ def _build_model(data: dict[str, Any], device: torch.device) -> torch.nn.Module:
     ).to(device)
 
 
+def _cat_tensor(data: dict[str, Any], idx: np.ndarray, device: torch.device) -> torch.Tensor:
+    """Build the (n, 4) categorical-index tensor for ClinicalEncoder.
+
+    Only "disease" is populated from real data when available (synthetic
+    data has no disease_idx, so all four columns default to "unknown"/0).
+    """
+    n_cat = 4
+    cat_t = torch.zeros(len(idx), n_cat, dtype=torch.long, device=device)
+    if "disease_idx" in data:
+        cat_t[:, 0] = torch.from_numpy(data["disease_idx"][idx]).long().to(device)
+    return cat_t
+
+
+def _diff_embeddings(
+    donor_t: torch.Tensor, recip_t: torch.Tensor, diff_mode: str,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Apply the donor/recipient → signed-difference transform if requested."""
+    if diff_mode == "signed":
+        diff = donor_t - recip_t
+        return diff, diff
+    return donor_t, recip_t
+
+
 def _train_fold(
     model: torch.nn.Module,
     data: dict[str, Any],
     train_idx: np.ndarray,
     epochs: int,
     device: torch.device,
+    diff_mode: str = "none",
 ) -> None:
     """Train model for one fold (simplified training loop for CV)."""
     from capa.model.losses import deephit_loss
@@ -254,18 +338,19 @@ def _train_fold(
 
     donor_t     = torch.from_numpy(data["donor"][train_idx]).to(device)
     recip_t     = torch.from_numpy(data["recipient"][train_idx]).to(device)
+    donor_t, recip_t = _diff_embeddings(donor_t, recip_t, diff_mode)
     clin_t      = torch.from_numpy(data["clinical"][train_idx]).to(device)
     etype_t = torch.from_numpy(data["event_type"][train_idx]).long().to(device)
     # deephit_loss expects time bin indices (0..time_bins-1), not raw days
+    max_days = data.get("max_days", 730.0)
     raw_times = data["event_time"][train_idx]
     bin_idx   = np.clip(
-        (raw_times / 730.0 * (data["time_bins"] - 1)).astype(int),
+        (raw_times / max_days * (data["time_bins"] - 1)).astype(int),
         0, data["time_bins"] - 1,
     )
     etime_t = torch.from_numpy(bin_idx).long().to(device)
 
-    n_cat = 4
-    cat_t = torch.zeros(len(train_idx), n_cat, dtype=torch.long, device=device)
+    cat_t = _cat_tensor(data, train_idx, device)
 
     for epoch in range(epochs):
         opt.zero_grad()
@@ -285,15 +370,16 @@ def _eval_fold(
     val_idx: np.ndarray,
     n_bootstrap: int,
     device: torch.device,
+    diff_mode: str = "none",
 ) -> dict[str, Any]:
     """Evaluate model on one validation fold."""
     from capa.training.evaluate import concordance_index, bootstrap_ci
 
     donor_t  = torch.from_numpy(data["donor"][val_idx]).to(device)
     recip_t  = torch.from_numpy(data["recipient"][val_idx]).to(device)
+    donor_t, recip_t = _diff_embeddings(donor_t, recip_t, diff_mode)
     clin_t   = torch.from_numpy(data["clinical"][val_idx]).to(device)
-    n_cat    = 4
-    cat_t    = torch.zeros(len(val_idx), n_cat, dtype=torch.long, device=device)
+    cat_t    = _cat_tensor(data, val_idx, device)
 
     with torch.no_grad():
         clin_feats = model.clinical_encoder(clin_t, cat_t)
@@ -336,6 +422,68 @@ def _eval_fold(
             "ci_upper": ci["upper"],
             "n_events": n_events,
         }
+
+    return fold_results
+
+
+def _run_cox_fold(
+    data: dict[str, Any],
+    train_idx: np.ndarray,
+    val_idx: np.ndarray,
+) -> dict[str, Any]:
+    """Cox scalar-mismatch-distance baseline for one fold (real data only).
+
+    Uses per-locus L2 distance between mean-pooled donor/recipient ESM-2
+    embeddings plus clinical covariates — the same scalar-distance
+    representation CAPA's signed-difference mechanism is meant to improve on.
+    """
+    from lifelines import CoxPHFitter
+
+    if "dist" not in data:
+        return {"n": len(val_idx), "events": {}, "note": "no dist features (synthetic data)"}
+
+    dist_cols = [f"dist_{i}" for i in range(data["dist"].shape[1])]
+    clin_cols = ["age_recip", "age_donor", "cd34", "sex_mm"]
+    feat_cols = dist_cols + clin_cols
+
+    def _frame(idx: np.ndarray) -> pd.DataFrame:
+        df = pd.DataFrame(data["dist"][idx], columns=dist_cols)
+        for j, c in enumerate(clin_cols):
+            df[c] = data["clinical"][idx, j]
+        df["survival_time_days"] = data["event_time"][idx]
+        df["event_type"] = data["event_type"][idx]
+        return df
+
+    df_tr, df_va = _frame(train_idx), _frame(val_idx)
+    active_feats = [c for c in feat_cols if df_tr[c].std() > 0]
+
+    event_names = ["gvhd", "relapse", "trm"][:data["n_events"]]
+    fold_results: dict[str, Any] = {"n": len(val_idx), "events": {}}
+
+    for k, name in enumerate(event_names):
+        observed = (data["event_type"][val_idx] == (k + 1)).astype(bool)
+        n_events_va = int(observed.sum())
+        n_events_tr = int((df_tr["event_type"] == (k + 1)).sum())
+        if n_events_va < MIN_EVENTS_FOR_METRIC or n_events_tr < MIN_EVENTS_FOR_METRIC:
+            fold_results["events"][name] = {
+                "cindex": None, "n_events": n_events_va,
+                "note": f"skipped — too few events (val={n_events_va}, train={n_events_tr})",
+            }
+            continue
+
+        df_tr_k = df_tr[active_feats + ["survival_time_days"]].copy()
+        df_tr_k["event"] = (df_tr["event_type"] == (k + 1)).astype(int)
+        cph = CoxPHFitter(penalizer=0.1)
+        try:
+            cph.fit(df_tr_k, duration_col="survival_time_days", event_col="event")
+            risk_scores = cph.predict_partial_hazard(df_va[active_feats]).to_numpy().astype(np.float64)
+        except Exception as e:
+            fold_results["events"][name] = {"cindex": None, "n_events": n_events_va, "note": f"Cox fit failed: {e}"}
+            continue
+
+        from capa.training.evaluate import concordance_index
+        c = concordance_index(data["event_time"][val_idx].astype(np.float64), risk_scores, observed)
+        fold_results["events"][name] = {"cindex": round(c, 4), "n_events": n_events_va}
 
     return fold_results
 
@@ -412,6 +560,7 @@ def main() -> None:
 
     n_total    = len(data["event_time"])
     all_folds:  list[dict[str, Any]] = []
+    all_cox_folds: list[dict[str, Any]] = []
 
     for repeat in range(args.repeats):
         seed = args.seed + repeat * 1000
@@ -427,23 +576,31 @@ def main() -> None:
             )
 
             model = _build_model(data, device)
-            _train_fold(model, data, train_idx, epochs=args.epochs, device=device)
+            _train_fold(model, data, train_idx, epochs=args.epochs, device=device, diff_mode=args.diff_mode)
 
             fold_result = _eval_fold(
                 model, data, val_idx,
                 n_bootstrap=args.n_bootstrap,
                 device=device,
+                diff_mode=args.diff_mode,
             )
             fold_result["repeat"] = repeat
             fold_result["fold"]   = fold_i
             all_folds.append(fold_result)
 
+            cox_result = _run_cox_fold(data, train_idx, val_idx)
+            cox_result["repeat"] = repeat
+            cox_result["fold"]   = fold_i
+            all_cox_folds.append(cox_result)
+
     # Aggregate
     agg = _aggregate(all_folds)
+    agg_cox = _aggregate(all_cox_folds)
 
     # Report
     print("\n" + "=" * 60)
-    print(f"CAPA Repeated {args.folds}-fold CV × {args.repeats} repeats  (n={n_total})")
+    print(f"CAPA (diff-mode={args.diff_mode}) Repeated {args.folds}-fold CV "
+          f"× {args.repeats} repeats  (n={n_total})")
     print("=" * 60)
     print(f"{'Event':<10}  {'Mean C-index':>12}  {'Std':>6}  {'Range':>14}  {'Avg 95% CI':>18}  {'Folds':>5}")
     print("-" * 60)
@@ -457,11 +614,25 @@ def main() -> None:
             f"  [{m.min:.3f}–{m.max:.3f}]  {ci_str:>18}  {m.n_folds_evaluated:>5}"
         )
     print("=" * 60)
+    if agg_cox:
+        print(f"\nCox (scalar mismatch distance) baseline — same folds")
+        print("-" * 60)
+        for name, m in agg_cox.items():
+            print(f"{name:<10}  {m.mean:>12.4f}  {m.std:>6.4f}  [{m.min:.3f}–{m.max:.3f}]  {m.n_folds_evaluated:>5} folds")
+        print("=" * 60)
     print(
         "\nNote: mean C-index across folds is more reliable than a single\n"
         "29-patient test split. Wide CIs reflect the fundamental data-size\n"
         "limit — not a modelling failure.\n"
     )
+    if not args.synthetic:
+        print(
+            "CAVEAT: HLA alleles in bmt_imputed_hla.csv are frequency-imputed,\n"
+            "not real typing — they carry no outcome-specific biological signal.\n"
+            "This run validates pipeline mechanics and clinical-covariate\n"
+            "performance under proper CV; it does NOT test the directional\n"
+            "HLA-embedding mechanism.\n"
+        )
 
     results = {
         "config": {
@@ -471,9 +642,18 @@ def main() -> None:
             "n_bootstrap": args.n_bootstrap,
             "n_total": n_total,
             "synthetic": args.synthetic,
+            "diff_mode": args.diff_mode,
+            "caveat": None if args.synthetic else (
+                "HLA alleles are frequency-imputed (no real typing); results "
+                "validate pipeline mechanics, not the directional mechanism."
+            ),
         },
         "per_fold": all_folds,
         "aggregated": {k: v.to_dict() for k, v in agg.items()},
+        "cox_baseline": {
+            "per_fold": all_cox_folds,
+            "aggregated": {k: v.to_dict() for k, v in agg_cox.items()},
+        },
     }
 
     if args.output_path:

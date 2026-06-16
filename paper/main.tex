@@ -1184,6 +1184,56 @@ Any future study providing per-patient donor--recipient allele strings (e.g.,
 via CIBMTR registry data or a prospective cohort) can substitute those strings
 directly into the pipeline reported here.
 
+\subsection{Repeated Cross-Validation: Signed-Difference vs.\ Symmetric Architecture (Imputed Alleles)}
+\label{sec:cv_diffmode}
+
+The single-split result above (Section~\ref{sec:capa_imputed}) leaves open
+whether CAPA's signed-difference interaction mechanism (Section~\ref{sec:directional})
+behaves differently from a symmetric (unsigned) difference representation on
+real outcomes, as opposed to the synthetic cohort of
+Section~\ref{sec:directional} where the ground-truth hazard is constructed to
+depend on direction by design.  We repeated the 5$\times$10 stratified
+cross-validation protocol of Section~\ref{sec:cv} on the frequency-imputed
+UCI BMT cohort (50 folds total), training CAPA in two configurations ---
+self-attention over the symmetric difference $|e^D_l - e^R_l|$, and
+self-attention over the signed difference $(e^R_l - e^D_l)$ --- alongside a
+fold-matched Cox baseline on scalar per-locus ESM-2 mismatch distance.
+GvHD is excluded throughout because no fold retains $\geq 5$ GvHD-only events.
+
+\begin{table}[t!]
+  \caption{Repeated 5$\times$10 stratified CV mean $C$-index $\pm$ standard
+    deviation across 50 folds, frequency-imputed HLA alleles ($n=187$).
+    "Symmetric" and "Signed" are CAPA trained on $|e^D-e^R|$ and $(e^R-e^D)$
+    respectively; "Cox (distance)" is a per-fold Cox model on the same scalar
+    mismatch distances.}
+  \label{tab:cv_diffmode}
+  \begin{tabular}{lcc}
+    \toprule
+    \textbf{Model} & \textbf{Relapse} & \textbf{TRM} \\
+    \midrule
+    CAPA (symmetric diff)  & $0.516 \pm 0.196$ & $0.522 \pm 0.076$ \\
+    CAPA (signed diff)     & $0.495 \pm 0.184$ & $0.523 \pm 0.082$ \\
+    Cox (scalar distance)  & $0.462 \pm 0.173$ & $0.607 \pm 0.059$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\paragraph{Interpretation.}
+The signed and symmetric CAPA variants are statistically indistinguishable on
+this cohort ($\Delta C = 0.02$ for relapse, $\Delta C < 0.01$ for TRM, both
+far smaller than the $\pm 0.18$--$0.20$ fold-to-fold standard deviation), and
+neither CAPA variant outperforms the Cox scalar-distance baseline, which is
+in fact better on TRM.  This is the expected outcome given the limitation
+established in Section~\ref{sec:capa_imputed}: because imputed alleles carry
+no outcome-specific signal, there is no real directional relationship for the
+signed-difference mechanism to recover, so this experiment cannot --- and
+should not be read to --- test the directional-advantage claim of
+Section~\ref{sec:directional}. It instead confirms, under a proper repeated-CV
+protocol rather than a single split, that the architectural choice (signed
+vs.\ symmetric difference) does not by itself manufacture spurious lift on
+data without a real signal, and that demonstrating real directional
+advantage requires a cohort with actual donor--recipient allele typing.
+
 %% ── Results §8: Mechanistic simulation ─────────────────────────────────────
 \subsection{Mechanistic Simulation: ESM-2 Distances vs.\ Binary Mismatch Indicators}
 \label{sec:mechanistic}

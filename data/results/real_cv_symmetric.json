@@ -1,0 +1,2258 @@
+{
+  "config": {
+    "folds": 5,
+    "repeats": 10,
+    "epochs_per_fold": 30,
+    "n_bootstrap": 200,
+    "n_total": 187,
+    "synthetic": false,
+    "diff_mode": "none",
+    "caveat": "HLA alleles are frequency-imputed (no real typing); results validate pipeline mechanics, not the directional mechanism."
+  },
+  "per_fold": [
+    {
+      "n": 40,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 4,
+          "note": "skipped \u2014 only 4 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.6714,
+          "ci_lower": 0.3421,
+          "ci_upper": 0.9831,
+          "n_events": 6
+        },
+        "trm": {
+          "cindex": 0.544,
+          "ci_lower": 0.3693,
+          "ci_upper": 0.7046,
+          "n_events": 13
+        }
+      },
+      "repeat": 0,
+      "fold": 0
+    },
+    {
+      "n": 38,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 3,
+          "note": "skipped \u2014 only 3 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.3194,
+          "ci_lower": 0.0795,
+          "ci_upper": 0.561,
+          "n_events": 6
+        },
+        "trm": {
+          "cindex": 0.6867,
+          "ci_lower": 0.5041,
+          "ci_upper": 0.8503,
+          "n_events": 13
+        }
+      },
+      "repeat": 0,
+      "fold": 1
+    },
+    {
+      "n": 37,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 3,
+          "note": "skipped \u2014 only 3 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.4836,
+          "ci_lower": 0.2253,
+          "ci_upper": 0.736,
+          "n_events": 6
+        },
+        "trm": {
+          "cindex": 0.5661,
+          "ci_lower": 0.4078,
+          "ci_upper": 0.7212,
+          "n_events": 12
+        }
+      },
+      "repeat": 0,
+      "fold": 2
+    },
+    {
+      "n": 36,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 3,
+          "note": "skipped \u2014 only 3 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.4898,
+          "ci_lower": 0.2222,
+          "ci_upper": 0.7139,
+          "n_events": 5
+        },
+        "trm": {
+          "cindex": 0.5216,
+          "ci_lower": 0.3574,
+          "ci_upper": 0.7056,
+          "n_events": 12
+        }
+      },
+      "repeat": 0,
+      "fold": 3
+    },
+    {
+      "n": 36,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 3,
+          "note": "skipped \u2014 only 3 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.6593,
+          "ci_lower": 0.3905,
+          "ci_upper": 1.0,
+          "n_events": 5
+        },
+        "trm": {
+          "cindex": 0.5029,
+          "ci_lower": 0.3365,
+          "ci_upper": 0.704,
+          "n_events": 12
+        }
+      },
+      "repeat": 0,
+      "fold": 4
+    },
+    {
+      "n": 40,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 4,
+          "note": "skipped \u2014 only 4 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.4046,
+          "ci_lower": 0.2406,
+          "ci_upper": 0.5813,
+          "n_events": 6
+        },
+        "trm": {
+          "cindex": 0.412,
+          "ci_lower": 0.232,
+          "ci_upper": 0.5454,
+          "n_events": 13
+        }
+      },
+      "repeat": 1,
+      "fold": 0
+    },
+    {
+      "n": 38,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 3,
+          "note": "skipped \u2014 only 3 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.7476,
+          "ci_lower": 0.5118,
+          "ci_upper": 0.9611,
+          "n_events": 6
+        },
+        "trm": {
+          "cindex": 0.5296,
+          "ci_lower": 0.2967,
+          "ci_upper": 0.7324,
+          "n_events": 13
+        }
+      },
+      "repeat": 1,
+      "fold": 1
+    },
+    {
+      "n": 37,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 3,
+          "note": "skipped \u2014 only 3 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.6263,
+          "ci_lower": 0.4284,
+          "ci_upper": 0.8049,
+          "n_events": 6
+        },
+        "trm": {
+          "cindex": 0.5593,
+          "ci_lower": 0.428,
+          "ci_upper": 0.7103,
+          "n_events": 12
+        }
+      },
+      "repeat": 1,
+      "fold": 2
+    },
+    {
+      "n": 36,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 3,
+          "note": "skipped \u2014 only 3 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.5625,
+          "ci_lower": 0.2777,
+          "ci_upper": 0.7724,
+          "n_events": 5
+        },
+        "trm": {
+          "cindex": 0.4906,
+          "ci_lower": 0.3001,
+          "ci_upper": 0.6901,
+          "n_events": 12
+        }
+      },
+      "repeat": 1,
+      "fold": 3
+    },
+    {
+      "n": 36,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 3,
+          "note": "skipped \u2014 only 3 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.4474,
+          "ci_lower": 0.088,
+          "ci_upper": 0.8083,
+          "n_events": 5
+        },
+        "trm": {
+          "cindex": 0.4657,
+          "ci_lower": 0.2909,
+          "ci_upper": 0.6373,
+          "n_events": 12
+        }
+      },
+      "repeat": 1,
+      "fold": 4
+    },
+    {
+      "n": 40,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 4,
+          "note": "skipped \u2014 only 4 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.646,
+          "ci_lower": 0.3379,
+          "ci_upper": 0.8929,
+          "n_events": 6
+        },
+        "trm": {
+          "cindex": 0.3634,
+          "ci_lower": 0.227,
+          "ci_upper": 0.4918,
+          "n_events": 13
+        }
+      },
+      "repeat": 2,
+      "fold": 0
+    },
+    {
+      "n": 38,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 3,
+          "note": "skipped \u2014 only 3 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.4468,
+          "ci_lower": 0.1443,
+          "ci_upper": 0.6857,
+          "n_events": 6
+        },
+        "trm": {
+          "cindex": 0.5754,
+          "ci_lower": 0.4385,
+          "ci_upper": 0.7017,
+          "n_events": 13
+        }
+      },
+      "repeat": 2,
+      "fold": 1
+    },
+    {
+      "n": 37,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 3,
+          "note": "skipped \u2014 only 3 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.2308,
+          "ci_lower": 0.0,
+          "ci_upper": 0.644,
+          "n_events": 6
+        },
+        "trm": {
+          "cindex": 0.5886,
+          "ci_lower": 0.421,
+          "ci_upper": 0.7548,
+          "n_events": 12
+        }
+      },
+      "repeat": 2,
+      "fold": 2
+    },
+    {
+      "n": 36,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 3,
+          "note": "skipped \u2014 only 3 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.4722,
+          "ci_lower": 0.1904,
+          "ci_upper": 0.7072,
+          "n_events": 5
+        },
+        "trm": {
+          "cindex": 0.4821,
+          "ci_lower": 0.3215,
+          "ci_upper": 0.6503,
+          "n_events": 12
+        }
+      },
+      "repeat": 2,
+      "fold": 3
+    },
+    {
+      "n": 36,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 3,
+          "note": "skipped \u2014 only 3 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 1.0,
+          "ci_lower": 1.0,
+          "ci_upper": 1.0,
+          "n_events": 5
+        },
+        "trm": {
+          "cindex": 0.4217,
+          "ci_lower": 0.255,
+          "ci_upper": 0.587,
+          "n_events": 12
+        }
+      },
+      "repeat": 2,
+      "fold": 4
+    },
+    {
+      "n": 40,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 4,
+          "note": "skipped \u2014 only 4 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.5273,
+          "ci_lower": 0.3103,
+          "ci_upper": 0.75,
+          "n_events": 6
+        },
+        "trm": {
+          "cindex": 0.5192,
+          "ci_lower": 0.3424,
+          "ci_upper": 0.7086,
+          "n_events": 13
+        }
+      },
+      "repeat": 3,
+      "fold": 0
+    },
+    {
+      "n": 38,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 3,
+          "note": "skipped \u2014 only 3 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.2701,
+          "ci_lower": 0.012,
+          "ci_upper": 0.4741,
+          "n_events": 6
+        },
+        "trm": {
+          "cindex": 0.4853,
+          "ci_lower": 0.2995,
+          "ci_upper": 0.6577,
+          "n_events": 13
+        }
+      },
+      "repeat": 3,
+      "fold": 1
+    },
+    {
+      "n": 37,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 3,
+          "note": "skipped \u2014 only 3 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.5254,
+          "ci_lower": 0.1766,
+          "ci_upper": 0.8125,
+          "n_events": 6
+        },
+        "trm": {
+          "cindex": 0.4113,
+          "ci_lower": 0.2439,
+          "ci_upper": 0.5607,
+          "n_events": 12
+        }
+      },
+      "repeat": 3,
+      "fold": 2
+    },
+    {
+      "n": 36,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 3,
+          "note": "skipped \u2014 only 3 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.6375,
+          "ci_lower": 0.2648,
+          "ci_upper": 1.0,
+          "n_events": 5
+        },
+        "trm": {
+          "cindex": 0.4953,
+          "ci_lower": 0.2851,
+          "ci_upper": 0.6895,
+          "n_events": 12
+        }
+      },
+      "repeat": 3,
+      "fold": 3
+    },
+    {
+      "n": 36,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 3,
+          "note": "skipped \u2014 only 3 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.2809,
+          "ci_lower": 0.0424,
+          "ci_upper": 0.5378,
+          "n_events": 5
+        },
+        "trm": {
+          "cindex": 0.698,
+          "ci_lower": 0.5394,
+          "ci_upper": 0.8412,
+          "n_events": 12
+        }
+      },
+      "repeat": 3,
+      "fold": 4
+    },
+    {
+      "n": 40,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 4,
+          "note": "skipped \u2014 only 4 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.809,
+          "ci_lower": 0.568,
+          "ci_upper": 0.9697,
+          "n_events": 6
+        },
+        "trm": {
+          "cindex": 0.441,
+          "ci_lower": 0.2785,
+          "ci_upper": 0.61,
+          "n_events": 13
+        }
+      },
+      "repeat": 4,
+      "fold": 0
+    },
+    {
+      "n": 38,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 3,
+          "note": "skipped \u2014 only 3 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.495,
+          "ci_lower": 0.0,
+          "ci_upper": 0.8577,
+          "n_events": 6
+        },
+        "trm": {
+          "cindex": 0.4134,
+          "ci_lower": 0.2613,
+          "ci_upper": 0.5609,
+          "n_events": 13
+        }
+      },
+      "repeat": 4,
+      "fold": 1
+    },
+    {
+      "n": 37,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 3,
+          "note": "skipped \u2014 only 3 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.2903,
+          "ci_lower": 0.0943,
+          "ci_upper": 0.6383,
+          "n_events": 6
+        },
+        "trm": {
+          "cindex": 0.6132,
+          "ci_lower": 0.4208,
+          "ci_upper": 0.764,
+          "n_events": 12
+        }
+      },
+      "repeat": 4,
+      "fold": 2
+    },
+    {
+      "n": 36,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 3,
+          "note": "skipped \u2014 only 3 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.1974,
+          "ci_lower": 0.0409,
+          "ci_upper": 0.3505,
+          "n_events": 5
+        },
+        "trm": {
+          "cindex": 0.4923,
+          "ci_lower": 0.2761,
+          "ci_upper": 0.6915,
+          "n_events": 12
+        }
+      },
+      "repeat": 4,
+      "fold": 3
+    },
+    {
+      "n": 36,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 3,
+          "note": "skipped \u2014 only 3 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.7708,
+          "ci_lower": 0.5273,
+          "ci_upper": 0.9235,
+          "n_events": 5
+        },
+        "trm": {
+          "cindex": 0.5118,
+          "ci_lower": 0.3387,
+          "ci_upper": 0.7327,
+          "n_events": 12
+        }
+      },
+      "repeat": 4,
+      "fold": 4
+    },
+    {
+      "n": 40,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 4,
+          "note": "skipped \u2014 only 4 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.5506,
+          "ci_lower": 0.2424,
+          "ci_upper": 0.9001,
+          "n_events": 6
+        },
+        "trm": {
+          "cindex": 0.5931,
+          "ci_lower": 0.4522,
+          "ci_upper": 0.7639,
+          "n_events": 13
+        }
+      },
+      "repeat": 5,
+      "fold": 0
+    },
+    {
+      "n": 38,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 3,
+          "note": "skipped \u2014 only 3 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.3672,
+          "ci_lower": 0.0253,
+          "ci_upper": 0.6877,
+          "n_events": 6
+        },
+        "trm": {
+          "cindex": 0.5608,
+          "ci_lower": 0.421,
+          "ci_upper": 0.7094,
+          "n_events": 13
+        }
+      },
+      "repeat": 5,
+      "fold": 1
+    },
+    {
+      "n": 37,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 3,
+          "note": "skipped \u2014 only 3 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.5513,
+          "ci_lower": 0.0,
+          "ci_upper": 1.0,
+          "n_events": 6
+        },
+        "trm": {
+          "cindex": 0.4716,
+          "ci_lower": 0.3332,
+          "ci_upper": 0.6379,
+          "n_events": 12
+        }
+      },
+      "repeat": 5,
+      "fold": 2
+    },
+    {
+      "n": 36,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 3,
+          "note": "skipped \u2014 only 3 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.7,
+          "ci_lower": 0.4414,
+          "ci_upper": 0.9486,
+          "n_events": 5
+        },
+        "trm": {
+          "cindex": 0.5677,
+          "ci_lower": 0.3714,
+          "ci_upper": 0.7315,
+          "n_events": 12
+        }
+      },
+      "repeat": 5,
+      "fold": 3
+    },
+    {
+      "n": 36,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 3,
+          "note": "skipped \u2014 only 3 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.5714,
+          "ci_lower": 0.125,
+          "ci_upper": 0.9503,
+          "n_events": 5
+        },
+        "trm": {
+          "cindex": 0.4986,
+          "ci_lower": 0.3383,
+          "ci_upper": 0.6729,
+          "n_events": 12
+        }
+      },
+      "repeat": 5,
+      "fold": 4
+    },
+    {
+      "n": 40,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 4,
+          "note": "skipped \u2014 only 4 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.4771,
+          "ci_lower": 0.2157,
+          "ci_upper": 0.7812,
+          "n_events": 6
+        },
+        "trm": {
+          "cindex": 0.5507,
+          "ci_lower": 0.4154,
+          "ci_upper": 0.6921,
+          "n_events": 13
+        }
+      },
+      "repeat": 6,
+      "fold": 0
+    },
+    {
+      "n": 38,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 3,
+          "note": "skipped \u2014 only 3 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.4896,
+          "ci_lower": 0.2825,
+          "ci_upper": 0.6858,
+          "n_events": 6
+        },
+        "trm": {
+          "cindex": 0.4558,
+          "ci_lower": 0.2787,
+          "ci_upper": 0.5906,
+          "n_events": 13
+        }
+      },
+      "repeat": 6,
+      "fold": 1
+    },
+    {
+      "n": 37,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 3,
+          "note": "skipped \u2014 only 3 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.6167,
+          "ci_lower": 0.3391,
+          "ci_upper": 0.8247,
+          "n_events": 6
+        },
+        "trm": {
+          "cindex": 0.4986,
+          "ci_lower": 0.3281,
+          "ci_upper": 0.6582,
+          "n_events": 12
+        }
+      },
+      "repeat": 6,
+      "fold": 2
+    },
+    {
+      "n": 36,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 3,
+          "note": "skipped \u2014 only 3 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.4348,
+          "ci_lower": 0.0,
+          "ci_upper": 0.9094,
+          "n_events": 5
+        },
+        "trm": {
+          "cindex": 0.4138,
+          "ci_lower": 0.2338,
+          "ci_upper": 0.5712,
+          "n_events": 12
+        }
+      },
+      "repeat": 6,
+      "fold": 3
+    },
+    {
+      "n": 36,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 3,
+          "note": "skipped \u2014 only 3 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.5625,
+          "ci_lower": 0.0909,
+          "ci_upper": 1.0,
+          "n_events": 5
+        },
+        "trm": {
+          "cindex": 0.5743,
+          "ci_lower": 0.3992,
+          "ci_upper": 0.7743,
+          "n_events": 12
+        }
+      },
+      "repeat": 6,
+      "fold": 4
+    },
+    {
+      "n": 40,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 4,
+          "note": "skipped \u2014 only 4 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.2857,
+          "ci_lower": 0.1089,
+          "ci_upper": 0.4375,
+          "n_events": 6
+        },
+        "trm": {
+          "cindex": 0.4495,
+          "ci_lower": 0.3239,
+          "ci_upper": 0.6018,
+          "n_events": 13
+        }
+      },
+      "repeat": 7,
+      "fold": 0
+    },
+    {
+      "n": 38,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 3,
+          "note": "skipped \u2014 only 3 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.8381,
+          "ci_lower": 0.6925,
+          "ci_upper": 0.9658,
+          "n_events": 6
+        },
+        "trm": {
+          "cindex": 0.6753,
+          "ci_lower": 0.5561,
+          "ci_upper": 0.7935,
+          "n_events": 13
+        }
+      },
+      "repeat": 7,
+      "fold": 1
+    },
+    {
+      "n": 37,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 3,
+          "note": "skipped \u2014 only 3 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.2782,
+          "ci_lower": 0.0861,
+          "ci_upper": 0.5608,
+          "n_events": 6
+        },
+        "trm": {
+          "cindex": 0.5673,
+          "ci_lower": 0.3943,
+          "ci_upper": 0.7575,
+          "n_events": 12
+        }
+      },
+      "repeat": 7,
+      "fold": 2
+    },
+    {
+      "n": 36,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 3,
+          "note": "skipped \u2014 only 3 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.2737,
+          "ci_lower": 0.059,
+          "ci_upper": 0.4509,
+          "n_events": 5
+        },
+        "trm": {
+          "cindex": 0.44,
+          "ci_lower": 0.2555,
+          "ci_upper": 0.6292,
+          "n_events": 12
+        }
+      },
+      "repeat": 7,
+      "fold": 3
+    },
+    {
+      "n": 36,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 3,
+          "note": "skipped \u2014 only 3 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.0417,
+          "ci_lower": 0.0,
+          "ci_upper": 0.1374,
+          "n_events": 5
+        },
+        "trm": {
+          "cindex": 0.6416,
+          "ci_lower": 0.4673,
+          "ci_upper": 0.8417,
+          "n_events": 12
+        }
+      },
+      "repeat": 7,
+      "fold": 4
+    },
+    {
+      "n": 40,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 4,
+          "note": "skipped \u2014 only 4 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.5814,
+          "ci_lower": 0.2031,
+          "ci_upper": 0.9039,
+          "n_events": 6
+        },
+        "trm": {
+          "cindex": 0.5875,
+          "ci_lower": 0.3667,
+          "ci_upper": 0.773,
+          "n_events": 13
+        }
+      },
+      "repeat": 8,
+      "fold": 0
+    },
+    {
+      "n": 38,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 3,
+          "note": "skipped \u2014 only 3 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.6164,
+          "ci_lower": 0.2533,
+          "ci_upper": 1.0,
+          "n_events": 6
+        },
+        "trm": {
+          "cindex": 0.4383,
+          "ci_lower": 0.2928,
+          "ci_upper": 0.5885,
+          "n_events": 13
+        }
+      },
+      "repeat": 8,
+      "fold": 1
+    },
+    {
+      "n": 37,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 3,
+          "note": "skipped \u2014 only 3 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.1278,
+          "ci_lower": 0.0196,
+          "ci_upper": 0.2474,
+          "n_events": 6
+        },
+        "trm": {
+          "cindex": 0.5526,
+          "ci_lower": 0.4085,
+          "ci_upper": 0.7362,
+          "n_events": 12
+        }
+      },
+      "repeat": 8,
+      "fold": 2
+    },
+    {
+      "n": 36,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 3,
+          "note": "skipped \u2014 only 3 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.7857,
+          "ci_lower": 0.5626,
+          "ci_upper": 1.0,
+          "n_events": 5
+        },
+        "trm": {
+          "cindex": 0.4829,
+          "ci_lower": 0.2538,
+          "ci_upper": 0.6984,
+          "n_events": 12
+        }
+      },
+      "repeat": 8,
+      "fold": 3
+    },
+    {
+      "n": 36,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 3,
+          "note": "skipped \u2014 only 3 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.6667,
+          "ci_lower": 0.4272,
+          "ci_upper": 0.9537,
+          "n_events": 5
+        },
+        "trm": {
+          "cindex": 0.523,
+          "ci_lower": 0.3336,
+          "ci_upper": 0.6932,
+          "n_events": 12
+        }
+      },
+      "repeat": 8,
+      "fold": 4
+    },
+    {
+      "n": 40,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 4,
+          "note": "skipped \u2014 only 4 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.5244,
+          "ci_lower": 0.1956,
+          "ci_upper": 0.7718,
+          "n_events": 6
+        },
+        "trm": {
+          "cindex": 0.5545,
+          "ci_lower": 0.3421,
+          "ci_upper": 0.714,
+          "n_events": 13
+        }
+      },
+      "repeat": 9,
+      "fold": 0
+    },
+    {
+      "n": 38,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 3,
+          "note": "skipped \u2014 only 3 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.6777,
+          "ci_lower": 0.4845,
+          "ci_upper": 0.8667,
+          "n_events": 6
+        },
+        "trm": {
+          "cindex": 0.4806,
+          "ci_lower": 0.2968,
+          "ci_upper": 0.7017,
+          "n_events": 13
+        }
+      },
+      "repeat": 9,
+      "fold": 1
+    },
+    {
+      "n": 37,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 3,
+          "note": "skipped \u2014 only 3 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.3761,
+          "ci_lower": 0.1408,
+          "ci_upper": 0.6099,
+          "n_events": 6
+        },
+        "trm": {
+          "cindex": 0.493,
+          "ci_lower": 0.3469,
+          "ci_upper": 0.6359,
+          "n_events": 12
+        }
+      },
+      "repeat": 9,
+      "fold": 2
+    },
+    {
+      "n": 36,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 3,
+          "note": "skipped \u2014 only 3 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.8261,
+          "ci_lower": 0.511,
+          "ci_upper": 1.0,
+          "n_events": 5
+        },
+        "trm": {
+          "cindex": 0.6565,
+          "ci_lower": 0.4961,
+          "ci_upper": 0.8356,
+          "n_events": 12
+        }
+      },
+      "repeat": 9,
+      "fold": 3
+    },
+    {
+      "n": 36,
+      "events": {
+        "gvhd": {
+          "cindex": null,
+          "n_events": 3,
+          "note": "skipped \u2014 only 3 events (< 5)"
+        },
+        "relapse": {
+          "cindex": 0.5766,
+          "ci_lower": 0.201,
+          "ci_upper": 0.8866,
+          "n_events": 5
+        },
+        "trm": {
+          "cindex": 0.5945,
+          "ci_lower": 0.4252,
+          "ci_upper": 0.7624,
+          "n_events": 12
+        }
+      },
+      "repeat": 9,
+      "fold": 4
+    }
+  ],
+  "aggregated": {
+    "relapse": {
+      "mean": 0.5162,
+      "std": 0.1964,
+      "min": 0.0417,
+      "max": 1.0,
+      "ci_lower_mean": 0.2445,
+      "ci_upper_mean": 0.7729,
+      "n_folds_evaluated": 50
+    },
+    "trm": {
+      "mean": 0.5223,
+      "std": 0.076,
+      "min": 0.3634,
+      "max": 0.698,
+      "ci_lower_mean": 0.352,
+      "ci_upper_mean": 0.6914,
+      "n_folds_evaluated": 50
+    }
+  },
+  "cox_baseline": {
+    "per_fold": [
+      {
+        "n": 40,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 4,
+            "note": "skipped \u2014 too few events (val=4, train=12)"
+          },
+          "relapse": {
+            "cindex": 0.5714,
+            "n_events": 6
+          },
+          "trm": {
+            "cindex": 0.6218,
+            "n_events": 13
+          }
+        },
+        "repeat": 0,
+        "fold": 0
+      },
+      {
+        "n": 38,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 3,
+            "note": "skipped \u2014 too few events (val=3, train=13)"
+          },
+          "relapse": {
+            "cindex": 0.5,
+            "n_events": 6
+          },
+          "trm": {
+            "cindex": 0.6692,
+            "n_events": 13
+          }
+        },
+        "repeat": 0,
+        "fold": 1
+      },
+      {
+        "n": 37,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 3,
+            "note": "skipped \u2014 too few events (val=3, train=13)"
+          },
+          "relapse": {
+            "cindex": 0.4344,
+            "n_events": 6
+          },
+          "trm": {
+            "cindex": 0.6925,
+            "n_events": 12
+          }
+        },
+        "repeat": 0,
+        "fold": 2
+      },
+      {
+        "n": 36,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 3,
+            "note": "skipped \u2014 too few events (val=3, train=13)"
+          },
+          "relapse": {
+            "cindex": 0.5306,
+            "n_events": 5
+          },
+          "trm": {
+            "cindex": 0.6081,
+            "n_events": 12
+          }
+        },
+        "repeat": 0,
+        "fold": 3
+      },
+      {
+        "n": 36,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 3,
+            "note": "skipped \u2014 too few events (val=3, train=13)"
+          },
+          "relapse": {
+            "cindex": 0.2967,
+            "n_events": 5
+          },
+          "trm": {
+            "cindex": 0.5402,
+            "n_events": 12
+          }
+        },
+        "repeat": 0,
+        "fold": 4
+      },
+      {
+        "n": 40,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 4,
+            "note": "skipped \u2014 too few events (val=4, train=12)"
+          },
+          "relapse": {
+            "cindex": 0.4809,
+            "n_events": 6
+          },
+          "trm": {
+            "cindex": 0.5928,
+            "n_events": 13
+          }
+        },
+        "repeat": 1,
+        "fold": 0
+      },
+      {
+        "n": 38,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 3,
+            "note": "skipped \u2014 too few events (val=3, train=13)"
+          },
+          "relapse": {
+            "cindex": 0.233,
+            "n_events": 6
+          },
+          "trm": {
+            "cindex": 0.6375,
+            "n_events": 13
+          }
+        },
+        "repeat": 1,
+        "fold": 1
+      },
+      {
+        "n": 37,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 3,
+            "note": "skipped \u2014 too few events (val=3, train=13)"
+          },
+          "relapse": {
+            "cindex": 0.4343,
+            "n_events": 6
+          },
+          "trm": {
+            "cindex": 0.6271,
+            "n_events": 12
+          }
+        },
+        "repeat": 1,
+        "fold": 2
+      },
+      {
+        "n": 36,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 3,
+            "note": "skipped \u2014 too few events (val=3, train=13)"
+          },
+          "relapse": {
+            "cindex": 0.3625,
+            "n_events": 5
+          },
+          "trm": {
+            "cindex": 0.6698,
+            "n_events": 12
+          }
+        },
+        "repeat": 1,
+        "fold": 3
+      },
+      {
+        "n": 36,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 3,
+            "note": "skipped \u2014 too few events (val=3, train=13)"
+          },
+          "relapse": {
+            "cindex": 0.8026,
+            "n_events": 5
+          },
+          "trm": {
+            "cindex": 0.5791,
+            "n_events": 12
+          }
+        },
+        "repeat": 1,
+        "fold": 4
+      },
+      {
+        "n": 40,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 4,
+            "note": "skipped \u2014 too few events (val=4, train=12)"
+          },
+          "relapse": {
+            "cindex": 0.531,
+            "n_events": 6
+          },
+          "trm": {
+            "cindex": 0.6049,
+            "n_events": 13
+          }
+        },
+        "repeat": 2,
+        "fold": 0
+      },
+      {
+        "n": 38,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 3,
+            "note": "skipped \u2014 too few events (val=3, train=13)"
+          },
+          "relapse": {
+            "cindex": 0.4397,
+            "n_events": 6
+          },
+          "trm": {
+            "cindex": 0.6803,
+            "n_events": 13
+          }
+        },
+        "repeat": 2,
+        "fold": 1
+      },
+      {
+        "n": 37,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 3,
+            "note": "skipped \u2014 too few events (val=3, train=13)"
+          },
+          "relapse": {
+            "cindex": 0.2692,
+            "n_events": 6
+          },
+          "trm": {
+            "cindex": 0.5743,
+            "n_events": 12
+          }
+        },
+        "repeat": 2,
+        "fold": 2
+      },
+      {
+        "n": 36,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 3,
+            "note": "skipped \u2014 too few events (val=3, train=13)"
+          },
+          "relapse": {
+            "cindex": 0.3241,
+            "n_events": 5
+          },
+          "trm": {
+            "cindex": 0.6254,
+            "n_events": 12
+          }
+        },
+        "repeat": 2,
+        "fold": 3
+      },
+      {
+        "n": 36,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 3,
+            "note": "skipped \u2014 too few events (val=3, train=13)"
+          },
+          "relapse": {
+            "cindex": 0.7391,
+            "n_events": 5
+          },
+          "trm": {
+            "cindex": 0.4815,
+            "n_events": 12
+          }
+        },
+        "repeat": 2,
+        "fold": 4
+      },
+      {
+        "n": 40,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 4,
+            "note": "skipped \u2014 too few events (val=4, train=12)"
+          },
+          "relapse": {
+            "cindex": 0.5455,
+            "n_events": 6
+          },
+          "trm": {
+            "cindex": 0.5769,
+            "n_events": 13
+          }
+        },
+        "repeat": 3,
+        "fold": 0
+      },
+      {
+        "n": 38,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 3,
+            "note": "skipped \u2014 too few events (val=3, train=13)"
+          },
+          "relapse": {
+            "cindex": 0.3358,
+            "n_events": 6
+          },
+          "trm": {
+            "cindex": 0.4853,
+            "n_events": 13
+          }
+        },
+        "repeat": 3,
+        "fold": 1
+      },
+      {
+        "n": 37,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 3,
+            "note": "skipped \u2014 too few events (val=3, train=13)"
+          },
+          "relapse": {
+            "cindex": 0.2627,
+            "n_events": 6
+          },
+          "trm": {
+            "cindex": 0.6169,
+            "n_events": 12
+          }
+        },
+        "repeat": 3,
+        "fold": 2
+      },
+      {
+        "n": 36,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 3,
+            "note": "skipped \u2014 too few events (val=3, train=13)"
+          },
+          "relapse": {
+            "cindex": 0.2125,
+            "n_events": 5
+          },
+          "trm": {
+            "cindex": 0.6364,
+            "n_events": 12
+          }
+        },
+        "repeat": 3,
+        "fold": 3
+      },
+      {
+        "n": 36,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 3,
+            "note": "skipped \u2014 too few events (val=3, train=13)"
+          },
+          "relapse": {
+            "cindex": 0.6854,
+            "n_events": 5
+          },
+          "trm": {
+            "cindex": 0.6695,
+            "n_events": 12
+          }
+        },
+        "repeat": 3,
+        "fold": 4
+      },
+      {
+        "n": 40,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 4,
+            "note": "skipped \u2014 too few events (val=4, train=12)"
+          },
+          "relapse": {
+            "cindex": 0.5843,
+            "n_events": 6
+          },
+          "trm": {
+            "cindex": 0.5663,
+            "n_events": 13
+          }
+        },
+        "repeat": 4,
+        "fold": 0
+      },
+      {
+        "n": 38,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 3,
+            "note": "skipped \u2014 too few events (val=3, train=13)"
+          },
+          "relapse": {
+            "cindex": 0.505,
+            "n_events": 6
+          },
+          "trm": {
+            "cindex": 0.6227,
+            "n_events": 13
+          }
+        },
+        "repeat": 4,
+        "fold": 1
+      },
+      {
+        "n": 37,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 3,
+            "note": "skipped \u2014 too few events (val=3, train=13)"
+          },
+          "relapse": {
+            "cindex": 0.371,
+            "n_events": 6
+          },
+          "trm": {
+            "cindex": 0.6963,
+            "n_events": 12
+          }
+        },
+        "repeat": 4,
+        "fold": 2
+      },
+      {
+        "n": 36,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 3,
+            "note": "skipped \u2014 too few events (val=3, train=13)"
+          },
+          "relapse": {
+            "cindex": 0.3421,
+            "n_events": 5
+          },
+          "trm": {
+            "cindex": 0.6223,
+            "n_events": 12
+          }
+        },
+        "repeat": 4,
+        "fold": 3
+      },
+      {
+        "n": 36,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 3,
+            "note": "skipped \u2014 too few events (val=3, train=13)"
+          },
+          "relapse": {
+            "cindex": 0.6875,
+            "n_events": 5
+          },
+          "trm": {
+            "cindex": 0.6676,
+            "n_events": 12
+          }
+        },
+        "repeat": 4,
+        "fold": 4
+      },
+      {
+        "n": 40,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 4,
+            "note": "skipped \u2014 too few events (val=4, train=12)"
+          },
+          "relapse": {
+            "cindex": 0.618,
+            "n_events": 6
+          },
+          "trm": {
+            "cindex": 0.6176,
+            "n_events": 13
+          }
+        },
+        "repeat": 5,
+        "fold": 0
+      },
+      {
+        "n": 38,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 3,
+            "note": "skipped \u2014 too few events (val=3, train=13)"
+          },
+          "relapse": {
+            "cindex": 0.4375,
+            "n_events": 6
+          },
+          "trm": {
+            "cindex": 0.6436,
+            "n_events": 13
+          }
+        },
+        "repeat": 5,
+        "fold": 1
+      },
+      {
+        "n": 37,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 3,
+            "note": "skipped \u2014 too few events (val=3, train=13)"
+          },
+          "relapse": {
+            "cindex": 0.5385,
+            "n_events": 6
+          },
+          "trm": {
+            "cindex": 0.5625,
+            "n_events": 12
+          }
+        },
+        "repeat": 5,
+        "fold": 2
+      },
+      {
+        "n": 36,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 3,
+            "note": "skipped \u2014 too few events (val=3, train=13)"
+          },
+          "relapse": {
+            "cindex": 0.4667,
+            "n_events": 5
+          },
+          "trm": {
+            "cindex": 0.4438,
+            "n_events": 12
+          }
+        },
+        "repeat": 5,
+        "fold": 3
+      },
+      {
+        "n": 36,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 3,
+            "note": "skipped \u2014 too few events (val=3, train=13)"
+          },
+          "relapse": {
+            "cindex": 0.5714,
+            "n_events": 5
+          },
+          "trm": {
+            "cindex": 0.6447,
+            "n_events": 12
+          }
+        },
+        "repeat": 5,
+        "fold": 4
+      },
+      {
+        "n": 40,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 4,
+            "note": "skipped \u2014 too few events (val=4, train=12)"
+          },
+          "relapse": {
+            "cindex": 0.3578,
+            "n_events": 6
+          },
+          "trm": {
+            "cindex": 0.5676,
+            "n_events": 13
+          }
+        },
+        "repeat": 6,
+        "fold": 0
+      },
+      {
+        "n": 38,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 3,
+            "note": "skipped \u2014 too few events (val=3, train=13)"
+          },
+          "relapse": {
+            "cindex": 0.5,
+            "n_events": 6
+          },
+          "trm": {
+            "cindex": 0.622,
+            "n_events": 13
+          }
+        },
+        "repeat": 6,
+        "fold": 1
+      },
+      {
+        "n": 37,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 3,
+            "note": "skipped \u2014 too few events (val=3, train=13)"
+          },
+          "relapse": {
+            "cindex": 0.6583,
+            "n_events": 6
+          },
+          "trm": {
+            "cindex": 0.6034,
+            "n_events": 12
+          }
+        },
+        "repeat": 6,
+        "fold": 2
+      },
+      {
+        "n": 36,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 3,
+            "note": "skipped \u2014 too few events (val=3, train=13)"
+          },
+          "relapse": {
+            "cindex": 0.1391,
+            "n_events": 5
+          },
+          "trm": {
+            "cindex": 0.6019,
+            "n_events": 12
+          }
+        },
+        "repeat": 6,
+        "fold": 3
+      },
+      {
+        "n": 36,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 3,
+            "note": "skipped \u2014 too few events (val=3, train=13)"
+          },
+          "relapse": {
+            "cindex": 0.2292,
+            "n_events": 5
+          },
+          "trm": {
+            "cindex": 0.6029,
+            "n_events": 12
+          }
+        },
+        "repeat": 6,
+        "fold": 4
+      },
+      {
+        "n": 40,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 4,
+            "note": "skipped \u2014 too few events (val=4, train=12)"
+          },
+          "relapse": {
+            "cindex": 0.6842,
+            "n_events": 6
+          },
+          "trm": {
+            "cindex": 0.5361,
+            "n_events": 13
+          }
+        },
+        "repeat": 7,
+        "fold": 0
+      },
+      {
+        "n": 38,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 3,
+            "note": "skipped \u2014 too few events (val=3, train=13)"
+          },
+          "relapse": {
+            "cindex": 0.419,
+            "n_events": 6
+          },
+          "trm": {
+            "cindex": 0.6182,
+            "n_events": 13
+          }
+        },
+        "repeat": 7,
+        "fold": 1
+      },
+      {
+        "n": 37,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 3,
+            "note": "skipped \u2014 too few events (val=3, train=13)"
+          },
+          "relapse": {
+            "cindex": 0.3985,
+            "n_events": 6
+          },
+          "trm": {
+            "cindex": 0.6901,
+            "n_events": 12
+          }
+        },
+        "repeat": 7,
+        "fold": 2
+      },
+      {
+        "n": 36,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 3,
+            "note": "skipped \u2014 too few events (val=3, train=13)"
+          },
+          "relapse": {
+            "cindex": 0.5789,
+            "n_events": 5
+          },
+          "trm": {
+            "cindex": 0.4646,
+            "n_events": 12
+          }
+        },
+        "repeat": 7,
+        "fold": 3
+      },
+      {
+        "n": 36,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 3,
+            "note": "skipped \u2014 too few events (val=3, train=13)"
+          },
+          "relapse": {
+            "cindex": 0.0,
+            "n_events": 5
+          },
+          "trm": {
+            "cindex": 0.7023,
+            "n_events": 12
+          }
+        },
+        "repeat": 7,
+        "fold": 4
+      },
+      {
+        "n": 40,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 4,
+            "note": "skipped \u2014 too few events (val=4, train=12)"
+          },
+          "relapse": {
+            "cindex": 0.5814,
+            "n_events": 6
+          },
+          "trm": {
+            "cindex": 0.5396,
+            "n_events": 13
+          }
+        },
+        "repeat": 8,
+        "fold": 0
+      },
+      {
+        "n": 38,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 3,
+            "note": "skipped \u2014 too few events (val=3, train=13)"
+          },
+          "relapse": {
+            "cindex": 0.3836,
+            "n_events": 6
+          },
+          "trm": {
+            "cindex": 0.5819,
+            "n_events": 13
+          }
+        },
+        "repeat": 8,
+        "fold": 1
+      },
+      {
+        "n": 37,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 3,
+            "note": "skipped \u2014 too few events (val=3, train=13)"
+          },
+          "relapse": {
+            "cindex": 0.5865,
+            "n_events": 6
+          },
+          "trm": {
+            "cindex": 0.6456,
+            "n_events": 12
+          }
+        },
+        "repeat": 8,
+        "fold": 2
+      },
+      {
+        "n": 36,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 3,
+            "note": "skipped \u2014 too few events (val=3, train=13)"
+          },
+          "relapse": {
+            "cindex": 0.2857,
+            "n_events": 5
+          },
+          "trm": {
+            "cindex": 0.6636,
+            "n_events": 12
+          }
+        },
+        "repeat": 8,
+        "fold": 3
+      },
+      {
+        "n": 36,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 3,
+            "note": "skipped \u2014 too few events (val=3, train=13)"
+          },
+          "relapse": {
+            "cindex": 0.8431,
+            "n_events": 5
+          },
+          "trm": {
+            "cindex": 0.6408,
+            "n_events": 12
+          }
+        },
+        "repeat": 8,
+        "fold": 4
+      },
+      {
+        "n": 40,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 4,
+            "note": "skipped \u2014 too few events (val=4, train=12)"
+          },
+          "relapse": {
+            "cindex": 0.6585,
+            "n_events": 6
+          },
+          "trm": {
+            "cindex": 0.6019,
+            "n_events": 13
+          }
+        },
+        "repeat": 9,
+        "fold": 0
+      },
+      {
+        "n": 38,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 3,
+            "note": "skipped \u2014 too few events (val=3, train=13)"
+          },
+          "relapse": {
+            "cindex": 0.5372,
+            "n_events": 6
+          },
+          "trm": {
+            "cindex": 0.5736,
+            "n_events": 13
+          }
+        },
+        "repeat": 9,
+        "fold": 1
+      },
+      {
+        "n": 37,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 3,
+            "note": "skipped \u2014 too few events (val=3, train=13)"
+          },
+          "relapse": {
+            "cindex": 0.3077,
+            "n_events": 6
+          },
+          "trm": {
+            "cindex": 0.5462,
+            "n_events": 12
+          }
+        },
+        "repeat": 9,
+        "fold": 2
+      },
+      {
+        "n": 36,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 3,
+            "note": "skipped \u2014 too few events (val=3, train=13)"
+          },
+          "relapse": {
+            "cindex": 0.2609,
+            "n_events": 5
+          },
+          "trm": {
+            "cindex": 0.6444,
+            "n_events": 12
+          }
+        },
+        "repeat": 9,
+        "fold": 3
+      },
+      {
+        "n": 36,
+        "events": {
+          "gvhd": {
+            "cindex": null,
+            "n_events": 3,
+            "note": "skipped \u2014 too few events (val=3, train=13)"
+          },
+          "relapse": {
+            "cindex": 0.5495,
+            "n_events": 5
+          },
+          "trm": {
+            "cindex": 0.6098,
+            "n_events": 12
+          }
+        },
+        "repeat": 9,
+        "fold": 4
+      }
+    ],
+    "aggregated": {
+      "relapse": {
+        "mean": 0.4615,
+        "std": 0.1727,
+        "min": 0.0,
+        "max": 0.8431,
+        "ci_lower_mean": null,
+        "ci_upper_mean": null,
+        "n_folds_evaluated": 50
+      },
+      "trm": {
+        "mean": 0.6067,
+        "std": 0.0585,
+        "min": 0.4438,
+        "max": 0.7023,
+        "ci_lower_mean": null,
+        "ci_upper_mean": null,
+        "n_folds_evaluated": 50
+      }
+    }
+  }
+}
