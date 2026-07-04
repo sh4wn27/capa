@@ -38,9 +38,9 @@ Shared interface
 
 from __future__ import annotations
 
+import pytest
 import torch
 import torch.nn as nn
-import pytest
 
 from capa.model.interaction import (
     AttentionWeights,
@@ -387,7 +387,8 @@ class TestDiffMLPBehavior:
 
     def test_identical_inputs_zero_diff_feature(self, diff_model: DiffMLPInteraction) -> None:
         """When donor == recipient the abs-diff feature is zero.
-        The model can still produce non-zero output via donor/recipient terms."""
+        The model can still produce non-zero output via donor/recipient terms.
+        """
         x = torch.randn(BATCH, N_LOCI, EMB)
         out = diff_model(x, x)
         assert out.shape == (BATCH, DIM)

@@ -28,7 +28,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from torch.utils.data import DataLoader, TensorDataset
+from torch.utils.data import DataLoader
 
 # --- resolve project root so `capa` is importable when run as a script ------
 _ROOT = Path(__file__).resolve().parent.parent
@@ -235,7 +235,6 @@ def main() -> None:
         # Real data path — requires preprocessing to have been run first
         from capa.data.loader import load_bmt_dataset
         from capa.data.splits import make_splits
-        from capa.embeddings.cache import EmbeddingCache
 
         logger.info("Loading UCI BMT dataset from %s", cfg.data.bmt_path)
         try:

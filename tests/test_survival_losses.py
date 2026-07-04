@@ -73,19 +73,19 @@ losses.py
 
 from __future__ import annotations
 
-import torch
 import pytest
+import torch
 
-from capa.model.survival import (
-    CauseSpecificHazardHead,
-    DeepHitHead,
-    hazards_to_cif,
-)
 from capa.model.losses import (
     _log_likelihood,
     _ranking_loss,
     cause_specific_loss,
     deephit_loss,
+)
+from capa.model.survival import (
+    CauseSpecificHazardHead,
+    DeepHitHead,
+    hazards_to_cif,
 )
 
 # ---------------------------------------------------------------------------

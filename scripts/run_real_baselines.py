@@ -41,8 +41,6 @@ from capa.training.evaluate import (
     bootstrap_ci,
     concordance_index,
     integrated_brier_score,
-    brier_score,
-    evaluate_all,
 )
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
@@ -677,8 +675,7 @@ def main() -> None:
 
     # ── 11. Print results ─────────────────────────────────────────────────────
     print("\n" + "=" * 80)
-    print("RESULTS — Test set (n={}) — C-index (95% CI, {} bootstrap)".format(
-        len(X_te), N_BOOTSTRAP))
+    print(f"RESULTS — Test set (n={len(X_te)}) — C-index (95% CI, {N_BOOTSTRAP} bootstrap)")
     print("=" * 80)
     header = f"{'Model':<28} {'GvHD C-index':>16} {'Rel C-index':>16} {'TRM C-index':>16}"
     print(header)
@@ -704,7 +701,7 @@ def main() -> None:
     # ── 12. Feature ablation table ────────────────────────────────────────────
     if ablation_results:
         print("\n" + "=" * 80)
-        print("ABLATION — Cox PH with feature subsets (test set, n={})".format(len(X_te)))
+        print(f"ABLATION — Cox PH with feature subsets (test set, n={len(X_te)})")
         print("=" * 80)
         for model_name, res in ablation_results.items():
             row = f"{model_name:<36}"
@@ -768,9 +765,9 @@ def main() -> None:
     with out_path.open("w") as fh:
         json.dump(
             {
-                "n_train": int(len(X_tr)),
-                "n_val": int(len(X_vl)),
-                "n_test": int(len(X_te)),
+                "n_train": len(X_tr),
+                "n_val": len(X_vl),
+                "n_test": len(X_te),
                 "time_bins": TIME_BINS.tolist(),
                 "eval_times": EVAL_TIMES.tolist(),
                 "event_names": EVENT_NAMES,

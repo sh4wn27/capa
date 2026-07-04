@@ -59,14 +59,22 @@ from sklearn.model_selection import train_test_split
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from capa.model.capa_model import CAPAModel
-from capa.training.evaluate import concordance_index, bootstrap_ci
 from scripts.run_haplo_simulation import (
-    EMB_PATH, LOCI, MAX_DAYS, N_TIME_BINS, T365_BIN, N_BOOTSTRAP, SEED,
-    _POOLS, _compute_max_l2,
-    build_clinical_tensors, build_embedding_tensors, eval_cindex,
-    run_cox, train_capa,
+    _POOLS,
+    EMB_PATH,
+    LOCI,
+    MAX_DAYS,
+    N_TIME_BINS,
+    SEED,
+    _compute_max_l2,
+    build_clinical_tensors,
+    build_embedding_tensors,
+    eval_cindex,
+    run_cox,
+    train_capa,
 )
+
+from capa.model.capa_model import CAPAModel
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger(__name__)

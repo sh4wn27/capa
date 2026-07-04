@@ -291,11 +291,10 @@ class _CAPADataset(Dataset):  # type: ignore[type-arg]
 def make_onehot_loaders(
     train_data: dict[str, Any],
     val_data: dict[str, Any],
-    vocab: "AlleleVocabulary",  # type: ignore[name-defined]
+    vocab: AlleleVocabulary,  # type: ignore[name-defined]
     batch_size: int = 32,
 ) -> tuple[DataLoader[Any], DataLoader[Any]]:
     """Build DataLoaders for CAPAOneHotBaseline."""
-    from capa.model.baselines import AlleleVocabulary
 
     def _encode_alleles(allele_lists: list[list[str]]) -> np.ndarray:
         n = len(allele_lists)
@@ -399,6 +398,7 @@ def main() -> None:
 
     # Run dir
     import datetime
+
     from capa.config import get_config
     cfg = get_config(config_file=args.config)
     run_name = args.run_name or datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -621,7 +621,8 @@ def main() -> None:
     if "blosum" in models_to_run:
         logger.info("Fitting CAPA-BLOSUM (ablation)…")
         from capa.model.baselines import (
-            CAPABLOSUMBaseline, BLOSUM62_DIM, blosum_embed_sequence,
+            BLOSUM62_DIM,
+            CAPABLOSUMBaseline,
         )
 
         def _make_blosum_loader(

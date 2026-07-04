@@ -115,27 +115,27 @@ class FigureData:
     # Embeddings: list of (allele_name, locus, embedding_vec)
     allele_names: list[str] = field(default_factory=list)
     allele_loci: list[str] = field(default_factory=list)
-    embeddings: "NDArray[np.float32] | None" = None   # (N_alleles, 1280)
+    embeddings: NDArray[np.float32] | None = None   # (N_alleles, 1280)
 
     # Attention: (n_loci_donor, n_loci_recip) matrix for one example patient
-    attention_matrix: "NDArray[np.float32] | None" = None
+    attention_matrix: NDArray[np.float32] | None = None
 
     # Survival: per-patient arrays, shape (n_patients,)
-    durations: "NDArray[np.float32] | None" = None
-    events: "NDArray[np.int32] | None" = None          # 0=censored,1=GvHD,2=Relapse,3=TRM
+    durations: NDArray[np.float32] | None = None
+    events: NDArray[np.int32] | None = None          # 0=censored,1=GvHD,2=Relapse,3=TRM
 
     # Predicted CIF: shape (n_patients, n_events, n_times)
-    pred_cif: "NDArray[np.float32] | None" = None
-    eval_times: "NDArray[np.float32] | None" = None    # e.g. [30,100,365,730]
+    pred_cif: NDArray[np.float32] | None = None
+    eval_times: NDArray[np.float32] | None = None    # e.g. [30,100,365,730]
 
     # Model comparison: dict model_name → {event: (c_index, ci_low, ci_high)}
     model_results: dict = field(default_factory=dict)
 
     # Clinical covariates for SHAP: (n_patients, 8)
-    clinical_matrix: "NDArray[np.float32] | None" = None
+    clinical_matrix: NDArray[np.float32] | None = None
 
     # SHAP values: (n_patients, 8)
-    shap_values: "NDArray[np.float32] | None" = None
+    shap_values: NDArray[np.float32] | None = None
 
     # Hyperparameter sensitivity: dict param_name → {values, c_index_mean, c_index_ci}
     sensitivity: dict = field(default_factory=dict)
@@ -144,7 +144,7 @@ class FigureData:
 # ---------------------------------------------------------------------------
 # Synthetic data generator
 # ---------------------------------------------------------------------------
-def _make_synthetic(rng: np.random.Generator) -> FigureData:  # noqa: PLR0914
+def _make_synthetic(rng: np.random.Generator) -> FigureData:
     """Generate realistic-looking synthetic data for all figures."""
     n_patients = 187
     n_alleles_per_locus = 20
@@ -301,7 +301,7 @@ def load_data(synthetic: bool = False) -> FigureData:
             "Real-data loading succeeded but figure pipeline uses synthetic data "
             "until full training results are available. Pass --synthetic to silence."
         )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.info("Real data unavailable (%s) — using synthetic data", exc)
     return _make_synthetic(rng)
 
@@ -314,7 +314,7 @@ def _apply_style() -> None:
     mpl.rcParams.update(_STYLE)
 
 
-def _save(fig: "matplotlib.figure.Figure", name: str, out: Path, formats: list[str], dpi: int) -> None:  # type: ignore[name-defined]  # noqa: F821
+def _save(fig: matplotlib.figure.Figure, name: str, out: Path, formats: list[str], dpi: int) -> None:  # type: ignore[name-defined]  # noqa: F821
     out.mkdir(parents=True, exist_ok=True)
     for fmt in formats:
         path = out / f"{name}.{fmt}"
@@ -572,7 +572,7 @@ def figure_4_cif(data: FigureData, out: Path, formats: list[str], dpi: int) -> N
             ajf.fit(durations, events, event_of_interest=event_code)
             obs_times = np.array(ajf.cumulative_density_.index, dtype=float)
             obs_cif = np.array(ajf.cumulative_density_.iloc[:, 0], dtype=float)
-        except Exception:  # noqa: BLE001
+        except Exception:
             # Empirical marginal CIF (rough)
             obs_times = np.sort(np.unique(durations))
             obs_cif = np.array([
@@ -609,8 +609,8 @@ def figure_4_cif(data: FigureData, out: Path, formats: list[str], dpi: int) -> N
 # ---------------------------------------------------------------------------
 def figure_5_comparison(data: FigureData, out: Path, formats: list[str], dpi: int) -> None:
     """Grouped bar chart of C-index per event per model."""
-    import matplotlib.pyplot as plt
     import matplotlib.patches as mpatches
+    import matplotlib.pyplot as plt
 
     _apply_style()
 
@@ -799,8 +799,8 @@ def _supp_figure_1_shap_fallback(
     data: FigureData, out: Path, formats: list[str], dpi: int
 ) -> None:
     """Fallback SHAP beeswarm without capa.interpret."""
-    import matplotlib.pyplot as plt
     import matplotlib
+    import matplotlib.pyplot as plt
 
     _apply_style()
 

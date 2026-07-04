@@ -22,24 +22,22 @@ from __future__ import annotations
 import json
 import logging
 import textwrap
-import types
 from pathlib import Path
 
 import numpy as np
 import pytest
 import torch
+from scripts.download_hla_seqs import parse_fasta
 
 from capa.data.hla_parser import parse_who_allele
 from capa.embeddings.cache import EmbeddingCache, SequenceEmbedder
-from capa.embeddings.esm_embedder import EMBEDDING_DIM, ESMEmbedder, detect_device
+from capa.embeddings.esm_embedder import ESMEmbedder, detect_device
 from capa.embeddings.hla_sequences import (
     HLASequenceDB,
     _best_from_candidates,
     _candidate_keys,
     _is_expressed,
 )
-from scripts.download_hla_seqs import parse_fasta
-
 
 # ---------------------------------------------------------------------------
 # Helpers: mock model / tokenizer injection
@@ -104,10 +102,10 @@ def _make_mock_model(hidden_dim: int = _MOCK_HIDDEN, fill: float = 1.0) -> objec
             b, sl = inputs["attention_mask"].shape
             return _MockOutput(torch.full((b, sl, hidden_dim), fill))
 
-        def eval(self) -> "_MockModel":
+        def eval(self) -> _MockModel:
             return self
 
-        def to(self, device: object) -> "_MockModel":
+        def to(self, device: object) -> _MockModel:
             return self
 
     return _MockModel()
@@ -703,7 +701,6 @@ def _make_nn_mock_model(
     hidden_dim: int = _MOCK_HIDDEN,
 ) -> torch.nn.Module:
     """Return a tiny nn.Module that mimics the ESM-2 encoder.layer structure."""
-    import types
 
     class _FakeOutput:
         def __init__(self, hs: torch.Tensor) -> None:

@@ -62,7 +62,7 @@ import re
 import sys
 import urllib.request
 from collections import Counter
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s  %(message)s")
@@ -105,7 +105,7 @@ def download_fasta(url: str, dest: Path) -> None:
     dots_printed = 0
     dot_every = 2 * 1024 * 1024  # dot per 2 MB
 
-    with urllib.request.urlopen(url, timeout=120) as response:  # noqa: S310
+    with urllib.request.urlopen(url, timeout=120) as response:
         content_length = response.headers.get("Content-Length")
         if content_length:
             logger.info("Expected size: %.1f MB", int(content_length) / 1e6)
@@ -251,7 +251,7 @@ def build_output(
 
     meta: dict[str, object] = {
         "source_url": source_url,
-        "downloaded_at": datetime.now(tz=timezone.utc).isoformat(),
+        "downloaded_at": datetime.now(tz=UTC).isoformat(),
         "n_alleles": len(alleles),
         "loci": {gene: count for gene, count in sorted(locus_counts.items())},
     }

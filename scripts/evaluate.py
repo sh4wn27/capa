@@ -127,8 +127,7 @@ def _make_synthetic_batch(
 # Results table printer
 # ---------------------------------------------------------------------------
 
-def _print_results(result: "EvaluationResult") -> None:  # noqa: F821
-    from capa.training.evaluate import EvaluationResult  # local import
+def _print_results(result: EvaluationResult) -> None:  # noqa: F821
 
     sep = "─" * 72
     print(f"\n{sep}")
@@ -158,7 +157,7 @@ def _print_results(result: "EvaluationResult") -> None:  # noqa: F821
             else:
                 print(f"    IBS     : {ibs.value:.4f}")
 
-        print(f"    Brier scores per time point:")
+        print("    Brier scores per time point:")
         for t, bs in sorted(em.brier_scores.items()):
             if bs.n_bootstrap > 0:
                 print(

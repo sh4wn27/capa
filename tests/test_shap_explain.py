@@ -89,21 +89,21 @@ import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import matplotlib
 import numpy as np
 import pytest
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from capa.interpret.shap_explain import (
+    _CONT_SCALE,
     CLINICAL_FEATURE_NAMES,
     ClinicalDeepWrapper,
     SHAPExplanation,
-    _CONT_SCALE,
     _beeswarm_y_positions,
     _format_feature_value,
     _matrix_to_tensors,
@@ -122,7 +122,6 @@ from capa.interpret.shap_explain import (
     save_figure,
 )
 from capa.model.interaction import AttentionWeights
-
 
 # ---------------------------------------------------------------------------
 # Tiny model fixture that mimics CAPAModel structure

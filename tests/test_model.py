@@ -3,13 +3,11 @@
 from __future__ import annotations
 
 import torch
-import pytest
 
 from capa.model.capa_model import CAPAModel
 from capa.model.interaction import CrossAttentionInteraction
 from capa.model.losses import deephit_loss
 from capa.model.survival import DeepHitHead
-
 
 BATCH = 4
 N_LOCI = 5

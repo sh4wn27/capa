@@ -2,29 +2,34 @@
 """Generate CAPA V1 Technical Debrief PDF using ReportLab + matplotlib."""
 
 import io
-import textwrap
 from pathlib import Path
 
 import matplotlib
+
 matplotlib.use("Agg")
 matplotlib.rcParams['mathtext.fontset'] = 'stix'
 matplotlib.rcParams['font.family'] = 'STIXGeneral'
-import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+import matplotlib.pyplot as plt
 import numpy as np
-
 from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT
 from reportlab.lib.pagesizes import LETTER
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import inch
-from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT, TA_RIGHT
 from reportlab.platypus import (
-    BaseDocTemplate, Frame, PageTemplate, Paragraph, Spacer, Table,
-    TableStyle, Image, HRFlowable, PageBreak, KeepTogether, Preformatted,
-    ListFlowable, ListItem,
+    BaseDocTemplate,
+    Frame,
+    HRFlowable,
+    Image,
+    PageBreak,
+    PageTemplate,
+    Paragraph,
+    Preformatted,
+    Spacer,
+    Table,
+    TableStyle,
 )
-from reportlab.platypus.flowables import Flowable
-from reportlab.pdfgen import canvas as pdfcanvas
 
 # ── Output path ────────────────────────────────────────────────────────────────
 OUT_DIR = Path(__file__).parent.parent / "paper"

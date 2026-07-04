@@ -2,16 +2,13 @@
 
 from __future__ import annotations
 
-import pytest
-
+from capa.api.predict import predict_risk
 from capa.api.schemas import (
-    ClinicalCovariates,
     EventRisk,
     HLATyping,
     PredictionRequest,
     PredictionResponse,
 )
-from capa.api.predict import predict_risk
 
 
 class TestSchemas:

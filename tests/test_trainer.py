@@ -445,7 +445,8 @@ class TestCheckpointResume:
 class TestCLI:
     def _run(self, argv: list[str], tmp_path: Path) -> int:
         """Run scripts/train.py with given args; returns exit code."""
-        import os, subprocess
+        import os
+        import subprocess
         cmd = [
             sys.executable, str(_ROOT / "scripts" / "train.py"),
             "--run-name", "test_run",

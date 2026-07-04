@@ -593,7 +593,6 @@ class TestEvaluateCLI:
         """Train for 1 epoch on synthetic data and save a checkpoint."""
         import sys
         sys.path.insert(0, str(_ROOT))
-        import torch
         from capa.config import get_config
         from capa.model.capa_model import CAPAModel
         from capa.training.trainer import CheckpointState

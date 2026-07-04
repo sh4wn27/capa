@@ -54,7 +54,6 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
-from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -498,7 +497,7 @@ class AlleleVocabulary:
     def __init__(self) -> None:
         self._vocab: dict[str, int] = {self.UNK: self.UNK_IDX}
 
-    def fit(self, allele_strings: list[str]) -> "AlleleVocabulary":
+    def fit(self, allele_strings: list[str]) -> AlleleVocabulary:
         """Add all unique alleles to the vocabulary.
 
         Parameters

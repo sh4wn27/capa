@@ -117,6 +117,6 @@ def fastapi_app() -> object:
     first access and loads the model checkpoint into GPU memory.
     """
     # capa/ is on /root which is already on PYTHONPATH via add_local_python_source
-    from capa.api.predict import app as _app  # noqa: PLC0415
+    from capa.api.predict import app as _app
 
     return _app

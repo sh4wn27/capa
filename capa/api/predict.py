@@ -42,9 +42,10 @@ from __future__ import annotations
 import logging
 import os
 import time
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, AsyncGenerator
+from typing import Any
 
 import numpy as np
 import torch
@@ -132,7 +133,7 @@ def _mock_response(req: PredictionRequest) -> PredictionResponse:
     def _score(cif: list[float], extra: float = 0.0) -> float:
         return float(min(1.0, max(0.0, cif[-1] + extra)))
 
-    # Synthetic n×n attention — diagonal dominant with mismatch loci highlighted
+    # Synthetic nxn attention - diagonal dominant with mismatch loci highlighted
     # Size adapts to the number of loci actually provided
     n_loci = sum(
         1 for loc in _LOCI if getattr(req.donor_hla, loc) is not None
@@ -346,7 +347,7 @@ async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
                 cache = EmbeddingCache(cache_path, mode="r")
                 _model.set_inference_components(cache=cache)
                 logger.info("Embedding cache loaded from %s", cache_path)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 logger.warning("Could not load embedding cache: %s", exc)
 
         _startup_error = None  # model loaded successfully
@@ -490,7 +491,7 @@ async def health() -> dict[str, str | bool | float | None]:
 @app.post(
     "/predict",
     response_model=PredictionResponse,
-    summary="Predict competing-risks outcomes for a donor–recipient pair",
+    summary="Predict competing-risks outcomes for a donor-recipient pair",
 )
 async def predict(request: PredictionRequest) -> PredictionResponse:
     """Predict GvHD, relapse, and TRM cumulative incidence curves.
@@ -504,7 +505,7 @@ async def predict(request: PredictionRequest) -> PredictionResponse:
     Returns
     -------
     PredictionResponse
-        Cumulative incidence curves (100 time points, 0–730 days) and scalar
+        Cumulative incidence curves (100 time points, 0-730 days) and scalar
         risk scores for GvHD, relapse, and TRM.  Includes the cross-attention
         matrix and mismatch count.
 
@@ -552,7 +553,7 @@ async def compare(request: ComparisonRequest) -> ComparisonResponse:
     Parameters
     ----------
     request : ComparisonRequest
-        Recipient HLA typing, list of 2–20 donor entries, and optional
+        Recipient HLA typing, list of 2-20 donor entries, and optional
         shared clinical covariates.
 
     Returns

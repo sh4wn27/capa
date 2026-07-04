@@ -241,6 +241,7 @@ class TestRSFImportError:
 
     def test_check_raises_import_error(self) -> None:
         import unittest.mock as mock
+
         from capa.model.baselines import RandomSurvivalForestBaseline
         rsf = RandomSurvivalForestBaseline()
         with mock.patch.dict("sys.modules", {"sksurv": None}):
@@ -260,7 +261,7 @@ class TestCAPAOneHotModel:
         self.vocab.fit([f"A*0{i}:01" for i in range(10)])
         self.CAPAOneHotModel = CAPAOneHotModel
 
-    def _make_model(self, **kwargs: int | float) -> "CAPAOneHotModel":
+    def _make_model(self, **kwargs: int | float) -> CAPAOneHotModel:
         defaults = dict(
             vocab_size=self.vocab.size,
             embedding_dim=16,
@@ -340,8 +341,9 @@ class TestCAPAOneHotBaseline:
         num_events: int = 2,
         seed: int = 0,
     ) -> tuple:
+        from torch.utils.data import DataLoader
+
         from capa.model.baselines import AlleleVocabulary
-        from torch.utils.data import DataLoader, TensorDataset
 
         rng = np.random.default_rng(seed)
         vocab = AlleleVocabulary()

@@ -41,7 +41,7 @@ class ClinicalCovariates(BaseModel):
     age_donor : float | None
         Donor age in years.
     cd34_dose : float | None
-        CD34+ cell dose (×10⁶/kg).
+        CD34+ cell dose (x10^6/kg).
     sex_mismatch : bool | None
         True when donor and recipient sex differ.
     disease : str | None

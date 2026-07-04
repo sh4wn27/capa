@@ -15,11 +15,11 @@ import pandas as pd
 import pytest
 
 from capa.data.loader import (
-    COLUMN_DOCS,
-    RAW_TO_CLEAN,
     _INVERTED_BINARY_COLS,
     _SENTINEL,
     _SENTINEL_COLS,
+    COLUMN_DOCS,
+    RAW_TO_CLEAN,
     load_bmt,
 )
 

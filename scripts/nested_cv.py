@@ -373,7 +373,7 @@ def _eval_fold(
     diff_mode: str = "none",
 ) -> dict[str, Any]:
     """Evaluate model on one validation fold."""
-    from capa.training.evaluate import concordance_index, bootstrap_ci
+    from capa.training.evaluate import bootstrap_ci, concordance_index
 
     donor_t  = torch.from_numpy(data["donor"][val_idx]).to(device)
     recip_t  = torch.from_numpy(data["recipient"][val_idx]).to(device)
@@ -615,7 +615,7 @@ def main() -> None:
         )
     print("=" * 60)
     if agg_cox:
-        print(f"\nCox (scalar mismatch distance) baseline — same folds")
+        print("\nCox (scalar mismatch distance) baseline — same folds")
         print("-" * 60)
         for name, m in agg_cox.items():
             print(f"{name:<10}  {m.mean:>12.4f}  {m.std:>6.4f}  [{m.min:.3f}–{m.max:.3f}]  {m.n_folds_evaluated:>5} folds")

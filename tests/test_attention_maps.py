@@ -65,12 +65,12 @@ generate_population_map
 
 from __future__ import annotations
 
+import matplotlib
 import numpy as np
 import pytest
 import torch
 import torch.nn as nn
 
-import matplotlib
 matplotlib.use("Agg")  # non-interactive backend for tests
 import matplotlib.pyplot as plt
 
@@ -89,8 +89,7 @@ from capa.interpret.attention_maps import (
     plot_population_heatmap,
     save_figure,
 )
-from capa.model.interaction import AttentionWeights, CrossAttentionInteraction
-
+from capa.model.interaction import AttentionWeights
 
 # ---------------------------------------------------------------------------
 # Fixtures

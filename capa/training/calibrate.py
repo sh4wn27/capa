@@ -106,7 +106,7 @@ class IsotonicCalibrator:
         cif: F32 | F64 | npt.NDArray[Any],
         event_times: npt.NDArray[np.intp],
         event_types: npt.NDArray[np.intp],
-    ) -> "IsotonicCalibrator":
+    ) -> IsotonicCalibrator:
         """Fit isotonic regressors on held-out validation predictions.
 
         Parameters
@@ -254,7 +254,7 @@ class IsotonicCalibrator:
         logger.info("IsotonicCalibrator saved → %s", path)
 
     @classmethod
-    def load(cls, path: str | Path) -> "IsotonicCalibrator":
+    def load(cls, path: str | Path) -> IsotonicCalibrator:
         """Load a calibrator previously saved with :meth:`save`.
 
         Parameters

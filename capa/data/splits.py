@@ -133,7 +133,7 @@ def _merge_small_classes(label: pd.Series, min_size: int = _MIN_CLASS_SIZE) -> p
             min_size,
             _ALIVE,
         )
-        label = label.replace({cls: _ALIVE for cls in small_classes})
+        label = label.replace(dict.fromkeys(small_classes, _ALIVE))
     return label
 
 
@@ -239,9 +239,9 @@ def make_splits(
                 "test_fraction": test_fraction,
                 "random_seed": random_seed,
                 "n_total": len(df),
-                "n_train": int(len(train_pos)),
-                "n_val": int(len(val_pos)),
-                "n_test": int(len(test_pos)),
+                "n_train": len(train_pos),
+                "n_val": len(val_pos),
+                "n_test": len(test_pos),
             },
         )
 

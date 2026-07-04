@@ -20,9 +20,6 @@ from capa.data.hla_parser import (
     ANTIGEN_TO_FIELD1,
     CANONICAL_GENE,
     MISMATCH_TYPE_LABELS,
-    HLAAllele,
-    HLAMismatchSummary,
-    HLAProfile,
     STANDARD_LOCI,
     normalize_gene,
     parse_hla_string,
@@ -31,7 +28,6 @@ from capa.data.hla_parser import (
     parse_uci_hla_columns,
     parse_who_allele,
 )
-
 
 # ===========================================================================
 # WHO allele parsing — parse_who_allele

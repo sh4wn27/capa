@@ -90,9 +90,10 @@ Typical DeepExplainer usage (continuous features only)::
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import matplotlib
 import matplotlib.cm as cm
@@ -533,7 +534,7 @@ class ClinicalDeepWrapper(nn.Module):
         *,
         event_idx: int = 0,
         device: str | torch.device | None = None,
-    ) -> tuple["ClinicalDeepWrapper", Tensor]:
+    ) -> tuple[ClinicalDeepWrapper, Tensor]:
         """Construct a wrapper and background tensor from a CAPAModel.
 
         Parameters
@@ -637,7 +638,7 @@ def compute_shap_values(
 
 
 def compute_shap_values_deep(
-    wrapper: "ClinicalDeepWrapper",
+    wrapper: ClinicalDeepWrapper,
     background_tensor: Tensor,
     explain_tensor: Tensor,
 ) -> tuple[F32, float]:

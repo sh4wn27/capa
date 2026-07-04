@@ -41,8 +41,8 @@ References
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Callable
 
 import numpy as np
 import numpy.typing as npt
@@ -802,13 +802,13 @@ def brier_decomposition(
 # ---------------------------------------------------------------------------
 
 def plot_calibration_curve(
-    calib_result: "CalibrationResult",
+    calib_result: CalibrationResult,
     *,
     model_name: str = "Model",
     event_name: str = "Event",
-    ax: "Any | None" = None,
+    ax: Any | None = None,
     figsize: tuple[float, float] = (5.0, 5.0),
-) -> "Any":
+) -> Any:
     """Plot a reliability diagram for one (model, event, eval_time) triplet.
 
     Subjects are grouped by predicted CIF into quantile bins; the mean

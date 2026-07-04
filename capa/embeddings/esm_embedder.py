@@ -105,7 +105,7 @@ class ESMEmbedder:
         self._batch_size = batch_size
         self._max_length = max_length
         # Populated lazily on first call to embed()
-        self._model: object | None = None
+        self._model: torch.nn.Module | None = None
         self._tokenizer: object | None = None
 
     # ------------------------------------------------------------------

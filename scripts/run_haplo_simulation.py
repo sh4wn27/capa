@@ -39,7 +39,6 @@ import logging
 import sys
 from pathlib import Path
 
-import copy
 import h5py
 import numpy as np
 import pandas as pd
@@ -52,7 +51,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from capa.model.capa_model import CAPAModel
 from capa.model.losses import deephit_loss
-from capa.training.evaluate import concordance_index, bootstrap_ci
+from capa.training.evaluate import bootstrap_ci, concordance_index
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
