@@ -171,7 +171,7 @@ class ESMEmbedder:
             disable=not show_progress,
         ):
             batch = sequences[i : i + self._batch_size]
-            inputs = self._tokenizer(  # type: ignore[call-arg, operator]
+            inputs = self._tokenizer(  # type: ignore[operator, misc]
                 batch,
                 return_tensors="pt",
                 padding=True,
@@ -179,7 +179,7 @@ class ESMEmbedder:
                 max_length=self._max_length,
             )
             inputs = {k: v.to(self._device) for k, v in inputs.items()}
-            outputs = self._model(**inputs)  # type: ignore[operator]
+            outputs = self._model(**inputs)  # type: ignore[operator, misc]
 
             # Mean-pool over sequence positions, masking out padding tokens
             mask = inputs["attention_mask"].unsqueeze(-1).float()  # (B, L, 1)
@@ -205,7 +205,7 @@ class ESMEmbedder:
         npt.NDArray[np.float32]
             Embedding vector of shape ``(EMBEDDING_DIM,)``.
         """
-        return self.embed([sequence], show_progress=False)[0]
+        return self.embed([sequence], show_progress=False)[0]  # type: ignore[no-any-return]
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -247,7 +247,7 @@ class ESMEmbedder:
             return 0
 
         # First freeze everything
-        for p in self._model.parameters():  # type: ignore[union-attr]
+        for p in self._model.parameters():
             p.requires_grad_(False)
 
         # Unfreeze the last n encoder layers.
@@ -261,8 +261,8 @@ class ESMEmbedder:
                 self._model_name, n,
             )
             # Fall back: unfreeze the last n named modules that have params
-            named = [(name, mod) for name, mod in  # type: ignore[union-attr]
-                     self._model.named_modules()  # type: ignore[union-attr]
+            named = [(name, mod) for name, mod in
+                     self._model.named_modules()
                      if list(mod.parameters(recurse=False))]
             for _, mod in named[-n:]:
                 for p in mod.parameters(recurse=False):
@@ -273,7 +273,7 @@ class ESMEmbedder:
                     p.requires_grad_(True)
 
         n_trainable = sum(
-            p.numel() for p in self._model.parameters()  # type: ignore[union-attr]
+            p.numel() for p in self._model.parameters()
             if p.requires_grad
         )
         logger.info(
@@ -294,7 +294,7 @@ class ESMEmbedder:
         if self._model is None:
             return []
         return [
-            p for p in self._model.parameters()  # type: ignore[union-attr]
+            p for p in self._model.parameters()
             if p.requires_grad
         ]
 
@@ -308,9 +308,9 @@ class ESMEmbedder:
         """
         if self._model is not None:
             if train:
-                self._model.train()  # type: ignore[union-attr]
+                self._model.train()
             else:
-                self._model.eval()  # type: ignore[union-attr]
+                self._model.eval()
 
     def embed_with_grad(
         self,
@@ -337,7 +337,7 @@ class ESMEmbedder:
             raise ValueError("sequences must be non-empty")
         self._load()
 
-        inputs = self._tokenizer(  # type: ignore[call-arg, operator]
+        inputs = self._tokenizer(  # type: ignore[operator, misc]
             sequences,
             return_tensors="pt",
             padding=True,
@@ -345,12 +345,12 @@ class ESMEmbedder:
             max_length=self._max_length,
         )
         inputs = {k: v.to(self._device) for k, v in inputs.items()}
-        outputs = self._model(**inputs)  # type: ignore[operator]
+        outputs = self._model(**inputs)  # type: ignore[operator, misc]
 
         mask = inputs["attention_mask"].unsqueeze(-1).float()  # (B, L, 1)
         hidden = outputs.last_hidden_state * mask
         pooled = hidden.sum(dim=1) / mask.sum(dim=1).clamp(min=1e-9)
-        return pooled  # (B, D) — gradients flow through here
+        return pooled  # type: ignore[no-any-return]
 
     def _load(self) -> None:
         """Lazy-load the ESM-2 model and tokenizer on first use.
@@ -362,13 +362,13 @@ class ESMEmbedder:
 
         # Import inside method so that the module is importable without
         # `transformers` installed (tests can inject mock model/tokenizer).
-        from transformers import AutoModel, AutoTokenizer  # type: ignore[import]
+        from transformers import AutoModel, AutoTokenizer
 
         logger.info(
             "Loading ESM-2 weights: %s (device=%s)", self._model_name, self._device
         )
         self._tokenizer = AutoTokenizer.from_pretrained(self._model_name)
         self._model = AutoModel.from_pretrained(self._model_name)
-        self._model.eval()  # type: ignore[union-attr]
-        self._model.to(self._device)  # type: ignore[union-attr]
+        self._model.eval()
+        self._model.to(self._device)
         logger.info("ESM-2 ready on %s", self._device)

@@ -1,0 +1,210 @@
+{
+  "_meta": {
+    "reference": "PELC 0.5.4.5 (EpRegistry) doi:10.5281/zenodo.7526198",
+    "embeddings": "data/processed/hla_embeddings.h5",
+    "interlocus2": false,
+    "verified_only": false
+  },
+  "per_locus": {
+    "A": {
+      "n_alleles": 54,
+      "n_pairs": 1431,
+      "n_resolved": 1431,
+      "n_unresolved": 0,
+      "esm_l2_vs_pelc_total": {
+        "rho": 0.6540035411309243,
+        "p": 2.086134697347142e-175,
+        "n": 1431
+      },
+      "esm_cosine_vs_pelc_total": {
+        "rho": 0.6531271207847307,
+        "p": 8.719089210548577e-175,
+        "n": 1431
+      },
+      "asymmetry": {
+        "unexplainable_fraction": 0.13931355954668778,
+        "pct_pairs_asymmetric": 91.2648497554158,
+        "mean_abs_diff": 4.221523410202655,
+        "median_abs_diff": 4.0,
+        "max_abs_diff": 15.0,
+        "mean_total_load": 35.06848357791754
+      },
+      "n_proxy_pairs": 1431,
+      "proxy_corrected_vs_pelc_total": {
+        "rho": 0.8993849762507347,
+        "p": 0.0,
+        "n": 1431
+      },
+      "proxy_uncorrected_vs_pelc_total": {
+        "rho": 0.2357271362271515,
+        "p": 1.6092414858676262e-19,
+        "n": 1431
+      },
+      "proxy_corrected_vs_esm_l2": {
+        "rho": 0.5143833067483493,
+        "p": 1.7680435743713238e-97,
+        "n": 1431
+      }
+    },
+    "B": {
+      "n_alleles": 103,
+      "n_pairs": 5253,
+      "n_resolved": 5253,
+      "n_unresolved": 0,
+      "esm_l2_vs_pelc_total": {
+        "rho": 0.5837582248265221,
+        "p": 0.0,
+        "n": 5253
+      },
+      "esm_cosine_vs_pelc_total": {
+        "rho": 0.5891017303043242,
+        "p": 0.0,
+        "n": 5253
+      },
+      "asymmetry": {
+        "unexplainable_fraction": 0.08948369911142855,
+        "pct_pairs_asymmetric": 87.64515514943841,
+        "mean_abs_diff": 2.722634684941938,
+        "median_abs_diff": 2.0,
+        "max_abs_diff": 10.0,
+        "mean_total_load": 32.292404340376926
+      },
+      "n_proxy_pairs": 5253,
+      "proxy_corrected_vs_pelc_total": {
+        "rho": 0.8346533715146868,
+        "p": 0.0,
+        "n": 5253
+      },
+      "proxy_uncorrected_vs_pelc_total": {
+        "rho": 0.3607876633055709,
+        "p": 2.9643645431352743e-161,
+        "n": 5253
+      },
+      "proxy_corrected_vs_esm_l2": {
+        "rho": 0.6910663901968404,
+        "p": 0.0,
+        "n": 5253
+      }
+    },
+    "C": {
+      "n_alleles": 48,
+      "n_pairs": 1128,
+      "n_resolved": 946,
+      "n_unresolved": 182,
+      "esm_l2_vs_pelc_total": {
+        "rho": 0.5274548328797477,
+        "p": 7.265984453531403e-69,
+        "n": 946
+      },
+      "esm_cosine_vs_pelc_total": {
+        "rho": 0.5297730845626082,
+        "p": 1.4526607774931428e-69,
+        "n": 946
+      },
+      "asymmetry": {
+        "unexplainable_fraction": 0.12073674445934053,
+        "pct_pairs_asymmetric": 86.36363636363636,
+        "mean_abs_diff": 2.6226215644820297,
+        "median_abs_diff": 2.0,
+        "max_abs_diff": 9.0,
+        "mean_total_load": 24.75369978858351
+      },
+      "n_proxy_pairs": 946,
+      "proxy_corrected_vs_pelc_total": {
+        "rho": 0.7713686359606462,
+        "p": 1.740568036422432e-187,
+        "n": 946
+      },
+      "proxy_uncorrected_vs_pelc_total": {
+        "rho": 0.19939773472881678,
+        "p": 6.131125014121312e-10,
+        "n": 946
+      },
+      "proxy_corrected_vs_esm_l2": {
+        "rho": 0.6289289022606318,
+        "p": 2.6098082376638537e-105,
+        "n": 946
+      }
+    },
+    "DRB1": {
+      "n_alleles": 45,
+      "n_pairs": 990,
+      "n_resolved": 990,
+      "n_unresolved": 0,
+      "esm_l2_vs_pelc_total": {
+        "rho": 0.6407679721556935,
+        "p": 1.5335573578521714e-115,
+        "n": 990
+      },
+      "esm_cosine_vs_pelc_total": {
+        "rho": 0.6411650692799346,
+        "p": 1.0001441209028538e-115,
+        "n": 990
+      },
+      "asymmetry": {
+        "unexplainable_fraction": 0.11356016320256325,
+        "pct_pairs_asymmetric": 86.76767676767678,
+        "mean_abs_diff": 2.7636363636363637,
+        "median_abs_diff": 2.0,
+        "max_abs_diff": 18.0,
+        "mean_total_load": 31.610101010101012
+      },
+      "n_proxy_pairs": 990,
+      "proxy_corrected_vs_pelc_total": {
+        "rho": 0.6766578769028531,
+        "p": 1.6683756338588995e-133,
+        "n": 990
+      },
+      "proxy_uncorrected_vs_pelc_total": {
+        "rho": 0.45279002547301045,
+        "p": 3.3354639250103805e-51,
+        "n": 990
+      },
+      "proxy_corrected_vs_esm_l2": {
+        "rho": 0.538354742484932,
+        "p": 1.7642580812959409e-75,
+        "n": 990
+      }
+    },
+    "DQB1": {
+      "n_alleles": 20,
+      "n_pairs": 190,
+      "n_resolved": 190,
+      "n_unresolved": 0,
+      "esm_l2_vs_pelc_total": {
+        "rho": 0.6594824270027685,
+        "p": 4.37224694303285e-25,
+        "n": 190
+      },
+      "esm_cosine_vs_pelc_total": {
+        "rho": 0.6564437775945382,
+        "p": 8.521623464240156e-25,
+        "n": 190
+      },
+      "asymmetry": {
+        "unexplainable_fraction": 0.2508610265336255,
+        "pct_pairs_asymmetric": 91.57894736842105,
+        "mean_abs_diff": 3.4,
+        "median_abs_diff": 3.0,
+        "max_abs_diff": 10.0,
+        "mean_total_load": 20.073684210526316
+      },
+      "n_proxy_pairs": 190,
+      "proxy_corrected_vs_pelc_total": {
+        "rho": 0.38221225105744594,
+        "p": 5.277479912529218e-08,
+        "n": 190
+      },
+      "proxy_uncorrected_vs_pelc_total": {
+        "rho": 0.3001930101620729,
+        "p": 2.576011500826067e-05,
+        "n": 190
+      },
+      "proxy_corrected_vs_esm_l2": {
+        "rho": 0.5039730978501479,
+        "p": 1.2401083246546383e-13,
+        "n": 190
+      }
+    }
+  }
+}

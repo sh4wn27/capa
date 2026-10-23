@@ -66,6 +66,13 @@ interpret = [
 baselines = [
     "scikit-survival>=0.22.0",
 ]
+# Install with: uv sync --extra eplet
+# PELC provides EpRegistry-derived eplet loads, used by
+# scripts/run_eplet_correlation.py as an EXTERNAL reference for ESM-2
+# distances. Kept optional: it pins pandas-stubs below the dev extra.
+eplet = [
+    "pelc>=0.5.4,<0.6",
+]
 dev = [
     "pytest>=8.2.0",
     "pytest-cov>=5.0.0",

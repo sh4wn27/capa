@@ -195,7 +195,7 @@ def _ranking_loss(
     Tensor
         Scalar ranking loss, averaged over valid pairs.
     """
-    batch, num_events, time_bins = cif.shape
+    _batch, num_events, time_bins = cif.shape
     sigma = max(sigma, 1e-8)
 
     total_loss = cif.new_zeros(1).squeeze()
@@ -272,7 +272,7 @@ def cause_specific_loss(
     Tensor
         Scalar mean negative log-likelihood.
     """
-    batch, num_events, time_bins = hazards.shape
+    batch, _num_events, time_bins = hazards.shape
     eps = 1e-8
 
     t_idx = event_times.clamp(0, time_bins - 1)

@@ -272,7 +272,7 @@ def hazards_to_cif(hazards: Tensor) -> Tensor:
     Tensor
         CIF tensor of shape ``(batch, num_events, time_bins)``.
     """
-    batch, num_events, time_bins = hazards.shape
+    batch, _num_events, _time_bins = hazards.shape
     eps = 1e-7
 
     # Overall "no-event" probability at each time step

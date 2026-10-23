@@ -997,7 +997,7 @@ def plot_waterfall(
         running += s
 
     # Draw horizontal bars
-    for row, (start, width, label) in enumerate(zip(starts, bar_shap, bar_labels)):
+    for row, (start, width, _label) in enumerate(zip(starts, bar_shap, bar_labels)):
         colour = _POS_COLOUR if width >= 0 else _NEG_COLOUR
         ax.barh(
             row, width, left=start,

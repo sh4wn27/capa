@@ -619,11 +619,11 @@ def parse_hla_string(raw: str) -> HLAAllele:
         return parse_who_allele(raw)
     try:
         return parse_serological_allele(raw)
-    except ValueError:
+    except ValueError as exc:
         raise ValueError(
             f"Cannot parse HLA string {raw!r}: "
             f"not WHO notation (no '*') and not a recognised serological antigen."
-        )
+        ) from exc
 
 
 def parse_hla_typing(

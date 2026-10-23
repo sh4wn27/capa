@@ -1010,6 +1010,22 @@ _EPLET_POSITIONS: dict[str, list[int]] = {
     "DQB1": [26, 30, 45, 52, 57, 87],
 }
 
+# Signal-peptide (leader) lengths per locus, verified against IPD-IMGT/HLA 3.57.0
+# FASTA records in data/processed/hla_sequences.json.
+#
+# IMPORTANT: eplet nomenclature numbers residues from the start of the MATURE
+# protein, but the IPD-IMGT FASTA sequences include the leader peptide. A raw
+# ``pos - 1`` index therefore lands inside the leader, which is near-identical
+# across alleles of the same locus, so mismatch counts collapse toward zero
+# (23-51% of genuinely mismatched pairs scored 0 before this was corrected).
+# Mature residue ``pos`` lives at sequence index ``pos - 1 + _LEADER_LENGTH[locus]``.
+#
+# Verified mature N-termini: A/B "GSHSMRYF" @24, C "CSHSMKYF" @24,
+# DRB1 "GDTRPRFL" @29, DQB1 "RDSPEDFV" @32.
+_LEADER_LENGTH: dict[str, int] = {
+    "A": 24, "B": 24, "C": 24, "DRB1": 29, "DQB1": 32,
+}
+
 
 def compute_eplet_features(
     donor_alleles: list[list[str]],
@@ -1057,10 +1073,11 @@ def compute_eplet_features(
                     d_seq = seq_db.get_by_name(d_allele) if d_allele else ""
                     r_seq = seq_db.get_by_name(r_allele) if r_allele else ""
                     ep_pos = _EPLET_POSITIONS.get(locus, [])
+                    leader = _LEADER_LENGTH.get(locus, 0)
                     mm_count = sum(
                         1
                         for pos in ep_pos
-                        if (pi := pos - 1) < len(d_seq) and pi < len(r_seq)
+                        if (pi := pos - 1 + leader) < len(d_seq) and pi < len(r_seq)
                         and d_seq[pi] != r_seq[pi]
                     )
                     score = float(mm_count)
