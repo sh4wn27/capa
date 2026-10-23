@@ -1,0 +1,183 @@
+{
+  "_meta": {
+    "n_patients": 187,
+    "folds": 5,
+    "repeats": 5,
+    "event_codes": {
+      "0": "censored",
+      "1": "GvHD",
+      "2": "Relapse",
+      "3": "TRM"
+    }
+  },
+  "hierarchies": {
+    "outcome": {
+      "counts": {
+        "censored": 81,
+        "GvHD": 16,
+        "Relapse": 28,
+        "TRM": 62
+      },
+      "cv": {
+        "Cox PH": {
+          "GvHD": {
+            "cindex_mean": 0.5,
+            "cindex_std": 0.0,
+            "cindex_min": 0.5,
+            "cindex_max": 0.5,
+            "n_folds": 10
+          },
+          "Relapse": {
+            "cindex_mean": 0.5992,
+            "cindex_std": 0.1356,
+            "cindex_min": 0.28,
+            "cindex_max": 1.0,
+            "n_folds": 25
+          },
+          "TRM": {
+            "cindex_mean": 0.5641,
+            "cindex_std": 0.0644,
+            "cindex_min": 0.4352,
+            "cindex_max": 0.7167,
+            "n_folds": 25
+          }
+        },
+        "Fine-Gray": {
+          "GvHD": {
+            "cindex_mean": 0.5,
+            "cindex_std": 0.0,
+            "cindex_min": 0.5,
+            "cindex_max": 0.5,
+            "n_folds": 10
+          },
+          "Relapse": {
+            "cindex_mean": 0.6273,
+            "cindex_std": 0.1527,
+            "cindex_min": 0.18,
+            "cindex_max": 1.0,
+            "n_folds": 25
+          },
+          "TRM": {
+            "cindex_mean": 0.5653,
+            "cindex_std": 0.0634,
+            "cindex_min": 0.4352,
+            "cindex_max": 0.6969,
+            "n_folds": 25
+          }
+        }
+      }
+    },
+    "gvhd_first": {
+      "counts": {
+        "censored": 81,
+        "GvHD": 40,
+        "Relapse": 25,
+        "TRM": 41
+      },
+      "cv": {
+        "Cox PH": {
+          "GvHD": {
+            "cindex_mean": 0.5811,
+            "cindex_std": 0.1228,
+            "cindex_min": 0.3448,
+            "cindex_max": 0.8293,
+            "n_folds": 25
+          },
+          "Relapse": {
+            "cindex_mean": 0.6347,
+            "cindex_std": 0.1668,
+            "cindex_min": 0.2661,
+            "cindex_max": 0.9615,
+            "n_folds": 25
+          },
+          "TRM": {
+            "cindex_mean": 0.6309,
+            "cindex_std": 0.0771,
+            "cindex_min": 0.4878,
+            "cindex_max": 0.7654,
+            "n_folds": 25
+          }
+        },
+        "Fine-Gray": {
+          "GvHD": {
+            "cindex_mean": 0.6031,
+            "cindex_std": 0.1315,
+            "cindex_min": 0.3172,
+            "cindex_max": 0.8209,
+            "n_folds": 25
+          },
+          "Relapse": {
+            "cindex_mean": 0.6568,
+            "cindex_std": 0.1679,
+            "cindex_min": 0.3065,
+            "cindex_max": 1.0,
+            "n_folds": 25
+          },
+          "TRM": {
+            "cindex_mean": 0.6356,
+            "cindex_std": 0.0765,
+            "cindex_min": 0.479,
+            "cindex_max": 0.7778,
+            "n_folds": 25
+          }
+        }
+      }
+    },
+    "earliest": {
+      "counts": {
+        "censored": 81,
+        "GvHD": 40,
+        "Relapse": 25,
+        "TRM": 41
+      },
+      "cv": {
+        "Cox PH": {
+          "GvHD": {
+            "cindex_mean": 0.5657,
+            "cindex_std": 0.0853,
+            "cindex_min": 0.4024,
+            "cindex_max": 0.7602,
+            "n_folds": 25
+          },
+          "Relapse": {
+            "cindex_mean": 0.6735,
+            "cindex_std": 0.1602,
+            "cindex_min": 0.2577,
+            "cindex_max": 1.0,
+            "n_folds": 25
+          },
+          "TRM": {
+            "cindex_mean": 0.6172,
+            "cindex_std": 0.0804,
+            "cindex_min": 0.4694,
+            "cindex_max": 0.796,
+            "n_folds": 25
+          }
+        },
+        "Fine-Gray": {
+          "GvHD": {
+            "cindex_mean": 0.5788,
+            "cindex_std": 0.082,
+            "cindex_min": 0.4327,
+            "cindex_max": 0.7642,
+            "n_folds": 25
+          },
+          "Relapse": {
+            "cindex_mean": 0.6652,
+            "cindex_std": 0.175,
+            "cindex_min": 0.268,
+            "cindex_max": 1.0,
+            "n_folds": 25
+          },
+          "TRM": {
+            "cindex_mean": 0.6285,
+            "cindex_std": 0.0766,
+            "cindex_min": 0.4769,
+            "cindex_max": 0.801,
+            "n_folds": 25
+          }
+        }
+      }
+    }
+  }
+}

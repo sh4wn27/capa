@@ -131,12 +131,11 @@ $C_{\mathrm{GvHD}} = 0.759$ vs.\ $0.538$ for binary mismatch ($\Delta C = +0.221
 CAPA (locus attention, $d_{\mathrm{proj}}=64$) achieves $C_{\mathrm{GvHD}}=0.732$,
 statistically indistinguishable from Cox (ESM-2 distances) (95\,\% CIs overlap),
 demonstrating that alloreactivity self-attention recovers the main-effect
-signal from raw embeddings without explicit distance features.  Crucially, a
-scalar mismatch distance is symmetric and magnitude-only
-($\lVert\mathbf{e}^{\mathrm{D}}-\mathbf{e}^{\mathrm{R}}\rVert =
-\lVert\mathbf{e}^{\mathrm{R}}-\mathbf{e}^{\mathrm{D}}\rVert$) and is therefore
-\emph{blind to the direction} of donor--recipient mismatch, whereas
-graft-versus-host alloreactivity is intrinsically directional.  In a directional
+signal from raw embeddings without explicit distance features.  Grounding the
+representation externally, ESM-2 distances correlate with EpRegistry eplet
+loads at $\rho = 0.53$--$0.66$ across five loci ($8{,}810$ allele pairs), and
+that reference metric is itself directional: $8.9$--$25.1\,\%$ of its variance
+is provably unreachable by any symmetric pair function.  In a directional
 GvHD simulation (six seeds), the scalar-distance Cox model collapses to
 near-chance ($C_{\mathrm{GvHD}} = 0.575 \pm 0.059$) while CAPA---learning the
 immunodominant direction end-to-end from the \emph{signed} difference
@@ -173,11 +172,14 @@ deep learning; survival analysis; cross-attention
 Allogeneic haematopoietic stem cell transplantation (HSCT) is the only
 curative treatment for many high-risk haematological malignancies, including
 acute leukaemia, myelodysplastic syndromes, and severe aplastic anaemia
-\citep{appelbaum2001hsct, passweg2022ebmt}.  Global HSCT activity now exceeds
-50{,}000 procedures annually, yet five-year overall survival for unrelated-donor
-transplants remains below 50\,\% in many disease categories, underscoring the
-need for improved outcome prediction at the time of donor selection
-\citep{gratwohl2009risk, passweg2022ebmt}.
+\citep{appelbaum2001hsct, passweg2022ebmt}.  Worldwide activity reached
+93{,}105 transplants in the most recent global survey, of which 44{,}425 were
+allogeneic \citep{atsuta2024wbmt}, yet five-year overall survival after
+unrelated-donor transplantation remains below 50\,\% in many disease
+categories---42\,\% for matched-unrelated-donor AML in patients aged
+$\geq 50$, and 38\,\% for adult ALL transplanted in first complete
+remission---underscoring the need for improved outcome prediction at the time
+of donor selection \citep{gratwohl2009risk, passweg2022ebmt}.
 
 The three dominant causes of treatment failure after HSCT---acute
 graft-versus-host disease (aGvHD), disease relapse, and transplant-related
@@ -264,9 +266,8 @@ simultaneously.  CAPA (i)~replaces categorical mismatch flags with
 1280-dimensional ESM-2 embeddings of HLA allele protein sequences;
 (ii)~learns donor--recipient alloreactivity end-to-end via attention over the
 \emph{signed} difference embeddings, capturing the \emph{direction} of HLA
-mismatch---which antigens the recipient carries that the donor lacks---a
-property that the symmetric, magnitude-only scalar distances used in current
-practice are structurally incapable of representing; and (iii)~estimates all
+mismatch---which antigens the recipient carries that the donor lacks---which
+the scalar distances used in current practice cannot represent; and (iii)~estimates all
 three competing risks jointly through a DeepHit survival head
 \citep{lee2018deephit} that produces calibrated cumulative incidence functions
 over a 730-day post-transplant horizon.
@@ -1217,6 +1218,99 @@ Any improvement from ESM-2 structural allele embeddings on a registry dataset
 should be compared against this corrected baseline rather than the
 single-split test numbers.
 
+\subsection{Sensitivity to the Event-Priority Hierarchy}
+\label{sec:hierarchy}
+
+Every result on the UCI BMT cohort depends on a choice that is not determined
+by the data.  A patient may develop severe aGvHD \emph{and} later relapse or
+die, but competing-risks models admit one event per patient, so a priority
+hierarchy decides which one is recorded.  Section~\ref{sec:data} ranks
+relapse above TRM above GvHD.  Since this ordering is a modelling decision
+rather than an observation, we re-derived the labels under two alternatives
+and re-ran the tabular baselines under each.
+
+\paragraph{The three hierarchies.}
+\textbf{Outcome} is the manuscript's ordering (relapse $>$ TRM $>$ GvHD),
+which reads as ``what ultimately happened to this patient''; the event time is
+always the survival endpoint.  \textbf{GvHD-first} reverses the ranking
+(GvHD $>$ relapse $>$ TRM) while holding event times fixed, isolating how much
+GvHD signal the outcome ordering suppresses.  \textbf{Earliest} is the
+standard time-to-first-event construction: whichever event occurred first is
+recorded, and the event time is that event's own time, with aGvHD onset taken
+from the cohort's \texttt{days\_to\_acute\_gvhd\_iii\_iv} field.  Only the
+third is internally consistent with the DeepHit likelihood, which models time
+to first event.
+
+\paragraph{The ordering is load-bearing.}
+In this cohort aGvHD III/IV is an early event: among the 40 affected patients,
+median onset is 20.5 days (IQR 16--33, maximum 99), and in \emph{all} 40 cases
+onset precedes death or last follow-up.  GvHD is therefore always the first
+event to occur, yet the outcome hierarchy records only 16 of the 40 as GvHD
+events, reassigning the remaining 24 to relapse or TRM---a 60\,\% reduction
+(Table~\ref{tab:hierarchy}).  Because GvHD always comes first here, the
+GvHD-first and earliest hierarchies yield identical event counts and differ
+only in the recorded times.
+
+The consequence is not a small shift in a point estimate.  Under the outcome
+hierarchy the GvHD endpoint is not merely weakly predicted but
+\emph{unevaluable}: across 25 cross-validation folds, 15 contained fewer than
+two GvHD events in the held-out split and were skipped entirely, and the
+remaining 10 returned a concordance of exactly $0.500$ because the fitted
+model produced constant risk predictions.  The value reported in
+Table~\ref{tab:hierarchy} is therefore a degenerate fit, not a measurement of
+weak signal.  Under either alternative hierarchy the endpoint becomes
+estimable, at $C = 0.566$--$0.603$.
+
+The competing endpoints move as well, and not negligibly: TRM concordance
+rises from $0.564$ to $0.617$--$0.631$ and relapse from $0.599$ to
+$0.635$--$0.673$ once GvHD cases are removed from those event pools.  No
+conclusion in this manuscript that rests on the UCI BMT cohort should be read
+as independent of this choice.
+
+\paragraph{What we do and do not change.}
+We retain the outcome hierarchy as the primary specification, because it
+matches the clinical decision framing of Section~\ref{sec:data} and because
+changing it would not rescue the cohort: 40 GvHD events in 187 patients
+remains far below what is needed to fit the models of interest.  We report the
+sensitivity so that the GvHD results on this cohort are read as what they
+are---uninformative under the primary specification, and weakly estimable
+under alternatives---rather than as evidence either for or against the
+method.  This is a further reason the directional claims of
+Sections~\ref{sec:eplet} and~\ref{sec:directional} rest on simulation and
+external metrics rather than on this cohort.
+
+\begin{table}[ht]
+\centering
+\caption{Sensitivity of event counts and baseline concordance to the
+  event-priority hierarchy on the UCI BMT cohort ($n=187$), under repeated
+  $5\times5$ stratified cross-validation.  Concordance is reported as
+  mean $\pm$ standard deviation across folds.  The GvHD column under the
+  outcome hierarchy is marked $\dagger$: only 10 of 25 folds contained enough
+  held-out GvHD events to evaluate, and all 10 returned exactly $0.500$ from a
+  degenerate constant-risk fit, so the entry reflects non-estimability rather
+  than measured performance.}
+\label{tab:hierarchy}
+\small
+\begin{tabular}{llrrrr}
+\toprule
+Hierarchy & Model & \multicolumn{1}{c}{GvHD $n$} & \multicolumn{1}{c}{GvHD $C$}
+ & \multicolumn{1}{c}{Relapse $C$} & \multicolumn{1}{c}{TRM $C$} \\
+\midrule
+\multirow{2}{*}{Outcome}
+  & Cox PH    & 16 & $0.500^{\dagger}$ & $0.599 \pm 0.136$ & $0.564 \pm 0.064$ \\
+  & Fine--Gray & 16 & $0.500^{\dagger}$ & $0.627 \pm 0.153$ & $0.565 \pm 0.063$ \\
+\midrule
+\multirow{2}{*}{GvHD-first}
+  & Cox PH    & 40 & $0.581 \pm 0.123$ & $0.635 \pm 0.167$ & $0.631 \pm 0.077$ \\
+  & Fine--Gray & 40 & $0.603 \pm 0.132$ & $0.657 \pm 0.168$ & $0.636 \pm 0.076$ \\
+\midrule
+\multirow{2}{*}{Earliest}
+  & Cox PH    & 40 & $0.566 \pm 0.085$ & $0.673 \pm 0.160$ & $0.617 \pm 0.080$ \\
+  & Fine--Gray & 40 & $0.579 \pm 0.082$ & $0.665 \pm 0.175$ & $0.628 \pm 0.077$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 \subsection{CAPA End-to-End Validation with Frequency-Imputed HLA Alleles}
 \label{sec:capa_imputed}
 
@@ -2098,11 +2192,8 @@ that self-attention over alloreactivity representations recovers the main-effect
 discriminative signal without explicit per-locus distance features.
 
 The directional simulation (Section~\ref{sec:directional}) isolates the learned
-representation's genuine architectural advantage.  A scalar mismatch distance is
-symmetric and magnitude-only and is therefore structurally incapable of encoding
-the \emph{direction} of donor--recipient mismatch---yet graft-versus-host
-alloreactivity is directional, depending on antigens the recipient carries that
-the donor lacks.  In a cohort where GvHD hazard is driven by the signed
+representation's genuine architectural advantage over the direction-blind
+scalar distances characterised there.  In a cohort where GvHD hazard is driven by the signed
 projection of the difference embedding onto a hidden immunodominant direction,
 the scalar-distance Cox model collapses to near-chance ($C_{\mathrm{GvHD}} =
 0.575 \pm 0.059$ over six seeds), whereas CAPA---learning that direction
