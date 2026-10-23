@@ -287,23 +287,84 @@ def _make_synthetic(rng: np.random.Generator) -> FigureData:
 # ---------------------------------------------------------------------------
 # Data loader — real → synthetic fallback
 # ---------------------------------------------------------------------------
-def load_data(synthetic: bool = False) -> FigureData:
-    """Load real data if available, otherwise return synthetic data."""
-    rng = np.random.default_rng(42)
-    if synthetic:
-        logger.info("Using synthetic data (--synthetic flag)")
-        return _make_synthetic(rng)
+REAL_EMBEDDINGS_PATH = (
+    Path(__file__).resolve().parent.parent / "data" / "processed" / "hla_embeddings.h5"
+)
+
+
+def load_real_embeddings(
+    path: Path = REAL_EMBEDDINGS_PATH,
+) -> tuple[list[str], list[str], NDArray[np.float32]] | None:
+    """Load the cached real ESM-2 allele embeddings.
+
+    The cache is built by ``scripts/compute_embeddings.py`` from genuine
+    IPD-IMGT/HLA protein sequences (release 3.57.0), one dataset per allele
+    name, keyed as e.g. ``"A*01:01"``.
+
+    Parameters
+    ----------
+    path : Path
+        HDF5 embedding cache.
+
+    Returns
+    -------
+    tuple[list[str], list[str], numpy.ndarray] | None
+        ``(allele_names, loci, embedding_matrix)`` or None if unavailable.
+    """
+    if not path.exists():
+        logger.warning("Real embedding cache not found at %s", path)
+        return None
     try:
-        from capa.data.loader import load_bmt  # type: ignore[import]
-        logger.info("Loading real UCI BMT data …")
-        _df = load_bmt()
+        import h5py
+    except ImportError:
+        logger.warning("h5py not installed — cannot load real embeddings")
+        return None
+
+    names: list[str] = []
+    vecs: list[NDArray[np.float32]] = []
+    with h5py.File(path, "r") as fh:
+        for name in sorted(fh):
+            names.append(name)
+            vecs.append(np.asarray(fh[name][:], dtype=np.float32))
+    if not names:
+        logger.warning("Real embedding cache at %s is empty", path)
+        return None
+
+    loci = [n.split("*")[0] for n in names]
+    matrix = np.vstack(vecs)
+    logger.info(
+        "Loaded %d REAL ESM-2 allele embeddings (dim=%d) from %s",
+        len(names), matrix.shape[1], path.name,
+    )
+    return names, loci, matrix
+
+
+def load_data(synthetic: bool = False) -> FigureData:
+    """Load real data where available, falling back to synthetic.
+
+    Embeddings (Figures 2) come from the real 270-allele ESM-2 cache when it
+    is present. The cohort-level panels (Figures 3-6) remain synthetic because
+    the UCI BMT dataset records aggregate mismatch scores rather than
+    per-allele typing strings; see the manuscript for this limitation.
+    """
+    rng = np.random.default_rng(42)
+    data = _make_synthetic(rng)
+    if synthetic:
+        logger.info("Using synthetic data throughout (--synthetic flag)")
+        return data
+
+    real = load_real_embeddings()
+    if real is not None:
+        names, loci, matrix = real
+        data.allele_names = names
+        data.allele_loci = loci
+        data.embeddings = matrix
+    else:
         logger.warning(
-            "Real-data loading succeeded but figure pipeline uses synthetic data "
-            "until full training results are available. Pass --synthetic to silence."
+            "Falling back to SYNTHETIC embeddings for Figure 2 — "
+            "run scripts/compute_embeddings.py to build the real cache"
         )
-    except Exception as exc:
-        logger.info("Real data unavailable (%s) — using synthetic data", exc)
-    return _make_synthetic(rng)
+    return data
 
 
 # ---------------------------------------------------------------------------
@@ -332,9 +393,9 @@ def figure_1_architecture(data: FigureData, out: Path, formats: list[str], dpi: 
 
     _apply_style()
 
-    fig, ax = plt.subplots(figsize=(_2COL, _2COL * 0.65))
+    fig, ax = plt.subplots(figsize=(_2COL, _2COL * 0.78))
     ax.set_xlim(-0.9, 9.1)
-    ax.set_ylim(-0.1, 5.7)
+    ax.set_ylim(-0.1, 6.9)
     ax.axis("off")
     ax.set_title("CAPA Model Architecture", fontweight="bold", pad=6)
 
@@ -342,6 +403,7 @@ def figure_1_architecture(data: FigureData, out: Path, formats: list[str], dpi: 
     BOX_COLORS = {
         "input":      "#E8F4FD",
         "esm":        "#FFF3CD",
+        "diff":       "#FDEBD0",
         "interact":   "#D4EDDA",
         "clinical":   "#F8D7DA",
         "survival":   "#E2D9F3",
@@ -375,39 +437,57 @@ def figure_1_architecture(data: FigureData, out: Path, formats: list[str], dpi: 
             ),
         )
 
-    # Row y positions
-    y_in   = 4.7
-    y_esm  = 3.5
+    # Row y positions (six rows: input, ESM-2, signed difference,
+    # interaction/clinical, survival head, output)
+    y_in   = 5.9
+    y_esm  = 4.7
+    y_diff = 3.5
     y_int  = 2.3
     y_clin = 2.3
     y_cat  = 1.1
     y_out  = 0.1
 
-    # Donor inputs
+    # Donor / recipient / clinical inputs
     _box(0.1, y_in, 2.0, BOX_H, "Donor HLA alleles\n(A, B, C, DRB1, DQB1)", BOX_COLORS["input"])
-    # Recipient inputs
     _box(3.1, y_in, 2.0, BOX_H, "Recipient HLA alleles\n(A, B, C, DRB1, DQB1)", BOX_COLORS["input"])
-    # Clinical inputs
-    _box(6.1, y_in, 2.0, BOX_H, "Clinical covariates\n(age, CD34, sex, …)", BOX_COLORS["clinical"])
+    _box(6.1, y_in, 2.0, BOX_H, "Clinical covariates\n(age, CD34, sex, \u2026)", BOX_COLORS["clinical"])
 
     # ESM-2 encoders
     _box(0.1, y_esm, 2.0, BOX_H, "ESM-2 Encoder\n(frozen, 650M)", BOX_COLORS["esm"])
     _box(3.1, y_esm, 2.0, BOX_H, "ESM-2 Encoder\n(frozen, 650M)", BOX_COLORS["esm"])
-
-    # Arrows: input → esm
     _arrow(1.1, y_in, 1.1, y_esm + BOX_H)
     _arrow(4.1, y_in, 4.1, y_esm + BOX_H)
 
-    # Interaction network
-    _box(1.1, y_int, 3.0, BOX_H, "Cross-Attention Interaction Network\n(donor × recipient, 128-dim)", BOX_COLORS["interact"])
-    _arrow(1.1, y_esm, 2.5, y_int + BOX_H)
-    _arrow(4.1, y_esm, 2.7, y_int + BOX_H)
+    # Signed per-locus difference — the primary architecture's key step
+    _box(
+        1.1, y_diff, 3.0, BOX_H,
+        "Signed per-locus difference\n"
+        r"$\Delta_l = \mathbf{e}^D_l - \mathbf{e}^R_l$  (5 $\times$ 1280)",
+        BOX_COLORS["diff"],
+    )
+    _arrow(1.1, y_esm, 2.3, y_diff + BOX_H)
+    _arrow(4.1, y_esm, 2.9, y_diff + BOX_H)
+    ax.text(
+        4.35, y_diff + BOX_H / 2,
+        "sign retained:\nencodes mismatch\ndirection",
+        ha="left", va="center", fontsize=5.5, style="italic", color="#8A5A00",
+    )
+
+    # Interaction network (locus self-attention over the difference sequence)
+    _box(
+        1.1, y_int, 3.0, BOX_H,
+        r"Locus Self-Attention over $\Delta$" + "\n"
+        + r"(1280$\to$64 proj, 2 blocks $\times$ 4 heads) $\to$ 128-dim",
+        BOX_COLORS["interact"],
+        fontsize=6,
+    )
+    _arrow(2.6, y_diff, 2.6, y_int + BOX_H)
 
     # Clinical encoder
     _box(5.4, y_clin, 2.0, BOX_H, "Clinical Encoder\n(MLP, 32-dim)", BOX_COLORS["clinical"])
     _arrow(7.1, y_in, 7.1, y_clin + BOX_H)
 
-    # Concatenate arrow
+    # Concatenation into the survival head
     ax.annotate(
         "",
         xy=(4.6, y_cat + BOX_H), xytext=(2.6, y_int),
@@ -419,12 +499,16 @@ def figure_1_architecture(data: FigureData, out: Path, formats: list[str], dpi: 
         arrowprops=dict(arrowstyle="-|>", color="#444444", lw=0.6, mutation_scale=8),
     )
 
-    # Survival head
+    # Survival head and output
     _box(3.3, y_cat, 3.0, BOX_H, "DeepHit Competing-Risks Head\n(GvHD, Relapse, TRM)", BOX_COLORS["survival"])
-
-    # Output
-    _box(3.3, y_out, 3.0, BOX_H, "CIF curves · Risk scores · Attention weights", BOX_COLORS["output"])
+    _box(3.3, y_out, 3.0, BOX_H, "CIF curves \u00b7 Risk scores \u00b7 Attention", BOX_COLORS["output"])
     _arrow(4.8, y_cat, 4.8, y_out + BOX_H)
+
+    ax.text(
+        -0.75, y_out + BOX_H / 2,
+        "469,580 trainable parameters\n(ESM-2 frozen)",
+        ha="left", va="center", fontsize=5.5, color="#555555",
+    )
 
     fig.tight_layout()
     _save(fig, "fig1_architecture", out, formats, dpi)

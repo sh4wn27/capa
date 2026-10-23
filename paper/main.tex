@@ -80,20 +80,22 @@ mismatch information that no scalar distance can encode.
 We introduce CAPA (Computational Architecture for Predicting Alloimmunity), a
 deep learning framework that encodes each HLA allele as a 1280-dimensional
 vector using the frozen ESM-2 650M protein language model.  Donor--recipient
-interaction features are extracted by a bidirectional cross-attention network
-(2 layers, 8 heads), which is concatenated with clinical covariates
-and passed to a DeepHit head that jointly estimates the discrete-time
-cumulative incidence functions for all three competing events over a 730-day
-horizon.  Only the interaction network and survival head (${\sim}27.8$M
-parameters) are trained by default; ESM-2 is frozen but can optionally be
-partially fine-tuned via a second AdamW parameter group.  Post-hoc isotonic
-calibration is applied per event and time bin to improve CIF reliability.
-A multi-donor comparison endpoint ranks up to 20 candidates by composite
-GvHD+TRM risk.  Because the full cross-attention model is under-determined at
-the cohort sizes available here, the end-to-end experiments use a compact
-469K-parameter variant that self-attends over per-locus \emph{signed}
-difference embeddings $\mathbf{e}^{\mathrm{D}}-\mathbf{e}^{\mathrm{R}}$; we
-report this variant as CAPA throughout the simulation results.  We evaluate the
+interaction features are extracted by a compact attention network that
+operates on the per-locus \emph{signed} difference embedding
+$\mathbf{e}^{\mathrm{D}}_l-\mathbf{e}^{\mathrm{R}}_l$, retaining the direction
+of each mismatch rather than collapsing it to a symmetric magnitude.  The
+resulting 128-dimensional interaction vector is concatenated with encoded
+clinical covariates and passed to a DeepHit head that jointly estimates the
+discrete-time cumulative incidence functions for all three competing events
+over a 730-day horizon.  This model has 469{,}580 trainable parameters; ESM-2
+is frozen but can optionally be partially fine-tuned via a second AdamW
+parameter group.  A higher-capacity variant that cross-attends between the raw
+donor and recipient streams at full embedding dimensionality
+(${\sim}27.8$M parameters) is defined for completeness but is under-determined
+at the cohort sizes available here and is not used for any reported result.
+Post-hoc isotonic calibration is applied per event and time bin to improve CIF
+reliability.  A multi-donor comparison endpoint ranks up to 20 candidates by
+composite GvHD+TRM risk.  We evaluate the
 framework on the public UCI BMT cohort, a real-world allele-level dataset
 (IHWG), and three controlled simulations designed to isolate \emph{what} the
 learned representation adds over scalar mismatch distances; we do not claim a
@@ -301,17 +303,27 @@ baselines used as reference comparators.
 \begin{figure}[t!]
   \centering
   \includegraphics[width=\columnwidth]{figures/fig1_architecture}
-  \caption{Overview of the CAPA architecture.  HLA allele sequences for donor
+  \caption{The CAPA architecture as evaluated.  HLA allele sequences for donor
     and recipient are encoded independently by the frozen ESM-2 650M protein
-    language model ($d=1280$ per allele).  The resulting allele matrices pass
-    through $N=2$ stacked bidirectional cross-attention blocks; both streams
-    are then mean-pooled, concatenated, and compressed to a 128-dimensional
-    interaction vector $\mathbf{z}_{\mathrm{int}}$ via a two-layer MLP.
-    Structured clinical covariates are encoded in parallel by a separate MLP
-    to a 32-dimensional vector $\mathbf{z}_{\mathrm{clin}}$.  The concatenated
-    160-dimensional vector $\mathbf{z}$ is passed to the DeepHit survival head,
-    which jointly estimates cumulative incidence functions for GvHD, relapse,
-    and TRM over a 730-day horizon.}
+    language model ($d=1280$ per allele).  The per-locus \emph{signed}
+    difference $\boldsymbol{\delta}_l = \mathbf{e}^d_l - \mathbf{e}^r_l$ is
+    formed and retained with its sign, so that the direction of each mismatch
+    survives into the model; a symmetric distance would discard it
+    (Sections~\ref{sec:eplet},~\ref{sec:directional}).  The resulting
+    $L \times 1280$ difference matrix is projected to $d_{\mathrm{proj}}=64$
+    and passed through $N=2$ attention blocks ($H=4$ heads) that attend over
+    the sequence of loci; the two streams are mean-pooled, concatenated and
+    compressed to a 128-dimensional interaction vector
+    $\mathbf{z}_{\mathrm{int}}$ by a two-layer MLP.  Structured clinical
+    covariates are encoded in parallel to a 32-dimensional vector
+    $\mathbf{z}_{\mathrm{clin}}$.  The concatenated 160-dimensional vector is
+    passed to the DeepHit survival head, which jointly estimates cumulative
+    incidence functions for GvHD, relapse and TRM over a 730-day horizon.
+    The complete trainable model has 469{,}580 parameters with ESM-2 frozen.
+    A higher-capacity variant that instead cross-attends between the raw donor
+    and recipient streams at $d=1280$ (${\sim}27.8$\,M parameters) is defined
+    in Section~\ref{sec:interaction}; it did not converge at the cohort sizes
+    studied here and is not used for any reported result.}
   \label{fig:arch}
 \end{figure}
 
@@ -491,35 +503,52 @@ Let $\mathbf{D} = [\mathbf{e}^d_1, \ldots, \mathbf{e}^d_L]^\top \in
 \mathbf{e}^r_L]^\top \in \mathbb{R}^{L \times d}$ denote the row-stacked
 ESM-2 embedding matrices for the donor and recipient, respectively, where
 $L \in \{5, 6\}$ (five primary loci A, B, C, DRB1, DQB1; optionally
-extended to six by including DPB1) and $d = 1280$.  The cross-attention
-blocks operate directly at embedding dimensionality $d = 1280$; no
-pre-projection is applied before the first attention layer.
+extended to six by including DPB1) and $d = 1280$.
 
-\paragraph{Locus positional embeddings (optional).}
-Because cross-attention is permutation-equivariant with respect to the
-sequence of loci, we optionally add a learned per-locus positional bias
-before the first cross-attention layer.  A shared embedding table
-$\mathbf{P} \in \mathbb{R}^{L_{\max} \times 32}$ (with $L_{\max} = 16$ to
-accommodate future multi-locus extensions) is projected to $d$ via a
-learned linear layer $\mathbf{W}_{\mathrm{pos}} \in \mathbb{R}^{32 \times d}$
-and added to both $\mathbf{D}$ and $\mathbf{R}$:
+We describe two configurations of the interaction network.  The
+\emph{signed-difference locus-attention} model defined immediately below is
+the primary architecture: it is the configuration used for every end-to-end
+CAPA result reported in this manuscript, and ``CAPA'' refers to it unless
+stated otherwise.  The higher-capacity bidirectional cross-attention
+configuration is described afterwards; it is under-determined at the cohort
+sizes available to us and is reported only as a negative capacity result
+(Section~\ref{sec:haplo}).
+
+\paragraph{Primary architecture: signed-difference locus attention.}
+The network operates on the per-locus \emph{signed} difference between donor
+and recipient embeddings,
 \begin{equation}
-  \mathbf{D} \leftarrow \mathbf{D}
-    + \mathbf{P}_{1:L}\,\mathbf{W}_{\mathrm{pos}},
+  \boldsymbol{\Delta} = \mathbf{D} - \mathbf{R}
+  = [\boldsymbol{\delta}_1, \ldots, \boldsymbol{\delta}_L]^\top
+  \in \mathbb{R}^{L \times d},
   \qquad
-  \mathbf{R} \leftarrow \mathbf{R}
-    + \mathbf{P}_{1:L}\,\mathbf{W}_{\mathrm{pos}}.
+  \boldsymbol{\delta}_l = \mathbf{e}^d_l - \mathbf{e}^r_l .
+  \label{eq:signed_diff}
 \end{equation}
-This adds 41{,}472 parameters and allows the cross-attention heads to
-incorporate locus identity when computing attention scores.  Positional
-embeddings are disabled by default (\texttt{interaction\_pos\_embed: false}
-in the config) and should be enabled when locus ordering is fixed and meaningful.
+Retaining the sign is the substantive modelling choice.  The magnitude
+$\lVert \boldsymbol{\delta}_l \rVert$ is symmetric under exchange of donor and
+recipient and therefore cannot encode the direction of a mismatch, whereas
+$\boldsymbol{\delta}_l$ itself can; Sections~\ref{sec:eplet}
+and~\ref{sec:directional} quantify what that distinction is worth.
 
-\paragraph{Bidirectional cross-attention.}
-We apply $N = 2$ stacked bidirectional cross-attention layers
-\citep{vaswani2017attention}.  At layer $\ell$, each stream attends to the
-other stream as its context.  For $H = 8$ attention heads and per-head
-dimension $d_h = d / H = 160$, the multi-head cross-attention update is:
+A single shared linear map $\mathbf{W}_{\mathrm{in}} \in
+\mathbb{R}^{d \times d_{\mathrm{proj}}}$ with $d_{\mathrm{proj}} = 64$
+projects each locus difference before attention, reducing the attention
+parameter matrices from $d^2$ to $d_{\mathrm{proj}}^2$.  The projected
+sequence $\tilde{\boldsymbol{\Delta}} = \boldsymbol{\Delta}
+\mathbf{W}_{\mathrm{in}} \in \mathbb{R}^{L \times d_{\mathrm{proj}}}$ is then
+passed through $N = 2$ attention blocks.  Each block contains two independently
+parameterised multi-head attention modules, both taking
+$\tilde{\boldsymbol{\Delta}}$ as query, key and value, so that attention
+operates \emph{over the sequence of per-locus differences}: the model learns
+which loci's mismatches matter and how they modulate one another, rather than
+attempting to learn the donor--recipient comparison itself from random
+initialisation.  Because the two modules do not share parameters, they yield
+two distinct transformations of the same input.
+
+\paragraph{Attention mechanism.}
+For $H = 4$ heads and per-head dimension $d_h = d_{\mathrm{proj}} / H = 16$,
+the multi-head attention update is
 \begin{align}
   \mathrm{MHA}(\mathbf{X}, \mathbf{Y})
     &= \mathrm{concat}\!\left(\mathrm{head}_1, \ldots, \mathrm{head}_H\right)
@@ -533,49 +562,80 @@ dimension $d_h = d / H = 160$, the multi-head cross-attention update is:
        \mathbf{Y}\mathbf{W}^V_h,
   \label{eq:attn}
 \end{align}
-where $\mathbf{W}^Q_h, \mathbf{W}^K_h, \mathbf{W}^V_h \in
-\mathbb{R}^{d \times d_h}$ and $\mathbf{W}^O \in \mathbb{R}^{d \times d}$
-are learned projection matrices.  Each cross-attention block applies the
-donor-attends-to-recipient and recipient-attends-to-donor operations
-in parallel, each followed by a residual connection and layer normalisation
-\citep{ba2016layernorm}; there is no position-wise feed-forward sublayer:
+with learned projections $\mathbf{W}^Q_h, \mathbf{W}^K_h, \mathbf{W}^V_h$ and
+output matrix $\mathbf{W}^O$.  Writing $\mathbf{U}^{(0)} = \mathbf{V}^{(0)} =
+\tilde{\boldsymbol{\Delta}}$ for the two streams, each block applies a
+residual update followed by layer normalisation \citep{ba2016layernorm}, with
+no position-wise feed-forward sublayer:
 \begin{align}
-  \mathbf{D}^{(\ell+1)}
-    &= \mathrm{LayerNorm}\!\left(\mathbf{D}^{(\ell)}
-       + \mathrm{drop}\!\left(\mathrm{MHA}(\mathbf{D}^{(\ell)},\,
-                      \mathbf{R}^{(\ell)})\right)\right),
+  \mathbf{U}^{(\ell+1)}
+    &= \mathrm{LayerNorm}\!\left(\mathbf{U}^{(\ell)}
+       + \mathrm{drop}\!\left(\mathrm{MHA}_U(\mathbf{U}^{(\ell)},\,
+                      \mathbf{V}^{(\ell)})\right)\right),
   \label{eq:xattn_d} \\
-  \mathbf{R}^{(\ell+1)}
-    &= \mathrm{LayerNorm}\!\left(\mathbf{R}^{(\ell)}
-       + \mathrm{drop}\!\left(\mathrm{MHA}(\mathbf{R}^{(\ell)},\,
-                      \mathbf{D}^{(\ell)})\right)\right),
+  \mathbf{V}^{(\ell+1)}
+    &= \mathrm{LayerNorm}\!\left(\mathbf{V}^{(\ell)}
+       + \mathrm{drop}\!\left(\mathrm{MHA}_V(\mathbf{V}^{(\ell)},\,
+                      \mathbf{U}^{(\ell)})\right)\right),
   \label{eq:xattn_r}
 \end{align}
-where $\mathrm{drop}(\cdot)$ denotes dropout with $p = 0.1$ applied during
-training.  The two streams at layer $\ell+1$ are computed in parallel from
-the layer-$\ell$ states without sharing parameters.
+where $\mathrm{drop}(\cdot)$ is dropout ($p = 0.2$ in the simulation
+experiments, $p = 0.1$ otherwise).
 
 \paragraph{Interaction feature vector.}
-After $N = 2$ layers, each stream is mean-pooled over the $L$ locus
-positions and the two 1280-dimensional pooled vectors are concatenated, giving
-a $2d = 2560$-dimensional representation.  A two-layer projection MLP then
-compresses this to the $d'' = 128$-dimensional interaction vector:
+After $N = 2$ blocks each stream is mean-pooled over the $L$ locus positions
+and the two pooled vectors are concatenated, giving a
+$2 d_{\mathrm{proj}} = 128$-dimensional representation that a two-layer MLP
+compresses to the $d'' = 128$-dimensional interaction vector:
 \begin{align}
   \mathbf{z}_{\mathrm{cat}}
-    &= \left[\frac{1}{L}\sum_{j=1}^{L} \mathbf{D}^{(N)}_j \;;\;
-             \frac{1}{L}\sum_{j=1}^{L} \mathbf{R}^{(N)}_j\right]
-    \in \mathbb{R}^{2d}, \label{eq:zcat}\\
+    &= \left[\frac{1}{L}\sum_{j=1}^{L} \mathbf{U}^{(N)}_j \;;\;
+             \frac{1}{L}\sum_{j=1}^{L} \mathbf{V}^{(N)}_j\right]
+    \in \mathbb{R}^{2 d_{\mathrm{proj}}}, \label{eq:zcat}\\
   \mathbf{z}_{\mathrm{int}}
     &= \mathbf{W}_2\;\mathrm{drop}\!\left(\mathrm{GELU}\!\left(
          \mathbf{W}_1\,\mathbf{z}_{\mathrm{cat}}\right)\right)
     \in \mathbb{R}^{d''},  \label{eq:zint}
 \end{align}
-where $\mathbf{W}_1 \in \mathbb{R}^{2d \times 4d''}$ and
-$\mathbf{W}_2 \in \mathbb{R}^{4d'' \times d''}$ with $d'' = 128$.
-The total number of learnable parameters in the interaction network
-(four MultiheadAttention blocks at $d=1280$ across both streams and both
-layers, plus the post-projection MLP) is approximately 27.6\,M, or ${\sim}27.8$\,M
-including the DeepHit survival head; this count is dominated by the
+with $\mathbf{W}_1 \in \mathbb{R}^{2 d_{\mathrm{proj}} \times 4d''}$ and
+$\mathbf{W}_2 \in \mathbb{R}^{4d'' \times d''}$.  At $d_{\mathrm{proj}} = 64$,
+$L = 5$, three competing events and 100 time bins, the complete trainable
+model---interaction network, clinical encoder and DeepHit head---comprises
+469{,}580 parameters.
+
+\paragraph{Higher-capacity variant: full bidirectional cross-attention.}
+Setting $\mathbf{W}_{\mathrm{in}}$ to the identity (equivalently, disabling the
+input projection) and supplying $\mathbf{D}$ and $\mathbf{R}$ as separate
+streams recovers a bidirectional cross-attention network in which the donor
+stream attends to the recipient stream and vice versa, at full embedding
+dimensionality $d = 1280$ with $H = 8$ heads.  Equations~\eqref{eq:mha}
+through~\eqref{eq:zint} apply unchanged with $\mathbf{U} = \mathbf{D}$,
+$\mathbf{V} = \mathbf{R}$ and $d_{\mathrm{proj}}$ replaced by $d$.  This
+configuration has ${\sim}27.6$\,M parameters in the interaction network, or
+${\sim}27.8$\,M including the survival head---roughly sixty times the primary
+model---dominated by the attention matrices operating at full embedding
+dimensionality.
+
+In principle this variant is strictly more expressive, since it need not be
+given the difference $\boldsymbol{\Delta}$ in advance.  In practice it did not
+converge above a binary-mismatch Cox baseline at any cohort size available to
+us (Section~\ref{sec:haplo}): learning the donor--recipient comparison from
+random initialisation is under-determined at $N \le 10^4$, and the model
+remains near the trivial uniform-prediction solution.  We report it as a
+capacity finding rather than as a competitive configuration, and we do not use
+it for any headline result.
+
+\paragraph{Locus positional embeddings (optional).}
+Attention is permutation-equivariant with respect to the ordering of loci, so
+a learned per-locus positional bias may be added before the first block.  A
+shared embedding table $\mathbf{P} \in \mathbb{R}^{L_{\max} \times 32}$ (with
+$L_{\max} = 16$ to accommodate future multi-locus extensions) is projected to
+the attention dimension by $\mathbf{W}_{\mathrm{pos}}$ and added to both
+streams.  At full embedding dimensionality this adds 41{,}472 parameters.
+Positional embeddings are disabled by default
+(\texttt{interaction\_pos\_embed: false}) and were not used in any experiment
+reported here; they are intended for settings where locus ordering is fixed
+and meaningful.
 cross-attention parameter matrices operating at full embedding dimensionality.
 
 \subsection{Clinical Covariate Encoder}
@@ -850,36 +910,53 @@ be interpreted as indicative rather than definitive.
 
 \subsection{ESM-2 Embeddings Organise HLA Alleles by Structural Similarity}
 
-To illustrate the representational quality of the ESM-2 embedding pipeline, we
-applied UMAP dimensionality reduction \citep{mcinnes2018umap} to a prototype
-set of 100 HLA allele embeddings spanning the five primary loci (A, B, C,
-DRB1, DQB1; DPB1 is supported as an optional sixth locus),
-computed using the same embedding procedure described in Section~\ref{sec:esm2}
-(Figure~\ref{fig:umap}).
+To assess the representational quality of the ESM-2 embedding pipeline, we
+embedded all 270 HLA alleles in the cached allele set, drawn from genuine
+IPD-IMGT/HLA release 3.57.0 protein sequences and spanning the five primary
+loci (A, $n=54$; B, $n=103$; C, $n=48$; DRB1, $n=45$; DQB1, $n=20$; DPB1 is
+supported as an optional sixth locus), using the procedure of
+Section~\ref{sec:esm2}.  All structural statistics below are computed in the
+native 1280-dimensional embedding space; the UMAP projection
+\citep{mcinnes2018umap} in Figure~\ref{fig:umap} is shown for visualisation
+only, and inter-cluster distances in that projection should not be
+interpreted quantitatively.
 
-Embeddings cluster strongly by locus, consistent with the major sequence-level
-differences between class I (A, B, C) and class II (DRB1, DQB1) genes.
-Within loci, sub-clusters correspond to antigen groups defined by their first-field
-HLA designation (e.g.\ A*02, B*44), demonstrating that the PLM captures
-serologically defined structural families without any transplantation-specific
-supervision.  Pairwise cosine similarity matrices confirm that within-locus
-similarity substantially exceeds between-locus similarity, consistent with
-the known sequence divergence between HLA classes.
+Embeddings organise by locus: the nearest neighbour under cosine similarity
+shares the query allele's locus for 99.3\,\% of alleles (98.8\,\% at $k=5$,
+99.1\,\% at $k=10$), with per-locus 1-NN purity ranging from 97.8\,\% (DRB1)
+to 100\,\% (A, B, DQB1).  Within loci, the representation recovers
+serologically defined families without any transplantation-specific
+supervision: for 84.8\,\% of alleles the nearest within-locus neighbour shares
+the same first-field antigen group (e.g.\ A*02, B*44), against a
+composition-matched chance rate of 8.0\,\%, a 10.6-fold enrichment.
+
+Two caveats temper this.  First, all pairwise cosine similarities are high in
+absolute terms---within-locus $0.9982 \pm 0.0068$ versus between-locus
+$0.9837 \pm 0.0148$---because every allele is an MHC protein sharing a common
+fold; the usable structure lies in small relative differences, which is why
+distance normalisation must be computed over the relevant allele pool rather
+than the full cache (Section~\ref{sec:mechanistic}).  Second, the class I
+versus class II separation is modest ($0.9976$ within class versus $0.9695$
+between), and is not visually clean in the two-dimensional projection even
+though it is the largest of the group-level gaps we measured.
 
 \begin{figure}[t!]
   \centering
   \includegraphics[width=\columnwidth]{figures/fig2_umap}
-  \caption{ESM-2 embeddings of 100 synthetic prototype HLA alleles
-    (20 per locus) spanning five primary loci (A, B, C, DRB1, DQB1).
-    \textbf{(a)}~UMAP projection coloured by locus.
-    \textbf{(b)}~UMAP coloured by antigen group within HLA-A and HLA-B.
-    \textbf{(c)}~Within-locus pairwise cosine similarity matrices for each locus.
-    \textbf{(d)}~Violin plots comparing within-locus (dark) and between-locus
-    (light) cosine similarity distributions; horizontal bars indicate medians.
-    The UCI BMT dataset records aggregate mismatch scores rather than
-    per-allele typing strings and therefore cannot be used to generate
-    this analysis; the prototype allele set is distributed with the CAPA
-    open-source release.}
+  \caption{UMAP projection of ESM-2 embeddings for all 270 cached HLA alleles
+    (A, $n=54$; B, $n=103$; C, $n=48$; DRB1, $n=45$; DQB1, $n=20$), computed
+    from genuine IPD-IMGT/HLA release 3.57.0 protein sequences and coloured by
+    locus.  Alleles form locally coherent, locus-specific groups with visible
+    within-locus substructure; a small number sit apart from their locus
+    group.  Quantitative structure is reported in the text from the native
+    1280-dimensional space (1-NN locus purity 99.3\,\%; 84.8\,\% of alleles
+    share a first-field antigen group with their nearest within-locus
+    neighbour, versus 8.0\,\% expected by chance).  UMAP inter-cluster
+    distances are not meaningful and this projection should be read as
+    qualitative.  The UCI BMT dataset records aggregate mismatch scores rather
+    than per-allele typing strings, so this analysis uses the cached allele
+    set distributed with the CAPA open-source release rather than cohort
+    typings.}
   \label{fig:umap}
 \end{figure}
 
@@ -1351,14 +1428,14 @@ subgroup and exploit the full distributional signal.
 We evaluate CAPA end-to-end on two larger synthetic cohorts where allele-level
 information is available by construction.  A note on model capacity: in the
 $N=2{,}000$ mechanistic cohort (1{,}600 training patients), the full
-bidirectional cross-attention model (${\sim}27.8$M parameters, the default
-configuration of Section~\ref{sec:interaction}) did not converge above
+bidirectional cross-attention model (${\sim}27.8$M parameters, the
+higher-capacity variant of Section~\ref{sec:interaction}) did not converge above
 Cox(binary)---the optimisation problem of learning donor--recipient
 alloreactivity from random initialisation is under-determined at this scale.
-The simulations therefore use a compact variant ($d_{\mathrm{proj}}=64$,
-469K parameters) that projects the per-locus difference embeddings and
-self-attends over them; this is the same architecture trained at two scales,
-and we report it as ``CAPA'' throughout the simulation results.  The
+All reported results therefore use the primary architecture of
+Section~\ref{sec:interaction} ($d_{\mathrm{proj}}=64$, 469{,}580 parameters),
+which projects the per-locus signed difference embeddings and attends over
+them; we refer to it as ``CAPA'' throughout.  The
 haploidentical scale-up (Section~\ref{sec:haplo}, $N=10{,}000$) shows this
 variant achieves $C_{\mathrm{GvHD}}=0.732$, statistically indistinguishable from
 Cox (ESM-2 distances) at 0.759 (CIs overlap), confirming that the attention
@@ -1492,6 +1569,102 @@ overlaps that of Cox (ESM-2 distances) (0.74--0.78).}
 \end{table}
 
 %% ── Directional Alloreactivity ──────────────────────────────────────────────
+\subsection{External Grounding: ESM-2 Distances versus EpRegistry Eplet Loads}
+\label{sec:eplet}
+
+The experiments so far establish what the ESM-2 representation can do inside
+our own pipeline.  They do not establish that it measures anything an
+immunogeneticist would recognise.  We therefore compared ESM-2 embedding
+distances against an established, externally maintained immunogenicity
+metric: eplet load as defined by the International Registry of HLA Epitopes
+\citep{duquesnoy2014epregistry}, computed with the independently developed
+Python Eplet Load Calculator \citep{lhotte2022pelc}.  PELC shares no code,
+no sequence data and no parameters with CAPA, so this comparison is not
+circular.
+
+\paragraph{Design.}
+For each of the five primary loci we enumerated all within-locus allele pairs
+from the 270-allele cached set and computed, for every pair, (i)~the symmetric
+Euclidean distance between ESM-2 embeddings and (ii)~the EpRegistry eplet
+load in both directions.  Interlocus class II eplets were disabled so that
+each comparison depends only on the two alleles involved.  Of $8{,}992$
+candidate pairs, $8{,}810$ (98.0\,\%) resolved; the remainder involved at
+least one allele absent from the EpRegistry database and were excluded rather
+than imputed.  Exclusions were concentrated at HLA-C (83.9\,\% resolved).
+
+\paragraph{ESM-2 distances track eplet load.}
+Spearman correlations between ESM-2 distance and total eplet load are positive
+and highly significant at every locus, ranging from $\rho = 0.527$ (C) to
+$\rho = 0.659$ (DQB1) (Table~\ref{tab:eplet}; all $p < 5\times10^{-25}$).
+The learned representation therefore recovers a substantial fraction of the
+rank ordering of an expert-curated structural metric, with no exposure to
+eplet definitions during training.
+
+\paragraph{Eplet load is directional, and that is not a rounding error.}
+EpRegistry eplet load is defined asymmetrically: the eplets present in the
+donor but absent from the recipient are a different set, and generally a
+different number, from the reverse.  For HLA-A*01:01 versus A*02:01, for
+instance, the two directional loads are 24 and 30.  Across the resolved pairs,
+$86.4$--$91.6\,\%$ are asymmetric, with a mean absolute directional difference
+of up to 3.4 eplets.
+
+This has a consequence that does not depend on any modelling choice.  Any
+symmetric pair function $f(a,b) = f(b,a)$---including every scalar distance,
+every kernel, and every metric learned on unordered pairs---must emit a single
+value for both orderings of a pair.  Its variance-minimising prediction of the
+directional load is therefore the per-pair mean, and the residual is an error
+floor it cannot cross.  Decomposing each pair's loads into symmetric and
+antisymmetric components and taking the ratio of the resulting residual sum of
+squares to the total gives that floor exactly: between $8.9\,\%$ (B) and
+$25.1\,\%$ (DQB1) of the variance in directional eplet load is unreachable by
+any symmetric metric, however expressive (Table~\ref{tab:eplet}).
+
+This is independent external evidence for the argument developed in
+Section~\ref{sec:directional}.  The direction-blindness of scalar distances is
+not merely a theoretical property of the Euclidean norm; it is a measurable
+loss of information relative to the metric clinical immunogenetics already
+uses.
+
+\paragraph{A note on our own eplet proxy.}
+CAPA ships an eplet-proxy baseline that counts amino-acid mismatches at known
+polymorphic positions (Section~\ref{sec:baselines}).  Validating it against
+PELC revealed an indexing defect: eplet nomenclature numbers residues from the
+start of the \emph{mature} protein, whereas IPD-IMGT/HLA FASTA records include
+the leader peptide (24 residues for A, B and C; 29 for DRB1; 32 for DQB1).
+Uncorrected, the proxy indexed into the leader, which is nearly invariant
+within a locus, and scored 23--51\,\% of genuinely mismatched allele pairs as
+identical.  Correcting the offset raised the proxy's agreement with PELC from
+$\rho = 0.199$--$0.453$ to $\rho = 0.382$--$0.899$.  No result reported in
+this manuscript used the uncorrected proxy; we record the defect because the
+corrected baseline is part of the open-source release.
+
+\begin{table}[ht]
+\centering
+\caption{External grounding against EpRegistry eplet loads over all resolved
+  within-locus allele pairs.  $\rho$ is Spearman's rank correlation with total
+  eplet load.  ``Asym.\ pairs'' is the percentage of pairs whose two
+  directional loads differ.  ``Floor'' is the fraction of directional
+  eplet-load variance that no symmetric pair function can explain.  Proxy
+  columns give the agreement of CAPA's own position-mismatch proxy with PELC,
+  before and after the leader-offset correction.}
+\label{tab:eplet}
+\small
+\begin{tabular}{lrrrrrr}
+\toprule
+ & & \multicolumn{1}{c}{ESM-2} & \multicolumn{2}{c}{Proxy $\rho$}
+ & \multicolumn{2}{c}{Directionality} \\
+\cmidrule(lr){3-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}
+Locus & Pairs & $\rho$ & corrected & raw & Asym.\ pairs & Floor \\
+\midrule
+A    & 1{,}431 & 0.654 & 0.899 & 0.236 & 91.3\,\% & 13.9\,\% \\
+B    & 5{,}253 & 0.584 & 0.835 & 0.361 & 87.6\,\% &  8.9\,\% \\
+C    &     946 & 0.527 & 0.771 & 0.199 & 86.4\,\% & 12.1\,\% \\
+DRB1 &     990 & 0.641 & 0.677 & 0.453 & 86.8\,\% & 11.4\,\% \\
+DQB1 &     190 & 0.659 & 0.382 & 0.300 & 91.6\,\% & 25.1\,\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 \subsection{Directional Alloreactivity: Where the Learned Representation Beats Scalar Distances}
 \label{sec:directional}
 

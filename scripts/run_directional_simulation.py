@@ -190,7 +190,10 @@ def main() -> None:
     parser.add_argument("--device", default="cpu")
     parser.add_argument("--no-capa", action="store_true")
     parser.add_argument("--patience", type=int, default=120)
-    parser.add_argument("--proj-dim", type=int, default=128)
+    # 64 matches the primary architecture described in the manuscript
+    # (469,580 trainable parameters); run_haplo_simulation.py uses the same
+    # default. The published directional results were produced at 64.
+    parser.add_argument("--proj-dim", type=int, default=64)
     parser.add_argument("--seed", type=int, default=SEED,
                         help="Master seed for cohort, w-directions, split, init, "
                              "and minibatch shuffling (patches train_capa's SEED).")
