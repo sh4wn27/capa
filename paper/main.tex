@@ -293,8 +293,10 @@ claim to deliver.
 Figure~\ref{fig:arch} provides an overview of the CAPA architecture.  The
 framework comprises four main components: (i)~an ESM-2 650M protein language
 model that encodes each HLA allele as a 1280-dimensional embedding from its
-amino-acid sequence; (ii)~a bidirectional cross-attention interaction network
-that models donor--recipient locus-pair relationships; (iii)~a clinical
+amino-acid sequence; (ii)~a signed-difference locus-attention interaction
+network that models directional donor--recipient differences at each locus
+(a higher-capacity bidirectional cross-attention variant is reported as a
+negative capacity result); (iii)~a clinical
 covariate encoder; and (iv)~a DeepHit competing-risks survival head that
 jointly estimates discrete-time cumulative incidence functions for GvHD,
 relapse, and TRM.  Sections~\ref{sec:data}--\ref{sec:training} describe each
@@ -374,8 +376,9 @@ acute GvHD grade III--IV without relapse or death represent the subset where
 the ``GvHD'' label is most clinically distinct.  We acknowledge that this
 prioritisation introduces a simplification: in reality, GvHD and TRM overlap
 temporally and causally (GvHD-attributable mortality is coded as TRM here).
-Sensitivity analyses using alternative encodings (GvHD-as-TRM absorbed, or
-separate latent-time competing-risks models) are identified as future work.  Under this encoding: 28 patients experienced relapse
+Section~\ref{sec:hierarchy} re-derives the labels under two alternative
+orderings and shows that this choice materially changes every endpoint on this
+cohort; separate latent-time competing-risks models remain future work.  Under this encoding: 28 patients experienced relapse
 (15.0\,\%), 62 died without relapsing (TRM, 33.2\,\%), 16 had severe acute
 GvHD and survived without relapse (8.6\,\%), and 81 were censored (43.3\,\%).
 Survival times were right-censored at day 730.
@@ -848,7 +851,7 @@ early stopping (patience 25 epochs) on validation mean $C$-index across both
 evaluable events.  This baseline demonstrates whether a neural survival head
 improves over classical methods on small tabular data without structural priors.
 
-The CAPA ESM-2 pipeline (cross-attention + DeepHit head, Sections~\ref{sec:esm2}--\ref{sec:deephit})
+The CAPA ESM-2 pipeline (signed-difference locus attention + DeepHit head, Sections~\ref{sec:esm2}--\ref{sec:deephit})
 is fully implemented and released as open-source software; its evaluation on
 registry-scale data with allele-level HLA typing constitutes future work.
 
@@ -1271,7 +1274,12 @@ as independent of this choice.
 We retain the outcome hierarchy as the primary specification, because it
 matches the clinical decision framing of Section~\ref{sec:data} and because
 changing it would not rescue the cohort: 40 GvHD events in 187 patients
-remains far below what is needed to fit the models of interest.  We report the
+remains far below what is needed to fit the models of interest.  This choice
+has a cost we state explicitly: because the outcome ordering does not record
+time to first event, the DeepHit fits on this cohort optimise a likelihood
+whose event-time semantics the labels do not satisfy, and those fits should be
+read as an end-to-end pipeline check rather than as calibrated cumulative
+incidence estimates.  We report the
 sensitivity so that the GvHD results on this cohort are read as what they
 are---uninformative under the primary specification, and weakly estimable
 under alternatives---rather than as evidence either for or against the
