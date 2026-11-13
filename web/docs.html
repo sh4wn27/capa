@@ -140,6 +140,7 @@
       <a href="#config"><span class="n">07</span> Configuration</a>
       <a href="#baselines"><span class="n">08</span> Baselines &amp; ablations</a>
       <a href="#evaluation"><span class="n">09</span> Evaluation &amp; calibration</a>
+      <a href="#validation"><span class="n">10</span> Datasets &amp; validation</a>
     </nav>
   </aside>
 
@@ -150,6 +151,11 @@
       <h2>Overview</h2>
       <p>CAPA's backend is a <b>FastAPI</b> application that loads a trained PyTorch model on startup and exposes a REST API for inference. It runs inside Docker on <b>HuggingFace Spaces</b> — always-on, CPU-only, free tier.</p>
       <p>The model pipeline: donor and recipient HLA alleles are resolved to protein sequences, embedded with frozen <b>ESM-2</b> vectors (or looked up from a pre-built cache), passed through a cross-attention interaction network, and decoded by a <b>DeepHit competing-risks survival head</b> that jointly predicts the time-to-event distribution for GvHD, relapse, and TRM.</p>
+
+      <div class="callout">
+        <div class="c-tag">Deployed model vs. paper</div>
+        <p>The live API serves the <b>bidirectional cross-attention prototype</b> trained on UCI BMT; it is what returns <code>attention_weights</code>. The paper's primary architecture is the smaller <b>signed-difference locus-attention</b> model (469,580 parameters), and the cross-attention variant is reported there as a negative capacity result. Treat live predictions as a demonstration of the pipeline, not as validated clinical risk. See <a href="#validation">Datasets &amp; validation</a> for what has and has not been shown.</p>
+      </div>
 
       <div class="callout">
         <div class="c-tag">Live endpoint</div>
@@ -648,6 +654,44 @@ score = biology_alignment_score(d_attr[<span class="num">0</span>], locus=<span 
       </div>
     </section>
 
+    <section id="validation">
+      <h2>Datasets &amp; validation</h2>
+      <p>Every analysis in the paper is reproducible from a script in <code>scripts/</code> that writes its results to <code>data/results/</code>. The table lists each dataset, what it can and cannot test, and the headline result, including the negative ones.</p>
+
+      <h3>Datasets</h3>
+      <table class="field-table">
+        <tr><th>Dataset</th><th>Contents</th><th>Access</th></tr>
+        <tr><td><a href="https://archive.ics.uci.edu/dataset/565/bone+marrow+transplant+children" target="_blank" rel="noopener">UCI BMT</a></td><td>187 paediatric HSCT patients; aggregate mismatch counts only (no allele strings); GvHD, relapse, death. Alleles are frequency-imputed for end-to-end runs.</td><td>Public</td></tr>
+        <tr><td><a href="https://ftp.ncbi.nlm.nih.gov/pub/mhc/mhc/Final%20Archive/IHWG/Hematopoietic_Cell_Transplantation/" target="_blank" rel="noopener">IHWG HCT (dbMHC archive)</a></td><td>1,347 unrelated-donor HSCT pairs with real allele-level typing at A, B, C, DRB1, DQB1, DPB1; overall survival only.</td><td>Public (NCBI FTP)</td></tr>
+        <tr><td><a href="https://cibmtr.org/Manuscript/a028a00001HHGJxAAP/P-5545" target="_blank" rel="noopener">CIBMTR IB20-02</a></td><td>1,287 haploidentical PTCy recipients; HLAMatchmaker eplet counts split by GvH and HvG direction per locus; aGvHD, cGvHD, relapse, TRM, OS with event times. No allele strings.</td><td>Free download under CIBMTR terms. <b>Not redistributed here</b>; place it in <code>data/raw/cibmtr/IB20-02/</code> yourself.</td></tr>
+        <tr><td><a href="https://www.ebi.ac.uk/ipd/imgt/hla/" target="_blank" rel="noopener">IPD-IMGT/HLA</a></td><td>Protein sequences for the 270 alleles in the ESM-2 embedding cache.</td><td>Public</td></tr>
+      </table>
+
+      <h3>Analyses and results</h3>
+      <table class="field-table">
+        <tr><th>Question</th><th>Script</th><th>Result</th></tr>
+        <tr><td>Does the learned directional model beat scalar distances when the ground truth is directional?</td><td><code>run_directional_simulation.py</code></td><td>Yes, in simulation: GvHD C = 0.869 ± 0.023 (CAPA, signed difference) vs 0.575 ± 0.059 (Cox on scalar distances) over 6 seeds; oracle 0.892.</td></tr>
+        <tr><td>Do ESM-2 distances agree with an independent, EpRegistry-derived immunogenicity measure?</td><td><code>run_eplet_correlation.py</code></td><td>Moderately: Spearman ρ = 0.53–0.66 over 8,810 within-locus allele pairs. Eplet load is itself directional (86–92% of pairs asymmetric).</td></tr>
+        <tr><td>Do ESM-2 distances predict survival on real allele-typed patients?</td><td><code>run_ihwg_validation.py</code></td><td>Comparable to binary mismatch indicators overall (C = 0.602 vs 0.615); ahead in the single-mismatch non-CML subgroup (ΔC = +0.024, not significance-tested).</td></tr>
+        <tr><td>Does direction-resolved mismatch load predict outcomes in a real registry cohort?</td><td><code>run_cibmtr_directional.py</code></td><td><b>No.</b> GvH and HvG load are almost uncorrelated (|r| ≤ 0.08, 82–96% of patients asymmetric), confirming the directional structure. But directional models do not beat symmetric totals for any of six outcomes (LRT p = 0.18–0.72), and no eplet model beats clinical covariates alone. This is the PTCy setting, where HLA effects are expected to be weakest.</td></tr>
+        <tr><td>How much do UCI BMT results depend on the event-priority hierarchy?</td><td><code>run_hierarchy_sensitivity.py</code></td><td>A lot. Under the primary hierarchy GvHD cannot be estimated (degenerate C = 0.500); under alternatives C = 0.566–0.603.</td></tr>
+      </table>
+
+      <div class="callout">
+        <div class="c-tag">What is still missing</div>
+        <p>No public dataset yet combines <b>allele-level typing</b> with <b>event-specific outcomes</b> (GvHD, relapse, TRM). IHWG has the alleles but only overall survival; CIBMTR IB20-02 has the outcomes but only eplet counts. A test of the full CAPA pipeline on its intended endpoint requires registry data with both, ideally under conventional GvHD prophylaxis.</p>
+      </div>
+
+      <div class="code-block">
+        <div class="code-label">Shell</div>
+        <pre>uv run python scripts/run_directional_simulation.py
+uv run python scripts/run_eplet_correlation.py
+uv run python scripts/run_ihwg_validation.py
+uv run python scripts/run_cibmtr_directional.py   <span class="cmt"># needs the CIBMTR file locally</span>
+uv run python scripts/run_hierarchy_sensitivity.py</pre>
+      </div>
+    </section>
+
   </article>
 </div>
 
@@ -665,6 +709,8 @@ score = biology_alignment_score(d_attr[<span class="num">0</span>], locus=<span 
       <div class="footer-col"><h4>Resources</h4><ul>
         <li><a href="https://github.com/sh4wn27/capa" target="_blank" rel="noopener">GitHub Repository</a></li>
         <li><a href="https://archive.ics.uci.edu/dataset/565/bone+marrow+transplant+children" target="_blank" rel="noopener">UCI BMT Dataset</a></li>
+        <li><a href="https://ftp.ncbi.nlm.nih.gov/pub/mhc/mhc/Final%20Archive/IHWG/Hematopoietic_Cell_Transplantation/" target="_blank" rel="noopener">IHWG HCT Dataset</a></li>
+        <li><a href="https://cibmtr.org/Manuscript/a028a00001HHGJxAAP/P-5545" target="_blank" rel="noopener">CIBMTR IB20-02</a></li>
         <li><a href="https://www.ebi.ac.uk/ipd/imgt/hla/" target="_blank" rel="noopener">IPD-IMGT/HLA</a></li>
         <li><a href="https://huggingface.co/facebook/esm2_t33_650M_UR50D" target="_blank" rel="noopener">ESM-2 Model</a></li>
       </ul></div>

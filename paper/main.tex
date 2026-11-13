@@ -1970,6 +1970,93 @@ information \emph{comparable} to binary mismatch indicators; and
 the real-world subgroup where theory predicts binary features to lose
 discriminative power.
 
+%% ── CIBMTR directional eplet test ─────────────────────────────────────────
+\subsection{Directional Eplet Load on a Registry Cohort (CIBMTR IB20-02)}
+\label{sec:cibmtr}
+
+The directional argument of Sections~\ref{sec:eplet}
+and~\ref{sec:directional} makes a testable prediction that does not require
+allele strings: if GvH and HvG incompatibility are distinct quantities,
+resolving a mismatch score by direction should carry outcome information that
+its direction-blind total does not.  We tested this on the CIBMTR publicly
+available IB20-02 dataset~\citep{Zou2022Eplet}: 1{,}287 adult haploidentical
+HCT recipients (97 centres, 2013--2017) given post-transplant
+cyclophosphamide (PTCy), with HLAMatchmaker eplet mismatch counts scored
+separately in the GvH and HvG directions at HLA-A, -B, -C, -DRB1 and -DQB1,
+and event-specific outcomes with their own event times.
+
+\paragraph{Direction is real in the registry data.}
+GvH and HvG eplet load differ in 96.3\,\% of patients at class~I and
+91.3\,\% at class~II (82--88\,\% per locus), and the two directions are
+essentially uncorrelated across patients (Pearson $r$ between $-0.08$ and
+$0.03$ at every locus and class).  This replicates, on registry typing, the
+asymmetry found from EpRegistry definitions in Section~\ref{sec:eplet}: a
+symmetric total collapses two near-independent quantities into one.
+
+\paragraph{Direction does not improve prediction in this cohort.}
+For each outcome we fitted cause-specific Cox models (competing events
+censored; ridge penalty $0.01$) with 12 clinical covariates (29 encoded
+features) plus one eplet feature set: none, per-locus symmetric totals,
+GvH only, HvG only, or GvH and HvG as separate terms.  The directional model
+nests the symmetric one, so a likelihood-ratio test of the two asks exactly
+whether direction adds information given total load.  It does not, for any
+outcome ($p = 0.18$--$0.72$; Table~\ref{tab:cibmtr}).  Nor does eplet load
+of either kind improve on clinical covariates: cross-validated concordance of
+every eplet model is within $0.02$ of, and usually below, the clinical-only
+model, and AIC selects the clinical-only model for five of six outcomes (the
+exception, relapse with GvH load, has a symmetric-vs-clinical LRT
+$p = 0.046$ that does not survive correction across outcomes).  Of 60
+per-locus directional hazard ratios, six reach nominal $p < 0.05$, about
+what chance predicts, and they lack a consistent biological pattern (for
+aGvHD~II--IV, GvH load is a risk factor at DRB1 but protective at DQB1).
+These results agree with the original IB20-02 analysis, which found no
+association between eplet mismatch counts and major outcomes in this
+population~\citep{Zou2022Eplet}.
+
+\paragraph{Interpretation.}
+This is a real negative result for the simplest version of the directional
+hypothesis, and we report it as one.  Three features of the cohort limit how
+far it generalises.  First, PTCy selectively depletes alloreactive T cells
+early after transplant and is thought to blunt the outcome impact of HLA
+disparity itself, so haploidentical PTCy transplantation is the setting
+where \emph{any} HLA mismatch representation is least expected to matter.
+Second, eplet counts are a hand-defined, unweighted tally of surface
+polymorphisms; they test whether direction-resolved \emph{load} is
+predictive, not whether a learned directional representation such as CAPA's
+is.  Third, the dataset carries no allele strings, so the ESM-2 pipeline
+itself cannot be applied.  What the analysis does establish is that the
+directional structure CAPA is built to exploit is present in real registry
+typing, and that crude directional counts are not enough to convert it into
+prediction in the PTCy setting.  A test of CAPA proper still requires
+allele-level typing with event-specific outcomes, ideally in conventional
+GvHD prophylaxis where HLA effects are strongest.
+
+\begin{table}[ht]
+\centering
+\caption{Directional vs.\ symmetric eplet load on CIBMTR IB20-02
+  ($n=1{,}287$ haploidentical PTCy recipients).  Columns 3--7: repeated
+  $5\times5$ stratified cross-validated Harrell's $C$ (fold standard
+  deviations 0.02--0.06) for cause-specific Cox models with clinical
+  covariates plus the stated eplet features.  Final column: full-cohort
+  likelihood-ratio test of directional (GvH and HvG per locus) against
+  symmetric (GvH\,+\,HvG per locus) models, 5 df.}
+\label{tab:cibmtr}
+\small
+\begin{tabular}{lrrrrrrr}
+\toprule
+Outcome & Events & Clinical & Symmetric & GvH & HvG & Directional
+  & $p_{\text{dir}>\text{sym}}$ \\
+\midrule
+aGvHD II--IV      & 444 & $0.540$ & $0.538$ & $0.543$ & $0.534$ & $0.537$ & $0.48$ \\
+aGvHD III--IV     & 121 & $0.582$ & $0.563$ & $0.573$ & $0.571$ & $0.561$ & $0.21$ \\
+Chronic GvHD      & 385 & $0.620$ & $0.614$ & $0.613$ & $0.617$ & $0.611$ & $0.72$ \\
+Relapse           & 482 & $0.642$ & $0.639$ & $0.642$ & $0.637$ & $0.638$ & $0.18$ \\
+TRM               & 245 & $0.637$ & $0.633$ & $0.631$ & $0.634$ & $0.629$ & $0.36$ \\
+Overall mortality & 588 & $0.631$ & $0.627$ & $0.625$ & $0.627$ & $0.621$ & $0.53$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 %% ── 4. Discussion ───────────────────────────────────────────────────────────
 \section{Discussion}
 
@@ -2225,6 +2312,11 @@ exceed binary features ($\Delta C = +0.024$), consistent with the mechanistic
 prediction.  Together, the simulations and IHWG validation provide convergent
 evidence that continuous allele-distance representations capture immunologically
 relevant information invisible to standard binary mismatch indicators.
+A registry test on CIBMTR IB20-02 (Section~\ref{sec:cibmtr}; $n=1{,}287$
+haploidentical PTCy recipients) tempers this: GvH and HvG eplet load are
+nearly uncorrelated in real typing, confirming the directional structure, but
+resolving eplet load by direction did not improve prediction of any outcome
+over its symmetric total or over clinical covariates alone.
 
 The primary bottleneck for CAPA is outcome-specific data: the IHWG dataset
 provides only composite OS, obscuring the GvHD-specific signal where the ESM-2
@@ -2246,14 +2338,18 @@ This work was not supported by specific funding.
 The UCI Bone Marrow Transplant dataset is publicly available at
 \url{https://archive.ics.uci.edu/dataset/565}.  The IHWG HCT dataset is
 publicly available via the NCBI FTP Final Archive at
-\url{https://ftp.ncbi.nlm.nih.gov/pub/mhc/mhc/FinalArchive/IHWG/Hematopoietic_Cell_Transplantation/}.
+\url{https://ftp.ncbi.nlm.nih.gov/pub/mhc/mhc/Final\%20Archive/IHWG/Hematopoietic_Cell_Transplantation/}.
+The CIBMTR IB20-02 dataset is publicly available from CIBMTR, subject to its
+terms of use, at \url{https://cibmtr.org/Manuscript/a028a00001HHGJxAAP/P-5545};
+it is not redistributed with this work, and only aggregate results are reported.
 All code, pre-trained weights, the allele imputation script
 (\texttt{scripts/impute\_hla\_alleles.py}),
 the end-to-end CAPA evaluation script (\texttt{scripts/run\_capa\_imputed.py}),
 the mechanistic simulation script (\texttt{scripts/run\_mechanistic\_benchmark.py}),
 the haploidentical scale-up simulation script (\texttt{scripts/run\_haplo\_simulation.py}),
 the directional alloreactivity simulation script (\texttt{scripts/run\_directional\_simulation.py}),
-and the IHWG validation script (\texttt{scripts/run\_ihwg\_validation.py})
+the IHWG validation script (\texttt{scripts/run\_ihwg\_validation.py}),
+and the CIBMTR directional eplet analysis (\texttt{scripts/run\_cibmtr\_directional.py})
 are available at \url{https://github.com/sh4wn27/capa}.  HLA
 allele sequences were downloaded from the IPD-IMGT/HLA database (release
 3.57.0) at \url{https://www.ebi.ac.uk/ipd/imgt/hla/}.
@@ -2266,6 +2362,19 @@ analysis, and manuscript writing.
 The authors thank the patients and clinical teams whose data underpin this
 work, and the maintainers of the IPD-IMGT/HLA database and the UCI Machine
 Learning Repository.
+
+This dataset was collected by the Center for International Blood and Marrow
+Transplant Research (CIBMTR) which is supported primarily by the Public
+Health Service U24CA076518 from the National Cancer Institute; the National
+Heart, Lung, and Blood Institute; the National Institute of Allergy and
+Infectious Diseases; 75R60222C00011 from the Health Resources and Services
+Administration; NMDP; and the Medical College of Wisconsin.  We acknowledge
+the CIBMTR staff for making the dataset publicly available.  CIBMTR had no
+role in the study design, data analysis, interpretation of results, or
+manuscript preparation.  The study was not reviewed by CIBMTR and does not
+represent its views.  The analysis of the CIBMTR dataset was conducted in
+accordance with all applicable human subjects' protections laws and
+regulations; it used only de-identified, publicly released data.
 
 %% ── References ──────────────────────────────────────────────────────────────
 \bibliographystyle{abbrvnat}

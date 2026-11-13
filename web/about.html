@@ -94,17 +94,27 @@
   <!-- TOC -->
   <aside class="aside">
     <nav class="toc" id="toc">
-      <a href="#problem"><span class="n">01</span> The problem</a>
-      <a href="#idea"><span class="n">02</span> The core idea</a>
-      <a href="#method"><span class="n">03</span> How it works</a>
-      <a href="#data"><span class="n">04</span> Data & evaluation</a>
-      <a href="#limits"><span class="n">05</span> Limitations</a>
-      <a href="#author"><span class="n">06</span> Author & license</a>
+      <a href="#why"><span class="n">01</span> Why I built this</a>
+      <a href="#problem"><span class="n">02</span> The problem</a>
+      <a href="#idea"><span class="n">03</span> The core idea</a>
+      <a href="#method"><span class="n">04</span> How it works</a>
+      <a href="#data"><span class="n">05</span> Data & evaluation</a>
+      <a href="#limits"><span class="n">06</span> Limitations</a>
+      <a href="#author"><span class="n">07</span> Author & license</a>
     </nav>
   </aside>
 
   <!-- PROSE -->
   <article class="prose">
+    <section id="why">
+      <h2>Why I built this</h2>
+      <p>I have been through a bone marrow transplant myself. Every transplant patient learns a new vocabulary fast: HLA typing, donor search, and a single number that sums up a donor, such as 10/10 or 9/10. I learned it as a patient, when that number was about me.</p>
+      <p>Later, reading the research, I saw how much that number leaves out. It counts whether donor and recipient labels match. It says nothing about <em>how</em> two mismatched proteins differ, or in which direction. Two donors with the same score can be very different from the immune system's point of view. I wanted to know whether a model could read the HLA proteins themselves instead of counting labels. Answering that meant learning survival statistics, protein language models and enough transplant immunology to ask the right questions.</p>
+      <div class="pullquote">A negative result I can trust is worth more to the next patient than a positive one I can't.</div>
+      <p>Most of the work has been unglamorous. I built the whole pipeline: data processing, the model, the API, this site and the paper. I also found my own mistakes. One bug in my eplet code scored a quarter to half of mismatched allele pairs as identical. One early figure was drawn from synthetic data, and I rebuilt it from the real embeddings. When the first public dataset turned out to be too small to answer the question, I went looking for registry data. A 1,287-patient registry test then came back <b>negative</b>, and I reported it rather than bury it. You can read about it under <a href="#data">Data &amp; evaluation</a>.</p>
+      <p>CAPA is not finished, and it is not a clinical tool. It is my attempt to take a problem I lived through and work on it seriously, with a clear record of what holds up and what does not yet.</p>
+    </section>
+
     <section id="problem">
       <h2>The problem with match counting</h2>
       <p>Haematopoietic stem cell transplantation (HSCT) can cure otherwise fatal blood cancers, but its success hinges on <b>human leukocyte antigen (HLA) compatibility</b> between donor and recipient. The immune consequences of a mismatch — graft-versus-host disease, relapse, transplant-related mortality — are what determine whether a patient survives.</p>
@@ -151,6 +161,7 @@
       <p>On a single held-out test split (n = 29), the best baseline (Fine–Gray) reaches a C-index of 0.84 for relapse and 0.66 for TRM (Cox 0.75 / 0.65; Random Survival Forest 0.48 / 0.65; DeepHit 0.65 / 0.57). These single-split numbers are optimistic; repeated 5×5 cross-validation corrects them to Cox relapse <b>0.60 ± 0.14</b> and TRM <b>0.56 ± 0.06</b>. GvHD was not evaluable: only 2 events fell in the test fold.</p>
       <p>CAPA's own advantage is demonstrated in a controlled <b>directional simulation</b> (N = 10,000, 6 seeds): where GvHD hazard is driven by the <em>direction</em> of mismatch, a Cox model on symmetric scalar distances collapses to near-chance (C = 0.58), while CAPA — learning from signed difference embeddings — reaches <b>C = 0.87</b>, recovering 93% of the gap to a direction-aware oracle, with non-overlapping confidence intervals on every seed. On a scalar-distance TRM control CAPA is deliberately weaker, confirming the advantage is specific to directional structure.</p>
       <p>As a separate, real-outcome control, we ran repeated 5×10 cross-validation (50 folds) on the imputed-allele UCI BMT cohort comparing CAPA's signed-difference variant against a symmetric-difference variant and a fold-matched Cox model on scalar mismatch distance. As expected given the lack of real signal, the two CAPA variants were statistically indistinguishable (relapse 0.50 ± 0.18 signed vs. 0.52 ± 0.20 symmetric; TRM 0.52 ± 0.08 both), and neither beat the Cox baseline. This confirms the architectural choice alone does not manufacture spurious lift — it does not, and cannot, test the directional-advantage claim, which requires real allele typing.</p>
+      <p>Two registry cohorts test parts of the claim on real patients. On the <b>IHWG HCT</b> dataset (1,347 unrelated-donor pairs with real allele typing; overall survival only), ESM-2 distances perform comparably to binary mismatch indicators (C = 0.602 vs. 0.615), and slightly better in the single-mismatch subgroup where binary features carry least information. On <b>CIBMTR IB20-02</b> (1,287 haploidentical recipients given post-transplant cyclophosphamide, with eplet mismatch counted separately in each direction), GvH and HvG load are nearly uncorrelated, which confirms that direction is a real, separate quantity in registry typing. But splitting eplet load by direction did <b>not</b> improve prediction of any of six outcomes over the direction-blind total, and no eplet measure beat clinical covariates alone. We report this as a negative result. Post-transplant cyclophosphamide is the setting where HLA effects are expected to be weakest, and eplet counts are a cruder directional measure than CAPA's learned one, but it limits how strongly the directional claim can be stated.</p>
       <div class="callout">
         <div class="c-tag">Evaluation caveat</div>
         <p>A single 29-patient test split is one draw from a noisy distribution. We therefore report repeated 5×5 stratified cross-validation as the primary estimate (Cox relapse 0.60 ± 0.14, TRM 0.56 ± 0.06), which corrects the optimism of the single split. Results should be treated as a methodology demonstration, not a benchmark claim.</p>
@@ -168,8 +179,8 @@
         <li><b>Small cohort.</b> 187 patients is far too few to make clinical claims; confidence intervals are wide and some events are too rare to evaluate.</li>
         <li><b>Single test split.</b> The test set contains 29 patients — one draw from a noisy distribution. Bootstrap CIs on every metric touch 1.0. We therefore report repeated 5×5 stratified cross-validation as the primary estimate.</li>
         <li><b>GvHD not evaluable.</b> Only 2 GvHD events in the test fold. The architecture outputs a GvHD curve, but no performance claim can be made until evaluated on a larger cohort with more events.</li>
-        <li><b>Single dataset.</b> Results have not yet been replicated on an independent, larger transplant registry.</li>
-        <li><b>Directional result is simulation-based.</b> The headline directional advantage is established in a controlled simulation that plants a directional signal — it demonstrates the architecture <em>can</em> exploit direction when present (a capability), not that real GvHD signal lives in that direction at a useful magnitude. A repeated-CV control on the real (but allele-imputed) UCI BMT cohort found no difference between signed and symmetric CAPA variants, as expected for data with no real allele-outcome relationship — it cannot substitute for a real test of directionality. Confirming that requires registry data with per-allele typing and event-specific endpoints.</li>
+        <li><b>No dataset has both alleles and specific outcomes.</b> IHWG has real allele typing but only overall survival; CIBMTR IB20-02 has event-specific outcomes but only eplet counts. The full CAPA pipeline has not yet been tested on its intended endpoint with real alleles.</li>
+        <li><b>Directional result is simulation-based.</b> The headline directional advantage is established in a controlled simulation that plants a directional signal — it demonstrates the architecture <em>can</em> exploit direction when present (a capability), not that real GvHD signal lives in that direction at a useful magnitude. On CIBMTR registry data, direction-resolved eplet counts added no predictive value over symmetric totals. A repeated-CV control on the real (but allele-imputed) UCI BMT cohort found no difference between signed and symmetric CAPA variants, as expected for data with no real allele-outcome relationship — it cannot substitute for a real test of directionality. Confirming that requires registry data with per-allele typing and event-specific endpoints.</li>
         <li><b>Not for clinical use.</b> CAPA is a research artifact intended to demonstrate a representational idea, not a decision-support tool.</li>
       </ul>
       <p class="small">The right next step is external validation on a large multi-centre cohort. Contributions and replications are welcome via the repository.</p>
@@ -177,7 +188,7 @@
 
     <section id="author">
       <h2>Author & license</h2>
-      <p>CAPA is an independent open-source research project, released under the MIT license.</p>
+      <p>CAPA is an independent research project designed and built by Shawn (Huanxuan) Li, a student at Thomas Jefferson High School for Science and Technology. It is released as open source under the MIT license. Questions, corrections and replications are welcome via the repository.</p>
       <div style="display:flex;gap:14px;margin-top:8px;flex-wrap:wrap">
         <a class="btn btn-primary" href="paper.html">Read the paper <span class="arr">→</span></a>
         <a class="btn btn-ghost" href="https://github.com/sh4wn27/capa" target="_blank" rel="noopener">View on GitHub</a>
@@ -204,7 +215,7 @@
         <li><a href="https://huggingface.co/facebook/esm2_t33_650M_UR50D" target="_blank" rel="noopener">ESM-2 Model</a></li>
       </ul></div>
     </div>
-    <div class="footer-bottom"><span>© 2026 Huanxuan Li (Shawn) · MIT License</span><span>Next.js · Tailwind · ESM-2 · PyTorch</span></div>
+    <div class="footer-bottom"><span>© 2026 Huanxuan Li (Shawn) · MIT License</span><span>HTML · CSS · JavaScript · ESM-2 · PyTorch</span></div>
   </div>
 </footer>
 
