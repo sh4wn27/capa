@@ -87,72 +87,49 @@ of each mismatch rather than collapsing it to a symmetric magnitude.  The
 resulting 128-dimensional interaction vector is concatenated with encoded
 clinical covariates and passed to a DeepHit head that jointly estimates the
 discrete-time cumulative incidence functions for all three competing events
-over a 730-day horizon.  This model has 469{,}580 trainable parameters; ESM-2
-is frozen but can optionally be partially fine-tuned via a second AdamW
-parameter group.  A higher-capacity variant that cross-attends between the raw
-donor and recipient streams at full embedding dimensionality
-(${\sim}27.8$M parameters) is defined for completeness but is under-determined
-at the cohort sizes available here and is not used for any reported result.
-Post-hoc isotonic calibration is applied per event and time bin to improve CIF
-reliability.  A multi-donor comparison endpoint ranks up to 20 candidates by
-composite GvHD+TRM risk.  We evaluate the
+over a 730-day horizon.  The model has 469{,}580 trainable parameters.  A
+${\sim}27.8$M-parameter cross-attention variant is under-determined at the
+cohort sizes available here and is not used for any reported result.  We
+evaluate the
 framework on the public UCI BMT cohort, a real-world allele-level dataset
-(IHWG), and three controlled simulations designed to isolate \emph{what} the
-learned representation adds over scalar mismatch distances; we do not claim a
-clinically validated predictor.
+(IHWG), two public CIBMTR registry cohorts with directional mismatch
+measures, and three controlled simulations designed to isolate \emph{what}
+the learned representation adds over scalar mismatch distances.  We do not
+claim a clinically validated predictor.
 
 \medskip\noindent\textbf{Results:}
-On the public UCI Bone Marrow Transplant dataset ($n=187$ paediatric patients,
-train/val/test 70/15/15\,\%), we benchmark tabular-feature competing-risks
-models as reference comparators for CAPA.  Because the held-out test set is
-small ($n=29$), we treat repeated 5$\times$5 cross-validation as the primary
-performance estimate: the cause-specific Cox model reaches relapse
-$C = 0.60 \pm 0.14$ and TRM $0.56 \pm 0.06$.  Single held-out-split numbers are
-markedly more optimistic (Fine--Gray relapse 0.84, TRM 0.66; Cox 0.75/0.65) but
-carry very wide intervals (e.g.\ relapse 95\,\%~CI 0.69--1.00 on four test
-events) and should not be over-interpreted; a Random Survival Forest (relapse
-0.48) and a flat-feature DeepHit MLP with a correctly formulated censored
-log-likelihood (relapse 0.65, TRM 0.57) complete the reference set.  A feature
-ablation study shows that aggregate HLA mismatch scores alone yield near-chance
-concordance ($C \approx 0.49$), while clinical features alone match the
-full-feature model, directly motivating ESM-2 structural allele representations
-as the form of HLA information most likely to add discriminative signal.  A
-controlled mechanistic simulation provides a capability check: in a cohort where
-all patients share an identical binary DRB1 mismatch profile, a Cox model
-restricted to binary mismatch achieves GvHD $C = 0.501$ (chance), whereas a Cox
-model given the continuous ESM-2 alloreactivity distances achieves $C = 0.695$
-($\Delta C = +0.194$)---confirming that a continuous representation recovers a
-planted signal invisible to binary indicators, though the signal is generated
-from the distances by construction and the experiment is therefore a sanity
-check rather than evidence of biological informativeness.  A scale-up
-simulation in the haploidentical setting ($N=10{,}000$; all five loci
-mismatched) extends this result: Cox (ESM-2 distances) achieves
-$C_{\mathrm{GvHD}} = 0.759$ vs.\ $0.538$ for binary mismatch ($\Delta C = +0.221$).
-CAPA (locus attention, $d_{\mathrm{proj}}=64$) achieves $C_{\mathrm{GvHD}}=0.732$,
-statistically indistinguishable from Cox (ESM-2 distances) (95\,\% CIs overlap),
-demonstrating that alloreactivity self-attention recovers the main-effect
-signal from raw embeddings without explicit distance features.  Grounding the
-representation externally, ESM-2 distances correlate with EpRegistry eplet
-loads at $\rho = 0.53$--$0.66$ across five loci ($8{,}810$ allele pairs), and
-that reference metric is itself directional: $8.9$--$25.1\,\%$ of its variance
-is provably unreachable by any symmetric pair function.  In a directional
-GvHD simulation (six seeds), the scalar-distance Cox model collapses to
-near-chance ($C_{\mathrm{GvHD}} = 0.575 \pm 0.059$) while CAPA---learning the
-immunodominant direction end-to-end from the \emph{signed} difference
-embeddings---reaches $C_{\mathrm{GvHD}} = 0.869 \pm 0.023$, a gain of
-$\Delta C = +0.294$ that recovers $93\,\%$ of the gap to a direction-aware oracle
-($0.892 \pm 0.015$), with non-overlapping confidence intervals on every seed.
-This identifies the learned representation's genuine architectural advantage:
-it captures directional alloreactivity that no scalar distance can encode.
-Real-world
-validation on the publicly available IHWG HCT dataset ($n=1{,}347$,
-allele-level HLA typing, OS endpoint) confirms that ESM-2 distances are
-\emph{comparable} to binary mismatch indicators overall ($C = 0.602$ vs
-$0.615$); in the targeted subgroup of single-mismatch non-CML patients
-($n=112$), ESM-2 distances exceed binary features ($\Delta C = +0.024$),
-directionally consistent with the mechanistic prediction.  Registry-scale
-data with per-allele HLA typing and event-specific endpoints (CIBMTR)
-is identified as the primary direction for full validation.
+\emph{Representation.}  ESM-2 distances correlate with EpRegistry eplet
+loads at $\rho = 0.53$--$0.66$ across five loci ($8{,}810$ allele pairs).  That
+reference metric is itself directional: $8.9$--$25.1\,\%$ of its variance is
+provably unreachable by any symmetric pair function.
+\emph{Simulation.}  In a directional GvHD simulation (six seeds), a Cox model
+on scalar ESM-2 distances is near chance ($C_{\mathrm{GvHD}} = 0.575 \pm
+0.059$).  CAPA, learning the direction from the signed difference embeddings,
+reaches $0.869 \pm 0.023$ ($\Delta C = +0.294$), $93\,\%$ of the way to a
+direction-aware oracle ($0.892 \pm 0.015$), with non-overlapping confidence
+intervals on every seed.  Two magnitude-only simulations are sanity checks:
+continuous distances recover a planted signal invisible to binary mismatch
+flags ($\Delta C = +0.194$; $+0.221$ at $N=10{,}000$), and CAPA matches the
+distance model there ($C = 0.732$ vs.\ $0.759$, overlapping CIs).
+\emph{Real data.}  On allele-typed IHWG HCT data ($n=1{,}347$, OS endpoint),
+ESM-2 distances are comparable to binary mismatch indicators ($C = 0.602$
+vs.\ $0.615$).  Two CIBMTR registry cohorts test direction directly.  In
+haploidentical PTCy recipients (IB20-02, $n=1{,}287$), GvH and HvG eplet
+loads differ in $82$--$96\,\%$ of patients, but direction adds nothing over
+total load for any outcome (LRT $p = 0.18$--$0.72$).  In unrelated-donor
+recipients (IB19-01a, $n=5{,}108$), DPB1 T-cell-epitope matching replicates,
+but direction adds only a borderline signal for aGvHD~II--IV in the expected
+direction (GvH vs.\ HvG non-permissive HR $1.13$, $1.00$--$1.28$) and none
+for other outcomes.  On the small UCI BMT cohort ($n=187$), which lacks
+allele typing, tabular baselines reach cross-validated relapse
+$C = 0.60 \pm 0.14$.
+\emph{Conclusion.}  A learned representation captures directional
+alloreactivity that scalar distances provably cannot, and direction is a
+measurable property of real donor--recipient pairs.  The coarse directional
+summaries in public registry data, however, carry little prognostic signal
+beyond symmetric measures.  Whether a learned allele-level representation
+recovers more requires allele-typed registry data with event-specific
+outcomes.
 
 \medskip\noindent\textbf{Availability and Implementation:}
 Source code, pre-trained weights, and a web interface (including multi-donor
@@ -161,7 +138,7 @@ comparison) are freely available at
 
 \medskip\noindent\textbf{Keywords:} HLA; protein language model; competing
 risks; haematopoietic stem cell transplantation; graft-versus-host disease;
-deep learning; survival analysis; cross-attention
+deep learning; survival analysis; directional alloreactivity
 \end{abstract}
 
 \newpage
@@ -277,9 +254,12 @@ Fine--Gray, DeepHit MLP) on the publicly available UCI Bone Marrow Transplant
 (BMT) paediatric dataset \citep{sikora2010bmt} to establish reference
 performance achievable without allele-level HLA data.  The UCI BMT dataset
 records aggregate mismatch scores rather than specific allele identities,
-precluding end-to-end evaluation of the ESM-2 embedding step; validation on a
-registry dataset with high-resolution HLA typing constitutes the primary
-direction for future work.  We position this paper accordingly as a
+precluding end-to-end evaluation of the ESM-2 embedding step.  We therefore
+also test the directional hypothesis on two public CIBMTR registry cohorts
+that record mismatch direction but not allele strings
+(Sections~\ref{sec:cibmtr} and~\ref{sec:dpb1tce}).  End-to-end validation on
+a registry with high-resolution HLA typing remains future work.  We position
+this paper accordingly as a
 \emph{representation-level proof of concept}: our central, fully supported claim
 is that a learned representation captures directional alloreactivity that scalar
 mismatch distances provably cannot (Section~\ref{sec:directional}); a
@@ -2291,7 +2271,12 @@ registry validation.  The directional result in particular should be read as a
 representation can recover directional alloreactivity that is provably outside
 the span of scalar distances, but the magnitude of this advantage on real
 transplant outcomes---where the directional signal may be weaker, confounded,
-or partially captured by other covariates---is unknown.  The directional
+or partially captured by other covariates---is unknown.  The two registry
+tests (Sections~\ref{sec:cibmtr} and~\ref{sec:dpb1tce}) give the first
+real-data bound.  Direction-resolved eplet load and DPB1 TCE direction add at
+most a small aGvHD~II--IV signal over their symmetric counterparts.  Those are
+hand-defined summaries rather than a learned representation, so they bound
+but do not settle the question.  The directional
 advantage also depends on a deliberate architectural choice (feeding the
 \emph{signed} rather than absolute difference embedding); and the same model is
 \emph{weaker} than an explicit scalar distance on the TRM control, where the
