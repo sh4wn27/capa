@@ -92,8 +92,8 @@ ${\sim}27.8$M-parameter cross-attention variant is under-determined at the
 cohort sizes available here and is not used for any reported result.  We
 evaluate the
 framework on the public UCI BMT cohort, a real-world allele-level dataset
-(IHWG), two public CIBMTR registry cohorts with directional mismatch
-measures, and three controlled simulations designed to isolate \emph{what}
+(IHWG), two public CIBMTR registry cohorts with directional and structural
+mismatch measures, and three controlled simulations designed to isolate \emph{what}
 the learned representation adds over scalar mismatch distances.  We do not
 claim a clinically validated predictor.
 
@@ -120,14 +120,18 @@ total load for any outcome (LRT $p = 0.18$--$0.72$).  In unrelated-donor
 recipients (IB19-01a, $n=5{,}108$), DPB1 T-cell-epitope matching replicates,
 but direction adds only a borderline signal for aGvHD~II--IV in the expected
 direction (GvH vs.\ HvG non-permissive HR $1.13$, $1.00$--$1.28$) and none
-for other outcomes.  On the small UCI BMT cohort ($n=187$), which lacks
+for other outcomes.  In the same patients, residue-level structure separates
+risk inside the TCE ``permissive'' category: core TCE3 mismatches carry lower
+TRM than other motif-matched TCE3 mismatches (HR $0.74$, $0.61$--$0.90$)
+without improving discrimination.  On the small UCI BMT cohort ($n=187$), which lacks
 allele typing, tabular baselines reach cross-validated relapse
 $C = 0.60 \pm 0.14$.
 \emph{Conclusion.}  A learned representation captures directional
 alloreactivity that scalar distances provably cannot, and direction is a
-measurable property of real donor--recipient pairs.  The coarse directional
-summaries in public registry data, however, carry little prognostic signal
-beyond symmetric measures.  Whether a learned allele-level representation
+measurable property of real donor--recipient pairs.  Residue-level structure
+separates risk within a mismatch category, but the coarse directional
+summaries in public registry data carry little prognostic signal beyond
+symmetric measures.  Whether a learned allele-level representation
 recovers more requires allele-typed registry data with event-specific
 outcomes.
 
