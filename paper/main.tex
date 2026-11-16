@@ -2057,6 +2057,99 @@ Overall mortality & 588 & $0.631$ & $0.627$ & $0.625$ & $0.627$ & $0.621$ & $0.5
 \end{tabular}
 \end{table}
 
+%% ── CIBMTR DPB1 TCE direction test ───────────────────────────────────────
+\subsection{Directional DPB1 T-Cell-Epitope Mismatch in Unrelated-Donor HCT (CIBMTR IB19-01a)}
+\label{sec:dpb1tce}
+
+The IB20-02 test has two weaknesses: PTCy, which blunts HLA effects, and
+unweighted eplet counts.  A second CIBMTR public dataset, IB19-01a
+% TODO: cite the source publication for IB19-01a once confirmed.
+(CIBMTR publicly available dataset P-5390), avoids both.  It contains
+5{,}108 unrelated-donor HCT recipients with AML, ALL or MDS (141 centres,
+2008--2017; 264 under 18) transplanted mostly without PTCy, with HLA-DPB1
+classified by the T-cell-epitope (TCE) algorithm~\citep{fleischhauer2012hla}
+\emph{and by direction}.  The categories are match ($n=776$), permissive
+mismatch ($n=2{,}429$), GvH non-permissive ($n=1{,}006$; the recipient
+carries the more immunogenic TCE group and is the target of donor T cells)
+and HvG non-permissive ($n=897$; the reverse).  Unlike eplet totals, this is
+a pre-specified directional measure at a locus with established outcome
+associations.  It also comes from an independent cohort four times the size
+of IB20-02.
+
+\paragraph{Design.}
+Cause-specific Cox models were fitted as in Section~\ref{sec:cibmtr}.  They
+adjust for 13 clinical covariates (34 encoded features) and for match grade
+at HLA-A, -B, -C, -DRB1 and -DQB1.  Each model then adds one DPB1 feature
+set: none; a symmetric coding (permissive, non-permissive with direction
+pooled); or a directional coding, which adds a GvH non-permissive indicator.
+The extra coefficient is the log hazard ratio of GvH versus HvG
+non-permissive.  The df${}=1$ likelihood-ratio test of directional against
+symmetric therefore asks: \emph{given a non-permissive mismatch, does its
+direction matter?}  Hazard ratios use centre-clustered robust standard
+errors.
+
+\paragraph{TCE matching itself replicates.}
+Pooling direction, TCE status improves the clinical model for aGvHD~II--IV
+(LRT $p=1.5\times10^{-5}$) and TRM ($p=0.023$).  Relative to DPB1 match,
+non-permissive mismatches raise aGvHD~II--IV risk
+(Table~\ref{tab:dpb1tce}), and HvG non-permissive mismatch raises TRM
+(HR $1.18$, $1.02$--$1.37$).  These findings are consistent with the original
+TCE analyses~\citep{fleischhauer2012hla}, so the dataset is sensitive enough
+to detect DPB1 effects.
+
+\paragraph{Direction adds at most a small aGvHD signal.}
+For aGvHD~II--IV, GvH non-permissive mismatch carries more risk than HvG
+non-permissive: HR versus match $1.43$ ($1.23$--$1.65$) against $1.27$
+($1.09$--$1.47$), a direct contrast of HR $1.13$ ($1.00$--$1.28$).  This is
+the direction the biology predicts, and AIC narrowly prefers the directional
+model for this outcome alone.  The contrast is nonetheless not significant:
+the LRT gives $p=0.070$, and a Bonferroni threshold across six outcomes is
+$0.0083$.  For every other outcome the contrast is null ($p=0.59$--$0.97$;
+HRs $0.96$--$1.06$).  Cross-validated concordance of the directional and
+symmetric models agrees to three decimals for every outcome.  Even
+symmetric TCE status adds only $+0.007$ to the clinical model for
+aGvHD~II--IV ($0.558\to0.565$).
+
+\paragraph{Interpretation.}
+The two registry tests agree.  Mismatch direction is a real, measurable
+property of donor--recipient pairs: asymmetric eplet loads in IB20-02 and a
+near-even GvH/HvG split of non-permissive DPB1 mismatches in IB19-01a.  With
+the coarse directional summaries available in public data, however,
+direction adds little or no prognostic information beyond a symmetric
+measure.  The one suggestive signal is aGvHD~II--IV in the expected
+direction, and it is small.  This bounds what the directional thesis can
+claim: for these summaries, any directional gain is small.  Whether a
+learned, allele-level directional representation recovers more remains
+untested, because neither dataset carries allele strings.
+
+\begin{table}[ht]
+\centering
+\caption{DPB1 TCE mismatch direction on CIBMTR IB19-01a ($n=5{,}108$
+  unrelated-donor recipients).  HRs are from cause-specific Cox models with
+  clinical covariates and HLA-A/-B/-C/-DRB1/-DQB1 match grade, with
+  centre-clustered 95\% CIs.  ``GvH-NP'' and ``HvG-NP'' are non-permissive
+  mismatches vs.\ DPB1 match; ``GvH/HvG'' is their direct contrast.
+  $C$: repeated $5\times5$ cross-validated Harrell's $C$ (fold SD
+  0.009--0.019) for the clinical-only and directional models.  Final column:
+  df${}=1$ likelihood-ratio test of directional vs.\ symmetric (direction
+  pooled) TCE coding.}
+\label{tab:dpb1tce}
+\small
+\begin{tabular}{lrcccccc}
+\toprule
+Outcome & Events & GvH-NP & HvG-NP & GvH/HvG & $C_{\text{clin}}$ & $C_{\text{dir}}$
+  & $p_{\text{dir}>\text{sym}}$ \\
+\midrule
+aGvHD II--IV      & 2{,}147 & $1.43$ & $1.27$ & $1.13$\,($1.00$--$1.28$) & $0.558$ & $0.565$ & $0.07$ \\
+aGvHD III--IV     &    839 & $1.25$ & $1.19$ & $1.06$\,($0.87$--$1.28$) & $0.579$ & $0.578$ & $0.59$ \\
+Chronic GvHD      & 2{,}464 & $1.02$ & $1.01$ & $1.00$\,($0.89$--$1.12$) & $0.572$ & $0.572$ & $0.97$ \\
+Relapse           & 1{,}550 & $0.89$ & $0.92$ & $0.96$\,($0.83$--$1.12$) & $0.599$ & $0.599$ & $0.65$ \\
+TRM               & 1{,}361 & $1.13$ & $1.18$ & $0.96$\,($0.84$--$1.11$) & $0.632$ & $0.634$ & $0.63$ \\
+Overall mortality & 2{,}676 & $1.06$ & $1.06$ & $1.00$\,($0.90$--$1.12$) & $0.618$ & $0.618$ & $0.95$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 %% ── 4. Discussion ───────────────────────────────────────────────────────────
 \section{Discussion}
 
@@ -2316,7 +2409,12 @@ A registry test on CIBMTR IB20-02 (Section~\ref{sec:cibmtr}; $n=1{,}287$
 haploidentical PTCy recipients) tempers this: GvH and HvG eplet load are
 nearly uncorrelated in real typing, confirming the directional structure, but
 resolving eplet load by direction did not improve prediction of any outcome
-over its symmetric total or over clinical covariates alone.
+over its symmetric total or over clinical covariates alone.  A second test,
+on directional DPB1 TCE mismatch in 5{,}108 unrelated-donor recipients
+(CIBMTR IB19-01a; Section~\ref{sec:dpb1tce}), agrees.  TCE matching itself
+replicates, but direction adds only a borderline aGvHD~II--IV signal in the
+expected direction (GvH vs.\ HvG non-permissive HR $1.13$, $1.00$--$1.28$)
+and nothing for other outcomes.
 
 The primary bottleneck for CAPA is outcome-specific data: the IHWG dataset
 provides only composite OS, obscuring the GvHD-specific signal where the ESM-2
@@ -2341,7 +2439,8 @@ publicly available via the NCBI FTP Final Archive at
 \url{https://ftp.ncbi.nlm.nih.gov/pub/mhc/mhc/Final\%20Archive/IHWG/Hematopoietic_Cell_Transplantation/}.
 The CIBMTR IB20-02 dataset is publicly available from CIBMTR, subject to its
 terms of use, at \url{https://cibmtr.org/Manuscript/a028a00001HHGJxAAP/P-5545};
-it is not redistributed with this work, and only aggregate results are reported.
+the CIBMTR IB19-01a dataset (P-5390) is likewise publicly available from CIBMTR.
+Neither is redistributed with this work, and only aggregate results are reported.
 All code, pre-trained weights, the allele imputation script
 (\texttt{scripts/impute\_hla\_alleles.py}),
 the end-to-end CAPA evaluation script (\texttt{scripts/run\_capa\_imputed.py}),
@@ -2349,7 +2448,8 @@ the mechanistic simulation script (\texttt{scripts/run\_mechanistic\_benchmark.p
 the haploidentical scale-up simulation script (\texttt{scripts/run\_haplo\_simulation.py}),
 the directional alloreactivity simulation script (\texttt{scripts/run\_directional\_simulation.py}),
 the IHWG validation script (\texttt{scripts/run\_ihwg\_validation.py}),
-and the CIBMTR directional eplet analysis (\texttt{scripts/run\_cibmtr\_directional.py})
+the CIBMTR directional eplet analysis (\texttt{scripts/run\_cibmtr\_directional.py}),
+and the CIBMTR DPB1 TCE direction analysis (\texttt{scripts/run\_cibmtr\_dpb1\_tce.py})
 are available at \url{https://github.com/sh4wn27/capa}.  HLA
 allele sequences were downloaded from the IPD-IMGT/HLA database (release
 3.57.0) at \url{https://www.ebi.ac.uk/ipd/imgt/hla/}.
