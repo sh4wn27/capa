@@ -181,7 +181,7 @@ def design(df: pd.DataFrame, clin: pd.DataFrame, feature_set: str) -> pd.DataFra
     return x
 
 
-def _hr_rows(cph: CoxPHFitter, cols: list[str]) -> dict[str, dict[str, float]]:
+def hr_rows(cph: CoxPHFitter, cols: list[str]) -> dict[str, dict[str, float]]:
     """Hazard ratio, 95% CI and p for selected coefficients."""
     s = cph.summary
     return {
@@ -209,11 +209,11 @@ def tce_hazard_ratios(
     x = x.loc[:, x.std() > 0]
     x[["T", "E"]] = sub[["T", "E"]]
     x["_centre"] = cluster.loc[sub.index].to_numpy()
-    out = _hr_rows(fit_cox(x, cluster_col="_centre"), vs_match)
+    out = hr_rows(fit_cox(x, cluster_col="_centre"), vs_match)
 
     xd = design(sub, clin, "directional")
     xd["_centre"] = cluster.loc[sub.index].to_numpy()
-    contrast = _hr_rows(fit_cox(xd, cluster_col="_centre"), ["tce_gvh_nonpermissive"])
+    contrast = hr_rows(fit_cox(xd, cluster_col="_centre"), ["tce_gvh_nonpermissive"])
     out["gvh_vs_hvg_nonpermissive"] = contrast["tce_gvh_nonpermissive"]
     return out
 

@@ -2130,6 +2130,94 @@ Overall mortality & 2{,}676 & $1.06$ & $1.06$ & $1.00$\,($0.90$--$1.12$) & $0.61
 \end{tabular}
 \end{table}
 
+%% ── CIBMTR DPB1 structural refinement ───────────────────────────────────
+\subsection{Residue-Level Structure Within a DPB1 Mismatch Category (CIBMTR IB19-01b)}
+\label{sec:dpb1struct}
+
+Sections~\ref{sec:cibmtr} and~\ref{sec:dpb1tce} test direction.  CAPA's
+other founding claim is that amino-acid structure carries information a
+categorical mismatch label discards.  CIBMTR IB19-01b (publicly available
+dataset P-5597) lets us test that claim on real outcomes.  It covers the
+same 5{,}108 patients as IB19-01a, linked one-to-one on the CIBMTR
+pseudo-identifier (covariates and outcomes agree exactly).  For the 2{,}205
+TCE3 3/3 permissive mismatches, where both alleles fall in TCE group~3 and
+the TCE algorithm treats every pair alike, it records two residue-level
+refinements.  The first is whether donor and recipient share the DEAV/GGPM
+motif at DPB1 codons 84--87 (matched $n=1{,}203$, mismatched $n=1{,}002$).
+The second is whether the mismatch lies within a structurally similar
+``core'' TCE3 allele group ($n=926$; every core mismatch is also
+motif-matched).  The two releases disagree on TCE status for 108 patients, a
+coding difference between releases; none is in this subcohort.
+
+\paragraph{Design.}
+Within the subcohort, cause-specific Cox models adjust for the
+Section~\ref{sec:dpb1tce} covariates and for DPB1 allele mismatch count
+($1$ vs.\ $2$), which is unevenly distributed across the structural groups.
+Two nested df${}=1$ likelihood-ratio tests ask whether motif match improves
+on this baseline, and whether core membership improves on motif match.
+Separately, a full-cohort model places each DPB1 subgroup on a common
+hazard-ratio scale against DPB1 match (Table~\ref{tab:dpb1struct}).
+
+\paragraph{The motif alone does not matter; the core group may.}
+Codon 84--87 motif match does not improve the model for any outcome
+(LRT $p=0.16$--$0.74$).  Core-group membership, given motif match, does for
+TRM ($p=0.022$) and overall mortality ($p=0.014$).  Relative to other
+motif-matched TCE3 mismatches, core mismatches carry lower TRM (HR $0.74$,
+$0.61$--$0.90$) and lower mortality ($0.79$, $0.68$--$0.92$).  With
+centre-clustered errors both reach $p=0.003$, under a Bonferroni threshold of
+$0.0042$ for six outcomes and two features; the model-based LRTs do not.  On
+the common scale, aGvHD~II--IV shows a structural gradient inside the
+``permissive'' label.  Core mismatches are close to DPB1 match (HR $1.11$,
+$0.96$--$1.28$).  Non-core motif-matched ($1.27$) and motif-mismatched
+($1.29$) TCE3 mismatches carry risk similar to non-permissive mismatch
+($1.34$).  None of this changes discrimination: cross-validated concordance
+moves by at most $0.003$ for any outcome.
+
+\paragraph{Interpretation.}
+This is the closest the public data come to CAPA's founding claim.  A
+mismatch category assigned by a hand-built immunogenicity rule mixes pairs
+whose risk differs, and finer protein-structural similarity separates them.
+Three caveats apply.  First, the core TCE3 group was presumably defined by
+the investigators who assembled this dataset, possibly using the same
+cohort, so this is a re-analysis rather than an independent replication.
+% TODO: confirm from the IB19-01b source publication whether the core TCE3
+% group was derived on this cohort or defined a priori.
+Second, the strongest effects are on TRM and mortality, not on aGvHD, where
+the HRs are suggestive but non-significant.  Third, the gains are in hazard
+ratios, not in individual-level discrimination.  The refinements are binary
+summaries of structure; whether a continuous representation of the same
+sequences, as CAPA uses, would separate risk further again requires allele
+strings.
+
+\begin{table}[ht]
+\centering
+\caption{DPB1 structural subgroups on CIBMTR IB19-01a/b ($n=5{,}108$).
+  Hazard ratios vs.\ DPB1 match from full-cohort cause-specific Cox models
+  (covariates as in Table~\ref{tab:dpb1tce}; centre-clustered 95\% CIs in
+  parentheses where shown).  NP: non-permissive.  TCE3 columns split the
+  2{,}205 TCE3 3/3 permissive mismatches by codon 84--87 motif match and
+  core-group membership; the 116 other permissive mismatches are modelled
+  but not shown.  Final column: within-TCE3 LRT of core membership given
+  motif match (df${}=1$).}
+\label{tab:dpb1struct}
+\small
+\begin{tabular}{lccccc}
+\toprule
+ & & \multicolumn{3}{c}{TCE3 3/3 permissive} & \\
+\cmidrule(lr){3-5}
+Outcome & NP & Motif MM & Motif, non-core & Core & $p_{\text{core}}$ \\
+ & ($n=2{,}008$) & ($n=1{,}002$) & ($n=277$) & ($n=926$) & \\
+\midrule
+aGvHD II--IV      & $1.34$ & $1.29$ & $1.27$ & $1.11$\,($0.96$--$1.28$) & $0.26$ \\
+aGvHD III--IV     & $1.20$ & $1.15$ & $0.99$ & $1.10$\,($0.91$--$1.33$) & $0.44$ \\
+Chronic GvHD      & $1.02$ & $0.99$ & $0.98$ & $0.91$\,($0.81$--$1.02$) & $0.35$ \\
+Relapse           & $0.91$ & $0.92$ & $0.98$ & $0.98$\,($0.84$--$1.14$) & $0.95$ \\
+TRM               & $1.14$ & $1.05$ & $1.19$ & $0.87$\,($0.74$--$1.02$) & $0.022$ \\
+Overall mortality & $1.06$ & $1.00$ & $1.13$ & $0.89$\,($0.80$--$1.00$) & $0.014$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 %% ── 4. Discussion ───────────────────────────────────────────────────────────
 \section{Discussion}
 
@@ -2399,7 +2487,13 @@ on directional DPB1 TCE mismatch in 5{,}108 unrelated-donor recipients
 (CIBMTR IB19-01a; Section~\ref{sec:dpb1tce}), agrees.  TCE matching itself
 replicates, but direction adds only a borderline aGvHD~II--IV signal in the
 expected direction (GvH vs.\ HvG non-permissive HR $1.13$, $1.00$--$1.28$)
-and nothing for other outcomes.
+and nothing for other outcomes.  In the same patients, residue-level
+structure separates risk within the TCE ``permissive'' category
+(Section~\ref{sec:dpb1struct}).  Core TCE3 mismatches carry lower TRM than
+other motif-matched TCE3 mismatches (HR $0.74$, $0.61$--$0.90$), which is
+real-outcome support for the premise that structure matters inside a
+mismatch category.  It is a re-analysis rather than an independent test,
+and it does not improve discrimination.
 
 The primary bottleneck for CAPA is outcome-specific data: the IHWG dataset
 provides only composite OS, obscuring the GvHD-specific signal where the ESM-2
@@ -2424,8 +2518,9 @@ publicly available via the NCBI FTP Final Archive at
 \url{https://ftp.ncbi.nlm.nih.gov/pub/mhc/mhc/Final\%20Archive/IHWG/Hematopoietic_Cell_Transplantation/}.
 The CIBMTR IB20-02 dataset is publicly available from CIBMTR, subject to its
 terms of use, at \url{https://cibmtr.org/Manuscript/a028a00001HHGJxAAP/P-5545};
-the CIBMTR IB19-01a dataset (P-5390) is likewise publicly available from CIBMTR.
-Neither is redistributed with this work, and only aggregate results are reported.
+the CIBMTR IB19-01a (P-5390) and IB19-01b (P-5597) datasets are likewise
+publicly available from CIBMTR.  None is redistributed with this work, and
+only aggregate results are reported.
 All code, pre-trained weights, the allele imputation script
 (\texttt{scripts/impute\_hla\_alleles.py}),
 the end-to-end CAPA evaluation script (\texttt{scripts/run\_capa\_imputed.py}),
@@ -2434,7 +2529,8 @@ the haploidentical scale-up simulation script (\texttt{scripts/run\_haplo\_simul
 the directional alloreactivity simulation script (\texttt{scripts/run\_directional\_simulation.py}),
 the IHWG validation script (\texttt{scripts/run\_ihwg\_validation.py}),
 the CIBMTR directional eplet analysis (\texttt{scripts/run\_cibmtr\_directional.py}),
-and the CIBMTR DPB1 TCE direction analysis (\texttt{scripts/run\_cibmtr\_dpb1\_tce.py})
+the CIBMTR DPB1 TCE direction analysis (\texttt{scripts/run\_cibmtr\_dpb1\_tce.py}),
+and the CIBMTR DPB1 structural analysis (\texttt{scripts/run\_cibmtr\_dpb1\_structure.py})
 are available at \url{https://github.com/sh4wn27/capa}.  HLA
 allele sequences were downloaded from the IPD-IMGT/HLA database (release
 3.57.0) at \url{https://www.ebi.ac.uk/ipd/imgt/hla/}.
