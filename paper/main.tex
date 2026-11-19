@@ -105,7 +105,7 @@ provably unreachable by any symmetric pair function.
 \emph{Simulation.}  In a directional GvHD simulation (six seeds), a Cox model
 on scalar ESM-2 distances is near chance ($C_{\mathrm{GvHD}} = 0.575 \pm
 0.059$).  CAPA, learning the direction from the signed difference embeddings,
-reaches $0.869 \pm 0.023$ ($\Delta C = +0.294$), $93\,\%$ of the way to a
+reaches $0.883 \pm 0.017$ ($\Delta C = +0.308$), $97\,\%$ of the way to a
 direction-aware oracle ($0.892 \pm 0.015$), with non-overlapping confidence
 intervals on every seed.  Two magnitude-only simulations are sanity checks:
 continuous distances recover a planted signal invisible to binary mismatch
@@ -1374,8 +1374,8 @@ GvHD is excluded throughout because no fold retains $\geq 5$ GvHD-only events.
     \toprule
     \textbf{Model} & \textbf{Relapse} & \textbf{TRM} \\
     \midrule
-    CAPA (symmetric diff)  & $0.516 \pm 0.196$ & $0.522 \pm 0.076$ \\
-    CAPA (signed diff)     & $0.495 \pm 0.184$ & $0.523 \pm 0.082$ \\
+    CAPA (symmetric diff)  & $0.485 \pm 0.165$ & $0.525 \pm 0.074$ \\
+    CAPA (signed diff)     & $0.460 \pm 0.176$ & $0.517 \pm 0.082$ \\
     Cox (scalar distance)  & $0.462 \pm 0.173$ & $0.607 \pm 0.059$ \\
     \bottomrule
   \end{tabular}
@@ -1383,8 +1383,8 @@ GvHD is excluded throughout because no fold retains $\geq 5$ GvHD-only events.
 
 \paragraph{Interpretation.}
 The signed and symmetric CAPA variants are statistically indistinguishable on
-this cohort ($\Delta C = 0.02$ for relapse, $\Delta C < 0.01$ for TRM, both
-far smaller than the $\pm 0.18$--$0.20$ fold-to-fold standard deviation), and
+this cohort ($\Delta C = 0.03$ for relapse, $\Delta C < 0.01$ for TRM, both
+far smaller than the $\pm 0.17$--$0.18$ fold-to-fold standard deviation), and
 neither CAPA variant outperforms the Cox scalar-distance baseline, which is
 in fact better on TRM.  This is the expected outcome given the limitation
 established in Section~\ref{sec:capa_imputed}: because imputed alleles carry
@@ -1642,11 +1642,11 @@ Model & GvHD & Relapse & TRM \\
 Cox (binary mismatch)              & 0.538 (0.51--0.57) & 0.771 (0.74--0.81) & 0.643 (0.60--0.68) \\
 Cox (ESM-2 distances)              & 0.759 (0.74--0.78) & 0.791 (0.75--0.82) & 0.694 (0.66--0.73) \\
 Cox (dist $+$ true interaction)    & 0.760 (0.74--0.78) & 0.790 (0.75--0.82) & 0.694 (0.66--0.73) \\
-CAPA (locus attention)             & 0.732 (0.71--0.76) & 0.751 (0.71--0.79) & 0.626 (0.58--0.67) \\
+CAPA (locus attention)             & 0.732 (0.71--0.76) & 0.766 (0.73--0.80) & 0.633 (0.59--0.68) \\
 \midrule
 $\Delta_1$ (dist $-$ binary)     & $\mathbf{+0.221}$ & $+0.019$ & $+0.051$ \\
 $\Delta_{\mathrm{int}}$ (oracle int.\ $-$ dist) & $+0.001$\textsuperscript{ns} & $-0.001$ & $0.000$ \\
-$\Delta_2$ (CAPA $-$ distances)  & $-0.027$\textsuperscript{ns} & $-0.040$ & $-0.068$ \\
+$\Delta_2$ (CAPA $-$ distances)  & $-0.027$\textsuperscript{ns} & $-0.025$ & $-0.061$ \\
 \bottomrule
 \end{tabular}
 \smallskip\\
@@ -1820,8 +1820,8 @@ Cox model collapses to near-chance ($C = 0.575 \pm 0.059$): the magnitude of the
 mismatch carries little information once the signal lives in its direction.  The
 oracle, handed the true directional features, reaches $C = 0.892 \pm 0.015$.
 \textbf{CAPA, learning the immunodominant direction end-to-end from the signed
-difference embeddings, achieves $C = 0.869 \pm 0.023$}---a gain of
-$\Delta C = +0.294$ over the scalar-distance baseline, recovering $93\,\%$ of
+difference embeddings, achieves $C = 0.883 \pm 0.017$}---a gain of
+$\Delta C = +0.308$ over the scalar-distance baseline, recovering $97\,\%$ of
 the direction-blind gap, with non-overlapping $95\,\%$ confidence intervals on
 \emph{every one} of the six seeds.  This is the experiment the haploidentical
 setting could not provide: a regime where CAPA does not merely match the
@@ -1832,7 +1832,7 @@ The TRM control confirms the result is specific, not generic.  There the
 generating signal is pure scalar distance, the distance-based Cox model is
 near-optimal ($C = 0.667 \pm 0.015$, matching its own oracle $0.666$), and
 CAPA---tuned end-to-end for the directional GvHD signal---is \emph{weaker}
-($C = 0.530 \pm 0.029$).  CAPA wins precisely and only where direction matters;
+($C = 0.575 \pm 0.020$).  CAPA wins precisely and only where direction matters;
 where magnitude suffices, an explicit distance is the better feature.  The
 relapse endpoint, driven by a single scalar distance, is essentially tied
 across all models ($C \approx 0.77$--$0.78$), as expected.
@@ -1855,13 +1855,13 @@ Model & GvHD & Relapse & TRM \\
 Cox (binary mismatch)   & $0.534 \pm 0.024$ & $0.771 \pm 0.006$ & $0.594 \pm 0.025$ \\
 Cox (scalar distances)  & $0.575 \pm 0.059$ & $0.782 \pm 0.014$ & $\mathbf{0.667 \pm 0.015}$ \\
 Cox (oracle direction)  & $0.892 \pm 0.015$ & $0.782 \pm 0.013$ & $0.666 \pm 0.013$ \\
-CAPA (signed diff)      & $\mathbf{0.869 \pm 0.023}$ & $0.769 \pm 0.006$ & $0.530 \pm 0.029$ \\
+CAPA (signed diff)      & $\mathbf{0.883 \pm 0.017}$ & $0.769 \pm 0.006$ & $0.575 \pm 0.020$ \\
 \midrule
-$\Delta C$ (CAPA $-$ distances) & $\mathbf{+0.294}$\textsuperscript{$\ast$} & $-0.013$ & $-0.137$ \\
+$\Delta C$ (CAPA $-$ distances) & $\mathbf{+0.308}$\textsuperscript{$\ast$} & $-0.013$ & $-0.092$ \\
 \bottomrule
 \end{tabular}
 \smallskip\\
-\noindent{\small\textsuperscript{$\ast$} CAPA recovers $93\,\%$ of the
+\noindent{\small\textsuperscript{$\ast$} CAPA recovers $97\,\%$ of the
 distance-to-oracle gap; the $95\,\%$ bootstrap CIs of CAPA and Cox (scalar
 distances) are non-overlapping on all six seeds.  On the TRM control, where the
 signal is genuine scalar distance, the distance-based Cox model is near-optimal
@@ -2467,8 +2467,8 @@ scalar distances characterised there.  In a cohort where GvHD hazard is driven b
 projection of the difference embedding onto a hidden immunodominant direction,
 the scalar-distance Cox model collapses to near-chance ($C_{\mathrm{GvHD}} =
 0.575 \pm 0.059$ over six seeds), whereas CAPA---learning that direction
-end-to-end from the signed difference embeddings---reaches $0.869 \pm 0.023$,
-recovering $93\,\%$ of the gap to a direction-aware oracle with non-overlapping
+end-to-end from the signed difference embeddings---reaches $0.883 \pm 0.017$,
+recovering $97\,\%$ of the gap to a direction-aware oracle with non-overlapping
 confidence intervals on every seed.  A TRM control driven by genuine scalar
 distance reverses the ordering (distance-based Cox near-optimal, CAPA weaker),
 confirming the advantage is specific to directional structure rather than a

@@ -271,8 +271,8 @@
   <div class="results-grid">
     <div class="reveal">
       <div class="stats">
-        <div class="stat"><div class="s-num">0.87</div><div class="s-lbl">C-index, GvHD — CAPA (signed diff)</div><div class="s-meta">Directional simulation · vs 0.58 scalar distance · 6 seeds</div></div>
-        <div class="stat"><div class="s-num">+0.29</div><div class="s-lbl">ΔC over direction-blind Cox</div><div class="s-meta">93% of oracle gap · non-overlapping CIs every seed</div></div>
+        <div class="stat"><div class="s-num">0.88</div><div class="s-lbl">C-index, GvHD — CAPA (signed diff)</div><div class="s-meta">Directional simulation · vs 0.58 scalar distance · 6 seeds</div></div>
+        <div class="stat"><div class="s-num">+0.31</div><div class="s-lbl">ΔC over direction-blind Cox</div><div class="s-meta">97% of oracle gap · non-overlapping CIs every seed</div></div>
         <div class="stat"><div class="s-num">0.84</div><div class="s-lbl">C-index, relapse — Fine–Gray</div><div class="s-meta">Best UCI BMT baseline · single split · CI wide</div></div>
         <div class="stat"><div class="s-num">187</div><div class="s-lbl">Patients (UCI BMT)</div><div class="s-meta">Baselines only · no per-allele typing</div></div>
       </div>
@@ -334,10 +334,10 @@
         <tr><td>Cox (binary mismatch)</td><td>0.53</td><td>0.77</td><td>0.59</td></tr>
         <tr><td>Cox (scalar distances)</td><td>0.58</td><td>0.78</td><td class="best">0.67</td></tr>
         <tr><td>Cox (oracle direction)</td><td>0.89</td><td>0.78</td><td>0.67</td></tr>
-        <tr style="border-top:1.5px solid var(--line)"><td><b>CAPA</b> <span style="font-family:var(--sans);font-size:11px;color:var(--ink-3)">(signed diff)</span></td><td class="best">0.87</td><td>0.77</td><td>0.53</td></tr>
+        <tr style="border-top:1.5px solid var(--line)"><td><b>CAPA</b> <span style="font-family:var(--sans);font-size:11px;color:var(--ink-3)">(signed diff)</span></td><td class="best">0.88</td><td>0.77</td><td>0.57</td></tr>
       </tbody>
     </table>
-    <p style="margin-top:18px;color:var(--ink-2);font-size:14px;line-height:1.66;max-width:60ch">CAPA recovers 93% of the distance-to-oracle gap on GvHD, with non-overlapping confidence intervals on every seed. On the TRM control — where the signal is genuine scalar magnitude — the distance-based Cox model is near-optimal and CAPA is weaker: the advantage is specific to directional structure, not a generic capacity effect. The simulation establishes a <b>capability</b> (the architecture can exploit direction when present), not a clinical result.</p>
+    <p style="margin-top:18px;color:var(--ink-2);font-size:14px;line-height:1.66;max-width:60ch">CAPA recovers 97% of the distance-to-oracle gap on GvHD, with non-overlapping confidence intervals on every seed. On the TRM control — where the signal is genuine scalar magnitude — the distance-based Cox model is near-optimal and CAPA is weaker: the advantage is specific to directional structure, not a generic capacity effect. The simulation establishes a <b>capability</b> (the architecture can exploit direction when present), not a clinical result.</p>
   </div>
 </section>
 
