@@ -225,7 +225,8 @@ IPD-IMGT/HLA allele sequences (public reference database) are used only to map a
 5. Lin Z, et al. Evolutionary-scale prediction of atomic-level protein structure with a language model. *Science.* 2023.
 6. Lee C, et al. DeepHit: a deep learning approach to survival analysis with competing risks. *Proc AAAI Conf Artif Intell.* 2018.
 7. Lhotte R, et al. Python Eplet Load Calculator (PELC). 2022. doi:10.5281/zenodo.7526198
-8. `[[Source publication for CIBMTR IB19-01a/b — confirm before submission]]`
+8. Mayor NP, et al. Impact of previously unrecognized HLA mismatches using ultrahigh resolution typing in unrelated donor hematopoietic cell transplantation. *J Clin Oncol.* 2021;39(21):2397–2409. doi:10.1200/JCO.20.03643 (source of IB19-01a, P-5390)
+9. Arrieta-Bolaños E, et al. A core group of structurally similar HLA-DPB1 alleles drives permissiveness after hematopoietic cell transplantation. *Blood.* 2022;140(6):659–663. doi:10.1182/blood.2022015708 (source of IB19-01b, P-5597; defined the core TCE3 group a priori by sequence clustering + in vitro alloreactivity, then tested it on this same 5,140-patient cohort)
 
 ## 19. Conflicts of Interest
 
@@ -268,7 +269,7 @@ None. `[[mentor to confirm their own]]`
 ## Checklist before submitting
 
 - [ ] Senior co-PI agreed and named (Section 3)
-- [ ] IB19-01a/b source publication identified and cited (ref 8), and whether the core-TCE3 group was derived on that cohort
+- [x] IB19-01a/b source publications identified and cited (refs 8–9). Core TCE3 was defined a priori (sequence clustering), but first tested clinically on this same cohort, so Aim 1b is a true replication only on a non-overlapping cohort
 - [ ] Year range set after IBWC reply on available N (Section 11)
 - [ ] Statistician-facing power numbers re-checked against the cohort table CIBMTR provides
 - [ ] Review CIBMTR Study Proposal Guidance, PI checklist, TED vs CRF reporting resource, MCW/NMDP COI policies

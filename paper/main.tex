@@ -2047,8 +2047,10 @@ Overall mortality & 588 & $0.631$ & $0.627$ & $0.625$ & $0.627$ & $0.621$ & $0.5
 
 The IB20-02 test has two weaknesses: PTCy, which blunts HLA effects, and
 unweighted eplet counts.  A second CIBMTR public dataset, IB19-01a
-% TODO: cite the source publication for IB19-01a once confirmed.
-(CIBMTR publicly available dataset P-5390), avoids both.  It contains
+(CIBMTR publicly available dataset P-5390, released with the
+ultrahigh-resolution typing study of Mayor et al.~\citep{mayor2021uhr}), avoids both.
+That study reports $5{,}140$ conventionally 10/10-matched patients; the
+public release contains
 5{,}108 unrelated-donor HCT recipients with AML, ALL or MDS (141 centres,
 2008--2017; 264 under 18) transplanted mostly without PTCy, with HLA-DPB1
 classified by the T-cell-epitope (TCE) algorithm~\citep{fleischhauer2012hla}
@@ -2181,11 +2183,14 @@ moves by at most $0.003$ for any outcome.
 This is the closest the public data come to CAPA's founding claim.  A
 mismatch category assigned by a hand-built immunogenicity rule mixes pairs
 whose risk differs, and finer protein-structural similarity separates them.
-Three caveats apply.  First, the core TCE3 group was presumably defined by
-the investigators who assembled this dataset, possibly using the same
-cohort, so this is a re-analysis rather than an independent replication.
-% TODO: confirm from the IB19-01b source publication whether the core TCE3
-% group was derived on this cohort or defined a priori.
+Three caveats apply.  First, the core group
+(DPB1*02:01, 04:01, 04:02, 23:01) was defined a priori by amino-acid
+sequence clustering within TCE3, supported by weaker \emph{in vitro} CD4$^+$
+alloreactivity, not from outcomes~\citep{arrietabolanos2022core}.  But its
+first clinical test used this same cohort, and reported lower TRM for core
+permissive than for non-permissive mismatches (HR $0.78$, $0.68$--$0.88$).
+Our contrast differs (core vs.\ other motif-matched TCE3), but the patients
+do not, so this is a re-analysis rather than an independent replication.
 Second, the strongest effects are on TRM and mortality, not on aGvHD, where
 the HRs are suggestive but non-significant.  Third, the gains are in hazard
 ratios, not in individual-level discrimination.  The refinements are binary
