@@ -85,6 +85,7 @@ from capa.model.losses import (
 from capa.model.survival import (
     CauseSpecificHazardHead,
     DeepHitHead,
+    deephit_joint,
     hazards_to_cif,
 )
 
@@ -521,22 +522,32 @@ class TestDeepHitLoss:
         t, k = _rand_times(), _rand_types()
         l_alpha0 = deephit_loss(logits, t, k, alpha=0.0)
         # Compute reference NLL directly
-        batch = logits.shape[0]
-        joint = torch.softmax(logits.view(batch, -1), dim=-1).view(
-            batch, NUM_EVENTS, TIME_BINS
-        )
+        joint = deephit_joint(logits)
         cif = torch.cumsum(joint, dim=2)
         nll = _log_likelihood(joint, cif, t, k, TIME_BINS)
         assert torch.allclose(l_alpha0, nll, atol=1e-5)
+
+    def test_censored_in_last_bin_is_finite(self) -> None:
+        """Censoring at the horizon must not give survival 0 (-log 0)."""
+        logits = torch.zeros(4, NUM_EVENTS, TIME_BINS)
+        t = torch.full((4,), TIME_BINS - 1, dtype=torch.long)
+        k = torch.zeros(4, dtype=torch.long)
+        loss = deephit_loss(logits, t, k, alpha=0.0)
+        expected = -torch.log(torch.tensor(1.0 / (NUM_EVENTS * TIME_BINS + 1)))
+        assert torch.allclose(loss, expected, atol=1e-5)
+
+    def test_horizon_bucket_leaves_survival_mass(self) -> None:
+        joint = deephit_joint(_rand_logits().detach())
+        total = joint.sum(dim=(1, 2))
+        assert (total < 1.0).all() and (total > 0.0).all()
 
     def test_alpha_one_equals_ranking_only(self) -> None:
         """alpha=1 → loss is purely from ranking."""
         logits = _rand_logits().detach()
         t, k = _rand_times(), _rand_types()
         l_alpha1 = deephit_loss(logits, t, k, alpha=1.0)
-        batch = logits.shape[0]
         cif = torch.cumsum(
-            torch.softmax(logits.view(batch, -1), dim=-1).view(batch, NUM_EVENTS, TIME_BINS),
+            deephit_joint(logits),
             dim=2,
         )
         rank = _ranking_loss(cif, t, k, sigma=0.1)

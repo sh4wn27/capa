@@ -61,13 +61,12 @@ import numpy.typing as npt
 import pandas as pd
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch import Tensor
 from torch.utils.data import DataLoader
 
 from capa.model.interaction import CrossAttentionInteraction
 from capa.model.losses import deephit_loss
-from capa.model.survival import DeepHitHead
+from capa.model.survival import DeepHitHead, deephit_joint
 from capa.training.evaluate import concordance_index
 
 logger = logging.getLogger(__name__)
@@ -634,11 +633,7 @@ class CAPAOneHotModel(nn.Module):
     ) -> Tensor:
         """Return CIF (batch, num_events, time_bins) in [0, 1]."""
         out = self.forward(donor_idx, recip_idx, raw_clinical)
-        batch = out.shape[0]
-        joint = F.softmax(out.view(batch, -1), dim=-1).view(
-            batch, self._num_events, self._time_bins
-        )
-        return torch.cumsum(joint, dim=2)
+        return torch.cumsum(deephit_joint(out), dim=2)
 
 
 class CAPAOneHotBaseline(BaselineModel):
@@ -1271,11 +1266,7 @@ class _BLOSUMModel(nn.Module):
     def cif(self, donor: Tensor, recip: Tensor, clinical: Tensor) -> Tensor:
         """Return CIF (B, K, T) in [0, 1]."""
         out = self.forward(donor, recip, clinical)
-        B = out.shape[0]
-        joint = F.softmax(out.view(B, -1), dim=-1).view(
-            B, self._num_events, self._time_bins
-        )
-        return torch.cumsum(joint, dim=2)
+        return torch.cumsum(deephit_joint(out), dim=2)
 
 
 class CAPABLOSUMBaseline(BaselineModel):

@@ -102,8 +102,9 @@ import numpy as np
 import numpy.typing as npt
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch import Tensor
+
+from capa.model.survival import deephit_joint
 
 logger = logging.getLogger(__name__)
 
@@ -441,8 +442,7 @@ def build_clinical_predict_fn(
                 cif = model.survival_head.cif(combined)         # (n, K, T)
             else:
                 logits = model.survival_head(combined)
-                nb, ne, nt = logits.shape
-                joint = F.softmax(logits.view(nb, -1), dim=-1).view(nb, ne, nt)
+                joint = deephit_joint(logits)
                 cif = torch.cumsum(joint, dim=2)
 
         return cif[:, event_idx, -1].cpu().numpy().astype(np.float32)
@@ -518,8 +518,7 @@ class ClinicalDeepWrapper(nn.Module):
             cif = self.survival_head.cif(combined)
         else:
             logits = self.survival_head(combined)
-            nb, ne, nt = logits.shape
-            joint = F.softmax(logits.view(nb, -1), dim=-1).view(nb, ne, nt)
+            joint = deephit_joint(logits)
             cif = torch.cumsum(joint, dim=2)
 
         return cif[:, self.event_idx, -1].unsqueeze(1)

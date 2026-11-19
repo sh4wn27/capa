@@ -36,8 +36,9 @@ AAAI 2018.
 from __future__ import annotations
 
 import torch
-import torch.nn.functional as F
 from torch import Tensor
+
+from capa.model.survival import deephit_joint
 
 # ---------------------------------------------------------------------------
 # DeepHit combined loss
@@ -77,12 +78,10 @@ def deephit_loss(
     Tensor
         Scalar combined loss.
     """
-    batch, num_events, time_bins = logits.shape
+    time_bins = logits.shape[2]
 
-    # Normalise over the joint (event × time) space → joint PMF
-    joint = F.softmax(logits.view(batch, -1), dim=-1).view(
-        batch, num_events, time_bins
-    )
+    # Normalise over the joint (event × time) space plus a horizon bucket
+    joint = deephit_joint(logits)
     cif = torch.cumsum(joint, dim=2)  # (batch, num_events, time_bins)
 
     ll = _log_likelihood(joint, cif, event_times, event_types, time_bins)

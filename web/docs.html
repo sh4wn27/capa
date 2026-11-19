@@ -150,11 +150,11 @@
     <section id="overview">
       <h2>Overview</h2>
       <p>CAPA's backend is a <b>FastAPI</b> application that loads a trained PyTorch model on startup and exposes a REST API for inference. It runs inside Docker on <b>HuggingFace Spaces</b> — always-on, CPU-only, free tier.</p>
-      <p>The model pipeline: donor and recipient HLA alleles are resolved to protein sequences, embedded with frozen <b>ESM-2</b> vectors (or looked up from a pre-built cache), passed through a cross-attention interaction network, and decoded by a <b>DeepHit competing-risks survival head</b> that jointly predicts the time-to-event distribution for GvHD, relapse, and TRM.</p>
+      <p>The model pipeline: donor and recipient HLA alleles are resolved to protein sequences, embedded with frozen <b>ESM-2</b> vectors (or looked up from a pre-built cache), differenced per locus (donor &minus; recipient, keeping the sign), passed through a locus self-attention network, and decoded by a <b>DeepHit competing-risks survival head</b> that jointly predicts the time-to-event distribution for GvHD, relapse, and TRM.</p>
 
       <div class="callout">
         <div class="c-tag">Deployed model vs. paper</div>
-        <p>The live API serves the <b>bidirectional cross-attention prototype</b> trained on UCI BMT; it is what returns <code>attention_weights</code>. The paper's primary architecture is the smaller <b>signed-difference locus-attention</b> model (469,580 parameters), and the cross-attention variant is reported there as a negative capacity result. Treat live predictions as a demonstration of the pipeline, not as validated clinical risk. See <a href="#validation">Datasets &amp; validation</a> for what has and has not been shown.</p>
+        <p>The live API serves the paper's primary architecture, the <b>signed-difference locus-attention</b> model (469,580 parameters). It was trained on the paper's <b>directional simulation</b>, not on patient data, because no public dataset pairs allele-level typing with outcomes. Each locus is mismatched in half of the simulated pairs, so matched loci are in-distribution. On held-out simulated pairs it reaches C = 0.93 (GvHD), 0.78 (relapse) and 0.67 (TRM). In the simulation, GvHD risk rises only for mismatches in the graft-versus-host direction along a random, fixed embedding direction, so swapping donor and recipient changes the answer. That direction is a modelling device, not biology. Only the five HLA loci and recipient age affect the output; other clinical fields are accepted and ignored. <code>attention_weights</code> are the model's locus self-attention. Treat live predictions as a demonstration of the pipeline, not as clinical risk. See <a href="#validation">Datasets &amp; validation</a> for what has and has not been shown.</p>
       </div>
 
       <div class="callout">
@@ -384,7 +384,7 @@ console.log(data.gvhd.risk_score);  <span class="cmt">// e.g. 0.331</span></pre>
         <tr><td>cumulative_incidence</td><td>float[100]</td><td>Monotone CIF values in [0, 1] at each of the 100 time points</td></tr>
         <tr><td>risk_score</td><td>float</td><td>2-year cumulative incidence probability (CIF at day 730)</td></tr>
         <tr><td>time_points</td><td>float[100]</td><td>Day values from 0 to 730 corresponding to each CIF entry</td></tr>
-        <tr><td>attention_weights</td><td>float[][] | null</td><td>n_loci × n_loci cross-attention matrix (donor→recipient, last layer)</td></tr>
+        <tr><td>attention_weights</td><td>float[][] | null</td><td>n_loci × n_loci locus self-attention matrix over the signed differences (last layer, head-averaged)</td></tr>
         <tr><td>mismatch_count</td><td>int</td><td>Number of loci where donor and recipient alleles differ</td></tr>
         <tr><td>model_version</td><td>string</td><td>Identifier of the loaded checkpoint</td></tr>
       </table>

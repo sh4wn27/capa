@@ -28,6 +28,7 @@ from pathlib import Path
 import numpy as np
 import torch
 
+
 # --- resolve project root so `capa` is importable when run as a script ------
 _ROOT = Path(__file__).resolve().parent.parent
 if str(_ROOT) not in sys.path:
@@ -245,7 +246,6 @@ def main() -> None:
         sys.exit(1)
 
     # ── Run model → get CIF ───────────────────────────────────────────
-    import torch.nn.functional as F
 
     with torch.no_grad():
         donor    = batch["donor_embeddings"].to(device)
@@ -253,9 +253,10 @@ def main() -> None:
         clinical = batch["clinical_features"].to(device)
         logits   = model(donor, recip, clinical)  # (n, K, T)
 
-        n_sub, K, T = logits.shape
         if args.survival_type == "deephit":
-            joint = F.softmax(logits.view(n_sub, -1), dim=-1).view(n_sub, K, T)
+            from capa.model.survival import deephit_joint
+
+            joint = deephit_joint(logits)
             cif_t = torch.cumsum(joint, dim=2).cpu().numpy()
         else:
             from capa.model.survival import hazards_to_cif

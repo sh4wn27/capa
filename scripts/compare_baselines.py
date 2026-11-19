@@ -35,6 +35,7 @@ import pandas as pd
 import torch
 from torch.utils.data import DataLoader, Dataset
 
+
 # Resolve project root
 _ROOT = Path(__file__).resolve().parent.parent
 if str(_ROOT) not in sys.path:
@@ -729,17 +730,15 @@ def main() -> None:
             c_emb = test_data["clinical_cont"]
 
             device = torch.device(args.device)
-            import torch.nn.functional as F
             capa_model.eval()
             with torch.no_grad():
                 dt = torch.tensor(d_emb, device=device)
                 rt = torch.tensor(r_emb, device=device)
                 ct = torch.tensor(c_emb, device=device)
                 logits = capa_model(dt, rt, ct)
-                bsz = logits.shape[0]
-                joint = F.softmax(logits.view(bsz, -1), dim=-1).view(
-                    bsz, num_events, time_bins
-                )
+                from capa.model.survival import deephit_joint
+
+                joint = deephit_joint(logits)
                 cif_capa = torch.cumsum(joint, dim=2).cpu().numpy()
 
             elapsed = time.perf_counter() - t0

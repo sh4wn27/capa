@@ -48,6 +48,32 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch import Tensor
 
+
+def deephit_joint(logits: Tensor) -> Tensor:
+    """Joint PMF ``p(T=t, K=k)`` from DeepHit logits, with a horizon bucket.
+
+    A fixed zero logit is appended before the softmax and dropped afterwards.
+    It holds the probability of being event-free through the last time bin,
+    so ``1 - sum_k CIF_k(t_max)`` is that probability and not identically 0.
+    Without it, a subject censored in the last bin has survival 0 and a
+    ``-log(0)`` likelihood, which destabilises training whenever follow-up is
+    clipped to the horizon.  (pycox pads its DeepHit output the same way.)
+
+    Parameters
+    ----------
+    logits : Tensor
+        Shape ``(batch, num_events, time_bins)``.
+
+    Returns
+    -------
+    Tensor
+        Joint PMF of the same shape; sums to less than 1 over events and bins.
+    """
+    batch, num_events, time_bins = logits.shape
+    flat = logits.reshape(batch, -1)
+    padded = torch.cat([flat, flat.new_zeros(batch, 1)], dim=1)
+    return F.softmax(padded, dim=-1)[:, :-1].reshape(batch, num_events, time_bins)
+
 # ---------------------------------------------------------------------------
 # Shared MLP backbone
 # ---------------------------------------------------------------------------
@@ -138,12 +164,8 @@ class DeepHitHead(nn.Module):
             CIF tensor of shape ``(batch, num_events, time_bins)`` with values
             in ``[0, 1]``.  Each row is monotone non-decreasing over time bins.
         """
-        logits = self.forward(x)
-        batch = logits.shape[0]
-        # Softmax over the *joint* (event × time) space
-        joint = F.softmax(logits.view(batch, -1), dim=-1).view(
-            batch, self.num_events, self.time_bins
-        )
+        # Softmax over the *joint* (event × time) space plus a horizon bucket
+        joint = deephit_joint(self.forward(x))
         return torch.cumsum(joint, dim=2)
 
 

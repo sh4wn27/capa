@@ -49,11 +49,15 @@ import numpy as np
 import numpy.typing as npt
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch import Tensor
 
 from capa.model.interaction import AttentionWeights, CrossAttentionInteraction
-from capa.model.survival import CauseSpecificHazardHead, DeepHitHead, hazards_to_cif
+from capa.model.survival import (
+    CauseSpecificHazardHead,
+    DeepHitHead,
+    deephit_joint,
+    hazards_to_cif,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -476,11 +480,7 @@ class CAPAModel(nn.Module):
         """
         out = self.forward(donor_embeddings, recipient_embeddings, clinical_features)
         if self._survival_type == "deephit":
-            batch = out.shape[0]
-            joint = F.softmax(out.view(batch, -1), dim=-1).view(
-                batch, self._num_events, self._time_bins
-            )
-            return torch.cumsum(joint, dim=2)
+            return torch.cumsum(deephit_joint(out), dim=2)
         else:
             return hazards_to_cif(out)
 

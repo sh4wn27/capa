@@ -27,7 +27,6 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from sklearn.preprocessing import StandardScaler
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -36,6 +35,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from capa.data.loader import load_bmt
 from capa.data.splits import make_splits
 from capa.model.baselines import CoxPHBaseline, FineGrayBaseline
+from capa.model.survival import deephit_joint
 from capa.training.evaluate import (
     MetricWithCI,
     bootstrap_ci,
@@ -188,9 +188,9 @@ class DeepHitMLP(nn.Module):
         h = self.net(x)
         logits = self.head(h)                      # (B, K*T)
         B = x.shape[0]
-        joint = F.softmax(logits.view(B, -1), dim=-1)
-        joint = joint.view(B, self.num_events, self.time_bins)
-        return joint                               # (B, K, T)
+        # Padded softmax: an extra "event-free past the horizon" bucket, so
+        # subjects censored in the last bin do not get survival 0.
+        return deephit_joint(logits.view(B, self.num_events, self.time_bins))
 
     def cif(self, x: torch.Tensor) -> torch.Tensor:
         return torch.cumsum(self.forward(x), dim=2)  # (B, K, T)

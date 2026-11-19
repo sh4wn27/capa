@@ -45,6 +45,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
 
 from capa.model.losses import deephit_loss
+from capa.model.survival import deephit_joint
 from capa.training.evaluate import concordance_index
 
 logger = logging.getLogger(__name__)
@@ -398,12 +399,10 @@ class Trainer:
         clinical: torch.Tensor,
     ) -> torch.Tensor:
         """Return CIF tensor (batch, num_events, time_bins) from the model."""
-        import torch.nn.functional as F
 
         out = self.model(donor, recip, clinical)
-        batch, num_events, time_bins = out.shape
         if self.survival_type == "deephit":
-            joint = F.softmax(out.view(batch, -1), dim=-1).view(batch, num_events, time_bins)
+            joint = deephit_joint(out)
             return torch.cumsum(joint, dim=2)
         else:
             from capa.model.survival import hazards_to_cif
