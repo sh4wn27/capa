@@ -106,6 +106,20 @@ def _parse_args() -> argparse.Namespace:
         help="Write results JSON to this path.",
     )
     p.add_argument(
+        "--alpha", type=float, default=0.0,
+        help="DeepHit ranking-loss weight. 0.0 (pure NLL) matches every other "
+             "CAPA training script; the ranking term at sigma=0.1 is unstable "
+             "and, at the old implicit default of 0.5, the model failed to fit "
+             "GvHD even in-sample.",
+    )
+    p.add_argument(
+        "--hierarchy", choices=["outcome", "gvhd_first", "earliest"],
+        default="outcome",
+        help="Event-priority hierarchy for real-data labels (see "
+             "scripts/run_hierarchy_sensitivity.py). 'earliest' is the only "
+             "one consistent with DeepHit's time-to-first-event likelihood.",
+    )
+    p.add_argument(
         "--diff-mode", choices=["none", "signed"], default="none",
         help="'none' = standard donor/recipient cross-attention; "
              "'signed' = self-attention on the signed difference "
@@ -159,7 +173,7 @@ _REAL_EMB_PATH = _ROOT / "data/processed/hla_embeddings.h5"
 _REAL_CSV_PATH = _ROOT / "data/processed/bmt_imputed_hla.csv"
 
 
-def _load_real_data() -> dict[str, Any]:
+def _load_real_data(hierarchy: str = "outcome") -> dict[str, Any]:
     """Load the real UCI BMT cohort with frequency-imputed HLA alleles.
 
     CAVEAT: alleles in bmt_imputed_hla.csv are frequency-imputed (see
@@ -215,15 +229,10 @@ def _load_real_data() -> dict[str, Any]:
         df["sex_mismatch_f2m"].fillna(0).to_numpy(dtype=np.float32),
     ], axis=1)
 
-    relapse = df["relapse"].fillna(0).astype(int).to_numpy()
-    dead    = df["dead"].fillna(0).astype(int).to_numpy()
-    gvhd    = df["acute_gvhd_iii_iv"].fillna(0).astype(int).to_numpy()
-    event_time = np.clip(df["survival_time_days"].astype(float).to_numpy(), 0.0, _REAL_MAX_DAYS).astype(np.float32)
+    from scripts.run_hierarchy_sensitivity import make_labels
 
-    event_type = np.zeros(n, dtype=np.int64)
-    event_type[(gvhd == 1) & (relapse == 0) & (dead == 0)] = 1
-    event_type[(dead == 1) & (relapse == 0)] = 3
-    event_type[relapse == 1] = 2
+    event_type, event_time = make_labels(df, hierarchy)
+    event_time = np.clip(event_time, 0.0, _REAL_MAX_DAYS).astype(np.float32)
 
     return {
         "donor":      donor_emb,
@@ -329,6 +338,7 @@ def _train_fold(
     epochs: int,
     device: torch.device,
     diff_mode: str = "none",
+    alpha: float = 0.0,
 ) -> None:
     """Train model for one fold (simplified training loop for CV)."""
     from capa.model.losses import deephit_loss
@@ -356,7 +366,7 @@ def _train_fold(
         opt.zero_grad()
         clin_feats = model.clinical_encoder(clin_t, cat_t)
         logits = model(donor_t, recip_t, clin_feats)
-        loss = deephit_loss(logits, event_times=etime_t, event_types=etype_t)
+        loss = deephit_loss(logits, event_times=etime_t, event_types=etype_t, alpha=alpha)
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
         opt.step()
@@ -555,8 +565,12 @@ def main() -> None:
         data = _make_synthetic(n=args.synthetic_n, seed=args.synthetic_seed)
         logger.info("Using synthetic data (n=%d)", args.synthetic_n)
     else:
-        data = _load_real_data()
-        logger.info("Using real UCI BMT data (n=%d)", len(data["event_time"]))
+        data = _load_real_data(args.hierarchy)
+        logger.info(
+            "Using real UCI BMT data (n=%d, hierarchy=%s, events=%s)",
+            len(data["event_time"]), args.hierarchy,
+            np.bincount(data["event_type"], minlength=4).tolist(),
+        )
 
     n_total    = len(data["event_time"])
     all_folds:  list[dict[str, Any]] = []
@@ -576,7 +590,8 @@ def main() -> None:
             )
 
             model = _build_model(data, device)
-            _train_fold(model, data, train_idx, epochs=args.epochs, device=device, diff_mode=args.diff_mode)
+            _train_fold(model, data, train_idx, epochs=args.epochs, device=device, diff_mode=args.diff_mode,
+                        alpha=args.alpha)
 
             fold_result = _eval_fold(
                 model, data, val_idx,
@@ -643,6 +658,8 @@ def main() -> None:
             "n_total": n_total,
             "synthetic": args.synthetic,
             "diff_mode": args.diff_mode,
+            "alpha": args.alpha,
+            "hierarchy": None if args.synthetic else args.hierarchy,
             "caveat": None if args.synthetic else (
                 "HLA alleles are frequency-imputed (no real typing); results "
                 "validate pipeline mechanics, not the directional mechanism."

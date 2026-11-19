@@ -89,11 +89,18 @@ def generate_directional_cohort(
     embs: dict[str, np.ndarray],
     rng: np.random.Generator,
     seed: int = SEED,
+    p_mismatch: float = 1.0,
 ) -> tuple[pd.DataFrame, dict[str, np.ndarray]]:
     """All-loci-mismatched cohort; GvHD driven by directional projection.
 
     Returns the patient DataFrame and the per-locus immunodominant directions
     ``w_l`` (for diagnostics / reproducibility only — not used by any model).
+
+    ``p_mismatch`` < 1 makes each locus mismatched only with that probability
+    (otherwise donor = recipient). The published runs use the default 1.0,
+    which draws no extra random numbers and so reproduces them exactly; the
+    deployed demo model (scripts/train_demo_model.py) uses 0.5 so that matched
+    loci are in-distribution.
     """
     emb_dim = next(iter(embs.values())).shape[0]
     max_l2 = _compute_max_l2(embs)
@@ -118,13 +125,15 @@ def generate_directional_cohort(
             op = np.array([probs_l[alleles_l.index(a)] for a in others])
             op /= op.sum()
             donor_a = rng.choice(others, p=op)
+            if p_mismatch < 1.0 and rng.random() >= p_mismatch:
+                donor_a = recip_a
 
             e_d = embs[donor_a].astype(np.float64)
             e_r = embs[recip_a].astype(np.float64)
             rec[f"dist_{loc}"] = float(np.linalg.norm(e_d - e_r)) / max_l2[loc]
             raw_proj[loc].append(float(w[loc] @ (e_r - e_d)))   # GvH direction
 
-            rec[f"bin_mm_{loc}"] = 1
+            rec[f"bin_mm_{loc}"] = int(donor_a != recip_a)
             rec[f"donor_{loc}_1"] = donor_a
             rec[f"donor_{loc}_2"] = donor_a
             rec[f"recip_{loc}_1"] = recip_a
@@ -134,7 +143,7 @@ def generate_directional_cohort(
         rec["age"] = age
         rec["age_norm"] = (age - 45.0) / 20.0
         rec["disease_risk"] = int(rng.random() < 0.35)
-        rec["n_mismatches"] = 5
+        rec["n_mismatches"] = sum(rec[f"bin_mm_{loc}"] for loc in LOCI)
         rows.append(rec)
 
     df = pd.DataFrame(rows)
